@@ -1,32 +1,64 @@
+import Link from "next/link";
+
 import {
   BriefcaseBusiness,
-  CalendarDays,
-  Clock3,
   ArrowUpRight,
 } from "lucide-react";
 
-const tasks = [
-  {
-    title: "Google Software Engineering Intern",
-    description: "Application deadline",
-    date: "18 Aug",
-    icon: BriefcaseBusiness,
-  },
-  {
-    title: "Microsoft Cloud Internship",
-    description: "Technical interview",
-    date: "20 Aug",
-    icon: CalendarDays,
-  },
-  {
-    title: "Xero Graduate Developer",
-    description: "Send follow-up email",
-    date: "22 Aug",
-    icon: Clock3,
-  },
-];
+type Application = {
+  id: number;
+  organisation: string;
+  roleTitle: string;
+  deadline: string;
+  status: string;
+};
 
-export default function UpcomingTasks() {
+type UpcomingTasksProps = {
+  applications: Application[];
+};
+
+function formatDeadline(deadline: string) {
+  const date = new Date(`${deadline}T00:00:00`);
+
+  return date.toLocaleDateString("en-NZ", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+export default function UpcomingTasks({
+  applications,
+}: UpcomingTasksProps) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const fourteenDaysFromNow = new Date(today);
+  fourteenDaysFromNow.setDate(today.getDate() + 14);
+
+  // Create tasks from application deadlines within the next 14 days.
+  const upcomingTasks = applications
+    .filter((application) => {
+      if (!application.deadline) {
+        return false;
+      }
+
+      const deadline = new Date(`${application.deadline}T00:00:00`);
+
+      return deadline >= today && deadline <= fourteenDaysFromNow;
+    })
+    .sort((a, b) => {
+      const firstDeadline = new Date(
+        `${a.deadline}T00:00:00`
+      ).getTime();
+
+      const secondDeadline = new Date(
+        `${b.deadline}T00:00:00`
+      ).getTime();
+
+      return firstDeadline - secondDeadline;
+    })
+    .slice(0, 3);
+
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-start justify-between gap-4">
@@ -40,41 +72,50 @@ export default function UpcomingTasks() {
           </p>
         </div>
 
-        <button className="flex items-center gap-1 text-sm font-medium text-slate-500 transition hover:text-slate-950">
+        <Link
+          href="/applications"
+          className="flex items-center gap-1 text-sm font-medium text-slate-500 transition hover:text-slate-950"
+        >
           View all
           <ArrowUpRight className="h-4 w-4" />
-        </button>
+        </Link>
       </div>
 
       <div className="mt-6 divide-y divide-slate-100">
-        {tasks.map((task) => {
-          const Icon = task.icon;
-
-          return (
-            <div
-              key={task.title}
-              className="group flex items-center gap-4 py-4 first:pt-0 last:pb-0"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500">
-                <Icon className="h-4 w-4" strokeWidth={1.8} />
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-slate-900">
-                  {task.title}
-                </p>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  {task.description}
-                </p>
-              </div>
-
-              <span className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-600">
-                {task.date}
-              </span>
+        {upcomingTasks.map((application) => (
+          <Link
+            key={application.id}
+            href={`/applications/${application.id}`}
+            className="group flex items-center gap-4 py-4 first:pt-0 last:pb-0"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500">
+              <BriefcaseBusiness
+                className="h-4 w-4"
+                strokeWidth={1.8}
+              />
             </div>
-          );
-        })}
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-slate-900">
+                {application.organisation} {application.roleTitle}
+              </p>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Application deadline
+              </p>
+            </div>
+
+            <span className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-600">
+              {formatDeadline(application.deadline)}
+            </span>
+          </Link>
+        ))}
+
+        {upcomingTasks.length === 0 && (
+          <p className="py-6 text-center text-sm text-slate-500">
+            No upcoming deadlines.
+          </p>
+        )}
       </div>
     </section>
   );
