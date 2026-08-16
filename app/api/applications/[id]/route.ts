@@ -1,0 +1,104 @@
+import { applications } from "@/lib/applicationsStore";
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const applicationId = Number(id);
+
+  const application = applications.find(
+    (item) => item.id === applicationId
+  );
+
+  if (!application) {
+    return Response.json(
+      {
+        success: false,
+        message: "Application not found.",
+      },
+      { status: 404 }
+    );
+  }
+
+  return Response.json({
+    success: true,
+    data: application,
+  });
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const applicationId = Number(id);
+
+  const application = applications.find(
+    (item) => item.id === applicationId
+  );
+
+  if (!application) {
+    return Response.json(
+      {
+        success: false,
+        message: "Application not found.",
+      },
+      { status: 404 }
+    );
+  }
+
+  const body = await request.json();
+
+  if (!body.organisation || !body.roleTitle) {
+    return Response.json(
+      {
+        success: false,
+        message: "Organisation and role title are required.",
+      },
+      { status: 400 }
+    );
+  }
+
+  application.organisation = body.organisation;
+  application.roleTitle = body.roleTitle;
+  application.location = body.location || "";
+  application.deadline = body.deadline || "";
+  application.status = body.status || "Interested";
+
+  return Response.json({
+    success: true,
+    message: "Application updated successfully.",
+    data: application,
+  });
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const applicationId = Number(id);
+
+  const applicationIndex = applications.findIndex(
+    (item) => item.id === applicationId
+  );
+
+  if (applicationIndex === -1) {
+    return Response.json(
+      {
+        success: false,
+        message: "Application not found.",
+      },
+      { status: 404 }
+    );
+  }
+
+  const deletedApplication = applications.splice(applicationIndex, 1)[0];
+
+  return Response.json({
+    success: true,
+    message: "Application deleted successfully.",
+    data: deletedApplication,
+  });
+}

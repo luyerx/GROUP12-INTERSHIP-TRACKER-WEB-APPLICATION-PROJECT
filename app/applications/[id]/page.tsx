@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import {
   ArrowLeft,
@@ -19,36 +19,112 @@ import {
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
-const application = {
-  id: "1",
-  organisation: "Google",
-  roleTitle: "Software Engineering Intern",
-  location: "Auckland",
-  deadline: "18 Aug 2026",
-  status: "Applied",
-  sourceLink: "https://careers.google.com/",
-  contactPerson: "Sarah Johnson",
-  jobDescription:
-    "Work with engineering teams to design, build, test, and maintain scalable software products. The role requires strong programming fundamentals, problem-solving skills, and collaboration with cross-functional teams.",
-  notes:
-    "Applied using CV version 3. Follow up if there is no response within two weeks.",
+type Application = {
+  id: number;
+  organisation: string;
+  roleTitle: string;
+  location: string;
+  deadline: string;
+  status: string;
+  sourceLink?: string;
+  contactPerson?: string;
+  jobDescription?: string;
+  notes?: string;
 };
 
 export default function ApplicationDetailPage() {
   const router = useRouter();
+  const params = useParams();
+  const id = params.id as string;
+
+  const [application, setApplication] = useState<Application | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  useEffect(() => {
+    const loadApplication = async () => {
+      try {
+        const response = await fetch(`/api/applications/${id}`);
+        const result = await response.json();
+
+        if (response.ok) {
+          setApplication(result.data);
+        } else {
+          setError(result.message || "Failed to load application.");
+        }
+      } catch (error) {
+        console.error("Load application error:", error);
+        setError("Something went wrong while loading the application.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      loadApplication();
+    }
+  }, [id]);
+
   const handleDelete = async () => {
     setIsDeleting(true);
 
-    // Temporary simulated delete.
-    // Later this will be replaced with DELETE /api/applications/:id.
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const response = await fetch(`/api/applications/${id}`, {
+        method: "DELETE",
+      });
 
-    router.push("/applications");
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result.message || "Failed to delete application.");
+        return;
+      }
+
+      alert("Application deleted successfully.");
+
+      router.push("/applications");
+    } catch (error) {
+      console.error("Delete application error:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
+            Loading application...
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !application) {
+    return (
+      <DashboardLayout>
+        <div className="mx-auto max-w-6xl">
+          <Link
+            href="/applications"
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-950"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to applications
+          </Link>
+
+          <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
+            {error || "Application not found."}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -65,7 +141,7 @@ export default function ApplicationDetailPage() {
         <div className="mt-6 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-lg font-semibold text-slate-700 shadow-sm">
-              G
+              {application.organisation.charAt(0)}
             </div>
 
             <div>
@@ -86,12 +162,19 @@ export default function ApplicationDetailPage() {
               <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500">
                 <span className="flex items-center gap-1.5">
                   <MapPin className="h-4 w-4" />
-                  {application.location}
+                  {application.location || "No location"}
                 </span>
 
                 <span className="flex items-center gap-1.5">
                   <CalendarDays className="h-4 w-4" />
-                  Deadline {application.deadline}
+                  Deadline{" "}
+                  {application.deadline
+                    ? new Date(application.deadline).toLocaleDateString("en-NZ", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "Not set"}
                 </span>
               </div>
             </div>
@@ -107,7 +190,7 @@ export default function ApplicationDetailPage() {
             </button>
 
             <Link
-              href="/applications/1/edit"
+              href={`/applications/${id}/edit`}
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
             >
               <Pencil className="h-4 w-4" />
@@ -127,7 +210,6 @@ export default function ApplicationDetailPage() {
 
         {/* Content */}
         <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.65fr]">
-          {/* Left column */}
           <div className="space-y-6">
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3">
@@ -147,18 +229,20 @@ export default function ApplicationDetailPage() {
               </div>
 
               <p className="mt-6 text-sm leading-7 text-slate-600">
-                {application.jobDescription}
+                {application.jobDescription || "No job description added."}
               </p>
 
-              <a
-                href={application.sourceLink}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
-              >
-                View original job posting
-                <ExternalLink className="h-4 w-4" />
-              </a>
+              {application.sourceLink && (
+                <a
+                  href={application.sourceLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
+                >
+                  View original job posting
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -171,7 +255,7 @@ export default function ApplicationDetailPage() {
               </p>
 
               <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-                {application.notes}
+                {application.notes || "No notes added."}
               </div>
             </section>
 
@@ -190,11 +274,11 @@ export default function ApplicationDetailPage() {
 
                   <div>
                     <p className="text-sm font-medium text-slate-900">
-                      Application submitted
+                      Application created
                     </p>
 
                     <p className="mt-1 text-xs text-slate-500">
-                      12 August 2026
+                      Current application record
                     </p>
                   </div>
                 </div>
@@ -204,11 +288,11 @@ export default function ApplicationDetailPage() {
 
                   <div>
                     <p className="text-sm font-medium text-slate-700">
-                      Waiting for employer response
+                      Current stage: {application.status}
                     </p>
 
                     <p className="mt-1 text-xs text-slate-500">
-                      Current stage
+                      Latest status
                     </p>
                   </div>
                 </div>
@@ -216,7 +300,6 @@ export default function ApplicationDetailPage() {
             </section>
           </div>
 
-          {/* Right column */}
           <div className="space-y-6">
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="text-base font-semibold text-slate-950">
@@ -240,7 +323,16 @@ export default function ApplicationDetailPage() {
                   </p>
 
                   <p className="mt-1.5 text-sm font-medium text-slate-800">
-                    {application.deadline}
+                    {application.deadline
+                      ? new Date(application.deadline).toLocaleDateString(
+                          "en-NZ",
+                          {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          }
+                        )
+                      : "Not set"}
                   </p>
                 </div>
 
@@ -250,7 +342,7 @@ export default function ApplicationDetailPage() {
                   </p>
 
                   <p className="mt-1.5 text-sm font-medium text-slate-800">
-                    {application.location}
+                    {application.location || "Not set"}
                   </p>
                 </div>
               </div>
@@ -266,7 +358,7 @@ export default function ApplicationDetailPage() {
               </div>
 
               <p className="mt-5 text-sm font-medium text-slate-800">
-                {application.contactPerson}
+                {application.contactPerson || "No contact added"}
               </p>
 
               <p className="mt-1 text-xs text-slate-500">
@@ -300,7 +392,6 @@ export default function ApplicationDetailPage() {
       {/* Delete confirmation modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          {/* Background overlay */}
           <button
             type="button"
             aria-label="Close delete confirmation"
@@ -312,7 +403,6 @@ export default function ApplicationDetailPage() {
             className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]"
           />
 
-          {/* Modal */}
           <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
