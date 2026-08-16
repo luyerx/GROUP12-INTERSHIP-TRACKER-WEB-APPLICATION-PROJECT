@@ -1,0 +1,3 @@
+import DashboardLayout from "@/components/layout/DashboardLayout";
+
+export default function ProfilePage() { return <DashboardLayout><p className="text-sm font-medium text-slate-500">Account</p><h1 className="mt-2 text-3xl font-semibold text-slate-950">Profile</h1><section className="mt-8 max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="font-semibold text-slate-950">Student profile</h2><p className="mt-2 text-sm leading-6 text-slate-500">Authentication and multi-user profiles are planned for the next milestone. Current application records use the local demo workspace or the configured MongoDB database.</p></section></DashboardLayout>; }

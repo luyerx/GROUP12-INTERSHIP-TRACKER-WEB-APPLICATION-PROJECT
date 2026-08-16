@@ -52,6 +52,7 @@ type ApplicationFormValues = z.infer<typeof applicationSchema>;
 
 type ApplicationFormProps = {
   mode?: "create" | "edit";
+  applicationId?: string;
   initialValues?: Partial<ApplicationFormValues>;
 };
 
@@ -62,6 +63,7 @@ const labelClassName = "text-sm font-medium text-slate-700";
 
 export default function ApplicationForm({
   mode = "create",
+  applicationId,
   initialValues,
 }: ApplicationFormProps) {
   const router = useRouter();
@@ -88,27 +90,64 @@ export default function ApplicationForm({
   });
 
   const onSubmit = async (data: ApplicationFormValues) => {
-    console.log(
-      mode === "edit"
-        ? "Updated application data:"
-        : "New application data:",
-      data
-    );
+    try {
+      if (mode === "edit") {
+        if (!applicationId) {
+          alert("Application ID is missing.");
+          return;
+        }
 
-    // Temporary simulated save.
-    // Later this will be replaced with API requests.
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+        const response = await fetch(
+          `/api/applications/${applicationId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+          }
+        );
 
-    if (mode === "edit") {
-      router.push("/applications/1");
-    } else {
+        const result = await response.json();
+
+        if (!response.ok) {
+          alert(result.message || "Failed to update application.");
+          return;
+        }
+
+        alert("Application updated successfully.");
+
+        router.push("/applications");
+        return;
+      }
+
+      const response = await fetch("/api/applications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result.message || "Failed to create application.");
+        return;
+      }
+
+      alert("Application created successfully.");
+
       router.push("/applications");
+    } catch (error) {
+      console.error("Application save error:", error);
+      alert("Something went wrong. Please try again.");
     }
   };
 
   const handleCancel = () => {
-    if (mode === "edit") {
-      router.push("/applications/1");
+    if (mode === "edit" && applicationId) {
+      router.push(`/applications/${applicationId}`);
     } else {
       router.push("/applications");
     }
@@ -234,85 +273,84 @@ export default function ApplicationForm({
         </div>
       </section>
 
-        {/* Application details */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      {/* Application details */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
             <CalendarDays
-                className="h-5 w-5"
-                strokeWidth={1.8}
+              className="h-5 w-5"
+              strokeWidth={1.8}
             />
-            </div>
+          </div>
 
-            <div>
+          <div>
             <h2 className="text-base font-semibold text-slate-950">
-                Application details
+              Application details
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-                Track the deadline, current stage, and original job description.
+              Track the deadline, current stage, and original job description.
             </p>
-            </div>
+          </div>
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
-            {/* Deadline */}
-            <div>
+          {/* Deadline */}
+          <div>
             <label className={labelClassName}>
-                Deadline
+              Deadline
             </label>
 
             <input
-            type="text"
-            placeholder="DD/MM/YYYY"
-            className={inputClassName}
-            {...register("deadline")}
+              type="date"
+              className={inputClassName}
+              {...register("deadline")}
             />
-            </div>
+          </div>
 
-            {/* Status */}
-            <div>
+          {/* Status */}
+          <div>
             <label className={labelClassName}>
-                Application status
+              Application status
             </label>
 
             <select
-                className={inputClassName}
-                {...register("status")}
+              className={inputClassName}
+              {...register("status")}
             >
-                <option value="Interested">Interested</option>
-                <option value="Preparing">Preparing</option>
-                <option value="Applied">Applied</option>
-                <option value="Interview">Interview</option>
-                <option value="Offer">Offer</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Withdrawn">Withdrawn</option>
+              <option value="Interested">Interested</option>
+              <option value="Preparing">Preparing</option>
+              <option value="Applied">Applied</option>
+              <option value="Interview">Interview</option>
+              <option value="Offer">Offer</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Withdrawn">Withdrawn</option>
             </select>
-            </div>
+          </div>
         </div>
 
         {/* Job description */}
         <div className="mt-5">
-            <label className={labelClassName}>
+          <label className={labelClassName}>
             Job description
-            </label>
+          </label>
 
-            <div className="relative">
+          <div className="relative">
             <FileText className="pointer-events-none absolute left-3.5 top-5 h-4 w-4 text-slate-400" />
 
             <textarea
-                rows={7}
-                placeholder="Paste the job description here. This can later be used by the AI assistant to generate a concise summary."
-                className={`${inputClassName} resize-none pl-10`}
-                {...register("jobDescription")}
+              rows={7}
+              placeholder="Paste the job description here. This can later be used by the AI assistant to generate a concise summary."
+              className={`${inputClassName} resize-none pl-10`}
+              {...register("jobDescription")}
             />
-            </div>
+          </div>
 
-            <p className="mt-2 text-xs leading-5 text-slate-400">
+          <p className="mt-2 text-xs leading-5 text-slate-400">
             Only include information you are comfortable storing in the system.
-            </p>
+          </p>
         </div>
-        </section>
+      </section>
 
       {/* Additional information */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

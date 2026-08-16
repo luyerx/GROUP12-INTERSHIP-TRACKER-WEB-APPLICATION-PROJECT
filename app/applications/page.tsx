@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   ArrowUpDown,
@@ -25,56 +25,13 @@ type ApplicationStatus =
   | "Withdrawn";
 
 type Application = {
-  id: number;
+  id: string;
   organisation: string;
   roleTitle: string;
   location: string;
   deadline: string;
   status: ApplicationStatus;
 };
-
-const applications: Application[] = [
-  {
-    id: 1,
-    organisation: "Google",
-    roleTitle: "Software Engineering Intern",
-    location: "Auckland",
-    deadline: "2026-08-18",
-    status: "Applied",
-  },
-  {
-    id: 2,
-    organisation: "Microsoft",
-    roleTitle: "Cloud Internship",
-    location: "Wellington",
-    deadline: "2026-08-20",
-    status: "Interview",
-  },
-  {
-    id: 3,
-    organisation: "Xero",
-    roleTitle: "Graduate Developer",
-    location: "Auckland",
-    deadline: "2026-08-22",
-    status: "Preparing",
-  },
-  {
-    id: 4,
-    organisation: "Datacom",
-    roleTitle: "Software Developer Intern",
-    location: "Christchurch",
-    deadline: "2026-08-25",
-    status: "Interested",
-  },
-  {
-    id: 5,
-    organisation: "Canva",
-    roleTitle: "Frontend Engineering Intern",
-    location: "Remote",
-    deadline: "2026-08-29",
-    status: "Offer",
-  },
-];
 
 const statusStyles: Record<ApplicationStatus, string> = {
   Interested: "bg-slate-100 text-slate-700 ring-slate-500/20",
@@ -87,10 +44,30 @@ const statusStyles: Record<ApplicationStatus, string> = {
 };
 
 export default function ApplicationsPage() {
+  const [applications, setApplications] = useState<Application[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [locationFilter, setLocationFilter] = useState("All");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  useEffect(() => {
+    const loadApplications = async () => {
+      try {
+        const response = await fetch("/api/applications");
+        const result = await response.json();
+
+        if (response.ok) {
+          setApplications(result.data);
+        } else {
+          console.error("Failed to load applications:", result.message);
+        }
+      } catch (error) {
+        console.error("Load applications error:", error);
+      }
+    };
+
+    loadApplications();
+  }, []);
 
   const filteredApplications = useMemo(() => {
     const filtered = applications.filter((application) => {
@@ -117,7 +94,7 @@ export default function ApplicationsPage() {
         ? first - second
         : second - first;
     });
-  }, [search, statusFilter, locationFilter, sortDirection]);
+  }, [applications, search, statusFilter, locationFilter, sortDirection]);
 
   return (
     <DashboardLayout>
@@ -294,14 +271,14 @@ export default function ApplicationsPage() {
 
                       <td className="px-6 py-4">
                         <span className="text-sm text-slate-600">
-                          {new Date(application.deadline).toLocaleDateString(
+                          {application.deadline ? new Date(`${application.deadline}T00:00:00`).toLocaleDateString(
                             "en-NZ",
                             {
                               day: "numeric",
                               month: "short",
                               year: "numeric",
                             }
-                          )}
+                          ) : "Not set"}
                         </span>
                       </td>
 

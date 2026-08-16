@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import {
   ArrowLeft,
@@ -136,6 +136,12 @@ const getTimelineItems = (status: ApplicationStatus) => {
 
 export default function ApplicationDetailPage() {
   const router = useRouter();
+  const params = useParams();
+  const id = params.id as string;
+
+  const [application, setApplication] = useState<Application | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -192,8 +198,46 @@ export default function ApplicationDetailPage() {
     // Later this will use DELETE /api/applications/:id.
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    router.push("/applications");
+      router.push("/applications");
+    } catch (error) {
+      console.error("Delete application error:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
+            Loading application...
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !application) {
+    return (
+      <DashboardLayout>
+        <div className="mx-auto max-w-6xl">
+          <Link
+            href="/applications"
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-950"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to applications
+          </Link>
+
+          <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
+            {error || "Application not found."}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -210,7 +254,7 @@ export default function ApplicationDetailPage() {
         <div className="mt-6 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-lg font-semibold text-slate-700 shadow-sm">
-              G
+              {application.organisation.charAt(0)}
             </div>
 
             <div>
@@ -235,12 +279,19 @@ export default function ApplicationDetailPage() {
               <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500">
                 <span className="flex items-center gap-1.5">
                   <MapPin className="h-4 w-4" />
-                  {application.location}
+                  {application.location || "No location"}
                 </span>
 
                 <span className="flex items-center gap-1.5">
                   <CalendarDays className="h-4 w-4" />
-                  Deadline {application.deadline}
+                  Deadline{" "}
+                  {application.deadline
+                    ? new Date(application.deadline).toLocaleDateString("en-NZ", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "Not set"}
                 </span>
               </div>
             </div>
@@ -254,10 +305,10 @@ export default function ApplicationDetailPage() {
             >
               <Sparkles className="h-4 w-4" />
               AI summary
-            </button>
+            </Link>
 
             <Link
-              href="/applications/1/edit"
+              href={`/applications/${id}/edit`}
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
             >
               <Pencil className="h-4 w-4" />
@@ -277,7 +328,6 @@ export default function ApplicationDetailPage() {
 
         {/* Main content */}
         <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.65fr]">
-          {/* Left column */}
           <div className="space-y-6">
             {/* Job description */}
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -298,18 +348,20 @@ export default function ApplicationDetailPage() {
               </div>
 
               <p className="mt-6 text-sm leading-7 text-slate-600">
-                {application.jobDescription}
+                {application.jobDescription || "No job description added."}
               </p>
 
-              <a
-                href={application.sourceLink}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
-              >
-                View original job posting
-                <ExternalLink className="h-4 w-4" />
-              </a>
+              {application.sourceLink && (
+                <a
+                  href={application.sourceLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
+                >
+                  View original job posting
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
             </section>
 
             {/* Notes */}
@@ -323,7 +375,7 @@ export default function ApplicationDetailPage() {
               </p>
 
               <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-                {application.notes}
+                {application.notes || "No notes added."}
               </div>
             </section>
 
@@ -376,7 +428,6 @@ export default function ApplicationDetailPage() {
             </section>
           </div>
 
-          {/* Right column */}
           <div className="space-y-6">
             {/* Application details */}
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -422,7 +473,16 @@ export default function ApplicationDetailPage() {
                   </p>
 
                   <p className="mt-1.5 text-sm font-medium text-slate-800">
-                    {application.deadline}
+                    {application.deadline
+                      ? new Date(application.deadline).toLocaleDateString(
+                          "en-NZ",
+                          {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          }
+                        )
+                      : "Not set"}
                   </p>
                 </div>
 
@@ -432,7 +492,7 @@ export default function ApplicationDetailPage() {
                   </p>
 
                   <p className="mt-1.5 text-sm font-medium text-slate-800">
-                    {application.location}
+                    {application.location || "Not set"}
                   </p>
                 </div>
               </div>
@@ -449,7 +509,7 @@ export default function ApplicationDetailPage() {
               </div>
 
               <p className="mt-5 text-sm font-medium text-slate-800">
-                {application.contactPerson}
+                {application.contactPerson || "No contact added"}
               </p>
 
               <p className="mt-1 text-xs text-slate-500">
