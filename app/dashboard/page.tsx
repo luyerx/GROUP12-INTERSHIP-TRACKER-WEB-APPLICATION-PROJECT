@@ -1,5 +1,6 @@
 "use client";
 
+<<<<<<< HEAD
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -10,11 +11,18 @@ import {
   Clock3,
 } from "lucide-react";
 
+=======
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { BriefcaseBusiness, CalendarClock, CircleCheckBig, Clock3 } from "lucide-react";
+import type { Application } from "@/lib/application";
+>>>>>>> c32dc60 (Complete database setup and improve frontend)
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import StatCard from "@/components/dashboard/StatCard";
 import ApplicationPipeline from "@/components/dashboard/ApplicationPipeline";
 import UpcomingTasks from "@/components/dashboard/UpcomingTasks";
 import RecentApplications from "@/components/dashboard/RecentApplications";
+<<<<<<< HEAD
 
 type Application = {
   id: number;
@@ -150,3 +158,15 @@ export default function DashboardPage() {
     </DashboardLayout>
   );
 }
+=======
+
+export default function DashboardPage() {
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [error, setError] = useState("");
+  const [today] = useState(() => new Date());
+  useEffect(() => { fetch("/api/applications").then(async (response) => { const result = await response.json(); if (!response.ok) throw new Error(result.message); setApplications(result.data); }).catch(() => setError("Dashboard data could not be loaded.")); }, []);
+  const deadlineCutoff = today.getTime() + 14 * 24 * 60 * 60 * 1000;
+  const upcoming = applications.filter((item) => { const time = new Date(`${item.deadline}T23:59:59`).getTime(); return item.deadline && time >= today.getTime() && time <= deadlineCutoff; }).length;
+  return <DashboardLayout><div><p className="text-sm text-slate-500">{today.toLocaleDateString("en-NZ", { weekday: "long", day: "numeric", month: "long" })}</p><div className="mt-2 flex items-start justify-between gap-6"><div><h1 className="text-2xl font-semibold tracking-tight text-slate-950">Dashboard</h1><p className="mt-1 text-sm text-slate-500">Applications, interviews, and deadlines.</p></div><Link href="/applications/new" className="rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">Add application</Link></div>{error && <p className="mt-5 rounded-md bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}<div className="mt-6 grid grid-cols-2 gap-x-6 lg:grid-cols-4"><StatCard title="Applications" value={applications.length} helper="Total" icon={BriefcaseBusiness}/><StatCard title="Interviews" value={applications.filter((item) => item.status === "Interview").length} helper="Current" icon={CalendarClock}/><StatCard title="Offers" value={applications.filter((item) => item.status === "Offer").length} helper="Current" icon={CircleCheckBig}/><StatCard title="Deadlines" value={upcoming} helper="Next 14 days" icon={Clock3}/></div></div><div className="mt-8 grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_0.85fr]"><ApplicationPipeline applications={applications}/><UpcomingTasks applications={applications}/></div><div className="mt-5"><RecentApplications applications={applications}/></div></DashboardLayout>;
+}
+>>>>>>> c32dc60 (Complete database setup and improve frontend)

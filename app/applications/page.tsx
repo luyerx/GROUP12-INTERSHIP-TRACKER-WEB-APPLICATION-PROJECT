@@ -25,7 +25,7 @@ type ApplicationStatus =
   | "Withdrawn";
 
 type Application = {
-  id: number;
+  id: string;
   organisation: string;
   roleTitle: string;
   location: string;
@@ -271,14 +271,14 @@ export default function ApplicationsPage() {
 
                       <td className="px-6 py-4">
                         <span className="text-sm text-slate-600">
-                          {new Date(application.deadline).toLocaleDateString(
+                          {application.deadline ? new Date(`${application.deadline}T00:00:00`).toLocaleDateString(
                             "en-NZ",
                             {
                               day: "numeric",
                               month: "short",
                               year: "numeric",
                             }
-                          )}
+                          ) : "Not set"}
                         </span>
                       </td>
 

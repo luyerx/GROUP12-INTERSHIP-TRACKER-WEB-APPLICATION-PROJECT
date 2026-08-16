@@ -1,19 +1,27 @@
+<<<<<<< HEAD
 import {
   applications,
   getNextApplicationId,
   isApplicationStatus,
   type Application,
 } from "@/lib/applicationsStore";
+=======
+import { applicationInputSchema } from "@/lib/application";
+import { createApplication, listApplications } from "@/lib/applicationsRepository";
+>>>>>>> c32dc60 (Complete database setup and improve frontend)
 
 export async function GET() {
-  return Response.json({
-    success: true,
-    data: applications,
-  });
+  try {
+    return Response.json({ success: true, data: await listApplications() });
+  } catch (error) {
+    console.error("List applications error:", error);
+    return Response.json({ success: false, message: "Unable to load applications." }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
   try {
+<<<<<<< HEAD
     const body = await request.json();
 
     // Organisation and role title are required.
@@ -84,3 +92,16 @@ export async function POST(request: Request) {
     );
   }
 }
+=======
+    const parsed = applicationInputSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return Response.json({ success: false, message: parsed.error.issues[0]?.message || "Invalid application data." }, { status: 400 });
+    }
+    const application = await createApplication(parsed.data);
+    return Response.json({ success: true, message: "Application created successfully.", data: application }, { status: 201 });
+  } catch (error) {
+    console.error("Create application error:", error);
+    return Response.json({ success: false, message: "Unable to create application." }, { status: 500 });
+  }
+}
+>>>>>>> c32dc60 (Complete database setup and improve frontend)

@@ -181,13 +181,13 @@ export default function ApplicationDetailPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
+            <Link
+              href="/ai-assistant"
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
             >
               <Sparkles className="h-4 w-4" />
               AI summary
-            </button>
+            </Link>
 
             <Link
               href={`/applications/${id}/edit`}
@@ -378,12 +378,12 @@ export default function ApplicationDetailPage() {
                 using the saved role description.
               </p>
 
-              <button
-                type="button"
+              <Link
+                href="/ai-assistant"
                 className="mt-5 w-full rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-slate-100"
               >
                 Open AI assistant
-              </button>
+              </Link>
             </section>
           </div>
         </div>

@@ -1,18 +1,19 @@
+<<<<<<< HEAD
 import {
   applications,
   isApplicationStatus,
 } from "@/lib/applicationsStore";
+=======
+import { applicationInputSchema } from "@/lib/application";
+import { deleteApplication, getApplication, updateApplication } from "@/lib/applicationsRepository";
+>>>>>>> c32dc60 (Complete database setup and improve frontend)
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const applicationId = Number(id);
-
-  const application = applications.find(
-    (item) => item.id === applicationId
-  );
+  const application = await getApplication(id);
 
   if (!application) {
     return Response.json(
@@ -34,6 +35,7 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+<<<<<<< HEAD
   try {
     const { id } = await params;
     const applicationId = Number(id);
@@ -110,6 +112,23 @@ export async function PUT(
       { status: 500 }
     );
   }
+=======
+  const { id } = await params;
+  const parsed = applicationInputSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return Response.json({ success: false, message: parsed.error.issues[0]?.message || "Invalid application data." }, { status: 400 });
+  }
+  const application = await updateApplication(id, parsed.data);
+  if (!application) {
+    return Response.json({ success: false, message: "Application not found." }, { status: 404 });
+  }
+
+  return Response.json({
+    success: true,
+    message: "Application updated successfully.",
+    data: application,
+  });
+>>>>>>> c32dc60 (Complete database setup and improve frontend)
 }
 
 export async function DELETE(
@@ -117,13 +136,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const applicationId = Number(id);
-
-  const applicationIndex = applications.findIndex(
-    (item) => item.id === applicationId
-  );
-
-  if (applicationIndex === -1) {
+  const deletedApplication = await deleteApplication(id);
+  if (!deletedApplication) {
     return Response.json(
       {
         success: false,
@@ -133,11 +147,14 @@ export async function DELETE(
     );
   }
 
+<<<<<<< HEAD
   const deletedApplication = applications.splice(
     applicationIndex,
     1
   )[0];
 
+=======
+>>>>>>> c32dc60 (Complete database setup and improve frontend)
   return Response.json({
     success: true,
     message: "Application deleted successfully.",
