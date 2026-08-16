@@ -1,12 +1,43 @@
-const pipelineData = [
-  { label: "Interested", value: 2, percentage: 17 },
-  { label: "Preparing", value: 2, percentage: 17 },
-  { label: "Applied", value: 4, percentage: 33 },
-  { label: "Interview", value: 3, percentage: 25 },
-  { label: "Offer", value: 1, percentage: 8 },
+type Application = {
+  id: number;
+  status: string;
+};
+
+type ApplicationPipelineProps = {
+  applications: Application[];
+};
+
+const pipelineStatuses = [
+  "Interested",
+  "Preparing",
+  "Applied",
+  "Interview",
+  "Offer",
 ];
 
-export default function ApplicationPipeline() {
+export default function ApplicationPipeline({
+  applications,
+}: ApplicationPipelineProps) {
+  const totalApplications = applications.length;
+
+  // Calculate the number and percentage of applications at each stage.
+  const pipelineData = pipelineStatuses.map((status) => {
+    const value = applications.filter(
+      (application) => application.status === status
+    ).length;
+
+    const percentage =
+      totalApplications === 0
+        ? 0
+        : Math.round((value / totalApplications) * 100);
+
+    return {
+      label: status,
+      value,
+      percentage,
+    };
+  });
+
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-start justify-between gap-4">
@@ -21,7 +52,7 @@ export default function ApplicationPipeline() {
         </div>
 
         <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
-          12 total
+          {totalApplications} total
         </span>
       </div>
 
