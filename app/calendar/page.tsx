@@ -1,23 +1,57 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import {
+  AlertCircle,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   Clock3,
+  LoaderCircle,
   MapPin,
   Pencil,
   Plus,
+  RefreshCw,
   Trash2,
   X,
 } from "lucide-react";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
-type EventType = "deadline" | "interview" | "reminder";
+type EventType =
+  | "deadline"
+  | "interview"
+  | "reminder";
+
+type ApplicationStatus =
+  | "Interested"
+  | "Preparing"
+  | "Applied"
+  | "Interview"
+  | "Offer"
+  | "Rejected"
+  | "Withdrawn";
+
+type Application = {
+  id: number;
+  organisation: string;
+  roleTitle: string;
+  location: string;
+  deadline: string;
+  status: ApplicationStatus;
+};
+
+type ApplicationsApiResponse = {
+  success: boolean;
+  data?: Application[];
+  message?: string;
+};
 
 type CalendarEvent = {
   id: number;
@@ -31,67 +65,32 @@ type CalendarEvent = {
   notes?: string;
 };
 
-const initialEvents: CalendarEvent[] = [
-  {
-    id: 1,
-    applicationId: 1,
-    type: "deadline",
-    title: "Application deadline",
-    organisation: "Google",
-    date: "2026-08-18",
-  },
-  {
-    id: 2,
-    applicationId: 2,
-    type: "interview",
-    title: "Technical interview",
-    organisation: "Microsoft",
-    date: "2026-08-20",
-    time: "10:30 AM",
-    location: "Microsoft Teams",
-    notes:
-      "Review data structures, algorithms, and recent software engineering projects before the interview.",
-  },
-  {
-    id: 3,
-    applicationId: 3,
-    type: "deadline",
-    title: "Application deadline",
-    organisation: "Xero",
-    date: "2026-08-22",
-  },
-  {
-    id: 4,
-    applicationId: 4,
-    type: "deadline",
-    title: "Application deadline",
-    organisation: "Datacom",
-    date: "2026-08-25",
-  },
-  {
-    id: 5,
-    applicationId: 5,
-    type: "interview",
-    title: "Behavioural interview",
-    organisation: "Canva",
-    date: "2026-08-27",
-    time: "2:00 PM",
-    location: "Zoom",
-    notes:
-      "Prepare examples about teamwork, communication, problem solving, and handling challenges.",
-  },
-];
+const eventStyles: Record<
+  EventType,
+  string
+> = {
+  deadline:
+    "bg-rose-50 text-rose-700 ring-rose-600/20",
 
-const eventStyles: Record<EventType, string> = {
-  deadline: "bg-rose-50 text-rose-700 ring-rose-600/20",
-  interview: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  reminder: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  interview:
+    "bg-blue-50 text-blue-700 ring-blue-600/20",
+
+  reminder:
+    "bg-amber-50 text-amber-700 ring-amber-600/20",
 };
 
-const eventIconStyles: Record<EventType, string> = {
-  deadline: "bg-rose-50 text-rose-600",
-  interview: "bg-blue-50 text-blue-600",
-  reminder: "bg-amber-50 text-amber-600",
+const eventIconStyles: Record<
+  EventType,
+  string
+> = {
+  deadline:
+    "bg-rose-50 text-rose-600",
+
+  interview:
+    "bg-blue-50 text-blue-600",
+
+  reminder:
+    "bg-amber-50 text-amber-600",
 };
 
 const monthNames = [
@@ -109,354 +108,892 @@ const monthNames = [
   "December",
 ];
 
-const weekdayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const weekdayNames = [
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+  "Sun",
+];
+
+function convertDeadlineToDateKey(
+  deadline: string
+) {
+  if (!deadline) {
+    return null;
+  }
+
+  /*
+   * Already YYYY-MM-DD
+   */
+  const isoMatch = deadline.match(
+    /^(\d{4})-(\d{2})-(\d{2})$/
+  );
+
+  if (isoMatch) {
+    return deadline;
+  }
+
+  /*
+   * DD/MM/YYYY
+   */
+  const nzMatch = deadline.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/
+  );
+
+  if (nzMatch) {
+    const [, day, month, year] =
+      nzMatch;
+
+    return `${year}-${month.padStart(
+      2,
+      "0"
+    )}-${day.padStart(2, "0")}`;
+  }
+
+  return null;
+}
+
+function formatDateKey(
+  date: Date
+) {
+  const year =
+    date.getFullYear();
+
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatDisplayDate(
+  date: string,
+  longMonth = false
+) {
+  return new Date(
+    `${date}T00:00:00`
+  ).toLocaleDateString("en-NZ", {
+    day: "numeric",
+    month: longMonth
+      ? "long"
+      : "short",
+    year: "numeric",
+  });
+}
 
 export default function CalendarPage() {
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1));
+  const today = new Date();
 
-  const [events, setEvents] =
-    useState<CalendarEvent[]>(initialEvents);
-
-  const [selectedEvent, setSelectedEvent] =
-    useState<CalendarEvent | null>(null);
-
-  const [editingEventId, setEditingEventId] =
-    useState<number | null>(null);
-
-  const [showEventForm, setShowEventForm] =
-    useState(false);
-
-  const [formMode, setFormMode] =
-    useState<"create" | "edit">("create");
-
-  const [showDeleteModal, setShowDeleteModal] =
-    useState(false);
-
-  const [isSavingEvent, setIsSavingEvent] =
-    useState(false);
-
-  const [isDeletingEvent, setIsDeletingEvent] =
-    useState(false);
-
-  const [eventType, setEventType] =
-    useState<EventType>("deadline");
-
-  const [organisation, setOrganisation] =
-    useState("");
-
-  const [applicationId, setApplicationId] =
-    useState("1");
-
-  const [eventTitle, setEventTitle] =
-    useState("");
-
-  const [eventDate, setEventDate] =
-    useState("");
-
-  const [eventTime, setEventTime] =
-    useState("");
-
-  const [eventLocation, setEventLocation] =
-    useState("");
-
-  const [eventNotes, setEventNotes] =
-    useState("");
-
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth();
-
-  const calendarDays = useMemo(() => {
-    const firstDay = new Date(
-      currentYear,
-      currentMonth,
+  const [
+    currentDate,
+    setCurrentDate,
+  ] = useState(
+    new Date(
+      today.getFullYear(),
+      today.getMonth(),
       1
+    )
+  );
+
+  const [
+    applications,
+    setApplications,
+  ] = useState<Application[]>([]);
+
+  const [
+    manualEvents,
+    setManualEvents,
+  ] =
+    useState<CalendarEvent[]>([]);
+
+  const [
+    isLoadingApplications,
+    setIsLoadingApplications,
+  ] = useState(true);
+
+  const [
+    applicationsError,
+    setApplicationsError,
+  ] = useState("");
+
+  const [
+    selectedEvent,
+    setSelectedEvent,
+  ] =
+    useState<CalendarEvent | null>(
+      null
     );
 
-    const lastDay = new Date(
-      currentYear,
-      currentMonth + 1,
-      0
+  const [
+    editingEventId,
+    setEditingEventId,
+  ] =
+    useState<number | null>(
+      null
     );
 
-    const daysInMonth = lastDay.getDate();
+  const [
+    showEventForm,
+    setShowEventForm,
+  ] = useState(false);
 
-    const firstWeekday =
-      firstDay.getDay() === 0
-        ? 6
-        : firstDay.getDay() - 1;
+  const [
+    formMode,
+    setFormMode,
+  ] =
+    useState<
+      "create" | "edit"
+    >("create");
 
-    const previousMonthLastDay = new Date(
-      currentYear,
-      currentMonth,
-      0
-    ).getDate();
+  const [
+    showDeleteModal,
+    setShowDeleteModal,
+  ] = useState(false);
 
-    const days: {
-      date: Date;
-      currentMonth: boolean;
-    }[] = [];
+  const [
+    isSavingEvent,
+    setIsSavingEvent,
+  ] = useState(false);
 
-    for (
-      let index = firstWeekday - 1;
-      index >= 0;
-      index--
-    ) {
-      days.push({
-        date: new Date(
-          currentYear,
-          currentMonth - 1,
-          previousMonthLastDay - index
-        ),
-        currentMonth: false,
-      });
-    }
+  const [
+    isDeletingEvent,
+    setIsDeletingEvent,
+  ] = useState(false);
 
-    for (
-      let day = 1;
-      day <= daysInMonth;
-      day++
-    ) {
-      days.push({
-        date: new Date(
-          currentYear,
-          currentMonth,
-          day
-        ),
-        currentMonth: true,
-      });
-    }
-
-    while (days.length < 42) {
-      const day =
-        days.length -
-        (firstWeekday + daysInMonth) +
-        1;
-
-      days.push({
-        date: new Date(
-          currentYear,
-          currentMonth + 1,
-          day
-        ),
-        currentMonth: false,
-      });
-    }
-
-    return days;
-  }, [currentYear, currentMonth]);
-
-  const upcomingEvents = useMemo(() => {
-    return [...events]
-      .sort(
-        (a, b) =>
-          new Date(a.date).getTime() -
-          new Date(b.date).getTime()
-      )
-      .slice(0, 6);
-  }, [events]);
-
-  const formatDateKey = (date: Date) => {
-    const year = date.getFullYear();
-
-    const month = String(
-      date.getMonth() + 1
-    ).padStart(2, "0");
-
-    const day = String(
-      date.getDate()
-    ).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-  };
-
-  const resetEventForm = () => {
-    setEventType("deadline");
-    setOrganisation("");
-    setApplicationId("1");
-    setEventTitle("");
-    setEventDate("");
-    setEventTime("");
-    setEventLocation("");
-    setEventNotes("");
-  };
-
-  const openCreateEvent = () => {
-    resetEventForm();
-    setEditingEventId(null);
-    setFormMode("create");
-    setShowEventForm(true);
-  };
-
-    const openEditEvent = () => {
-    if (!selectedEvent) {
-        return;
-    }
-
-    setEditingEventId(selectedEvent.id);
-
-    setEventType(selectedEvent.type);
-    setOrganisation(selectedEvent.organisation);
-    setApplicationId(String(selectedEvent.applicationId));
-    setEventTitle(selectedEvent.title);
-    setEventDate(selectedEvent.date);
-    setEventTime(selectedEvent.time ?? "");
-    setEventLocation(selectedEvent.location ?? "");
-    setEventNotes(selectedEvent.notes ?? "");
-
-    setFormMode("edit");
-    setShowEventForm(true);
-    };
-
-  const closeEventForm = () => {
-    if (isSavingEvent) {
-      return;
-    }
-
-    setShowEventForm(false);
-    setEditingEventId(null);
-    resetEventForm();
-  };
-
-  const handleSaveEvent = async () => {
-    if (
-      !organisation.trim() ||
-      !eventDate.trim()
-    ) {
-      return;
-    }
-
-    setIsSavingEvent(true);
-
-    // Temporary simulated save.
-    // Later this will be replaced with POST/PATCH API requests.
-    await new Promise((resolve) =>
-      setTimeout(resolve, 700)
+  const [
+    eventType,
+    setEventType,
+  ] =
+    useState<EventType>(
+      "interview"
     );
 
-    const eventData = {
-      applicationId: Number(applicationId),
-      type: eventType,
-      title:
-        eventTitle.trim() ||
-        (eventType === "deadline"
-          ? "Application deadline"
-          : eventType === "interview"
-            ? "Interview"
-            : "Reminder"),
-      organisation: organisation.trim(),
-      date: eventDate.trim(),
-      time:
-        eventTime.trim() || undefined,
-      location:
-        eventLocation.trim() || undefined,
-      notes:
-        eventNotes.trim() || undefined,
-    };
+  const [
+    organisation,
+    setOrganisation,
+  ] = useState("");
 
-    if (
-      formMode === "edit" &&
-      editingEventId !== null
-    ) {
-      setEvents((current) =>
-        current.map((event) =>
-          event.id === editingEventId
-            ? {
-                ...event,
-                ...eventData,
+  const [
+    applicationId,
+    setApplicationId,
+  ] = useState("");
+
+  const [
+    eventTitle,
+    setEventTitle,
+  ] = useState("");
+
+  const [
+    eventDate,
+    setEventDate,
+  ] = useState("");
+
+  const [
+    eventTime,
+    setEventTime,
+  ] = useState("");
+
+  const [
+    eventLocation,
+    setEventLocation,
+  ] = useState("");
+
+  const [
+    eventNotes,
+    setEventNotes,
+  ] = useState("");
+
+  const currentYear =
+    currentDate.getFullYear();
+
+  const currentMonth =
+    currentDate.getMonth();
+
+  /*
+   * Load applications from the real API.
+   */
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadApplications =
+      async () => {
+        try {
+          const response =
+            await fetch(
+              "/api/applications",
+              {
+                method: "GET",
+                cache:
+                  "no-store",
               }
-            : event
-        )
-      );
-    } else {
-      const newEvent: CalendarEvent = {
-        id: Date.now(),
-        ...eventData,
+            );
+
+          const result: ApplicationsApiResponse =
+            await response.json();
+
+          if (
+            !response.ok ||
+            !result.success
+          ) {
+            throw new Error(
+              result.message ||
+                "Failed to load applications."
+            );
+          }
+
+          if (!cancelled) {
+            setApplications(
+              Array.isArray(
+                result.data
+              )
+                ? result.data
+                : []
+            );
+          }
+        } catch (error) {
+          console.error(
+            "Calendar application load error:",
+            error
+          );
+
+          if (!cancelled) {
+            setApplicationsError(
+              error instanceof
+                Error
+                ? error.message
+                : "Unable to load application deadlines."
+            );
+          }
+        } finally {
+          if (!cancelled) {
+            setIsLoadingApplications(
+              false
+            );
+          }
+        }
       };
 
-      setEvents((current) => [
-        ...current,
-        newEvent,
-      ]);
-    }
+    void loadApplications();
 
-    const selectedDate = new Date(
-      `${eventDate}T00:00:00`
-    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-    setCurrentDate(
-      new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        1
-      )
-    );
+  /*
+   * Application deadlines become
+   * automatic calendar events.
+   */
+  const deadlineEvents =
+    useMemo(() => {
+      return applications.flatMap(
+        (application) => {
+          const date =
+            convertDeadlineToDateKey(
+              application.deadline
+            );
 
-    if (
-    formMode === "edit" &&
-    editingEventId !== null
-    ) {
-    setSelectedEvent({
-        id: editingEventId,
-        ...eventData,
-    });
-    }
+          if (!date) {
+            return [];
+          }
 
-    setIsSavingEvent(false);
-    setShowEventForm(false);
-    setEditingEventId(null);
-    resetEventForm();
-  };
+          const event: CalendarEvent =
+            {
+              /*
+               * Negative IDs separate
+               * automatic application
+               * deadlines from manual
+               * events.
+               */
+              id: -application.id,
 
-  const handleDeleteEvent = async () => {
-    if (!selectedEvent) {
-      return;
-    }
+              applicationId:
+                application.id,
 
-    setIsDeletingEvent(true);
+              type: "deadline",
 
-    // Temporary simulated delete.
-    // Later this will be replaced with DELETE /api/events/:id.
-    await new Promise((resolve) =>
-      setTimeout(resolve, 700)
-    );
+              title:
+                "Application deadline",
 
-    setEvents((current) =>
-      current.filter(
-        (event) =>
-          event.id !== selectedEvent.id
-      )
-    );
+              organisation:
+                application.organisation,
 
-    setIsDeletingEvent(false);
-    setShowDeleteModal(false);
-    setSelectedEvent(null);
-  };
+              date,
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(
-      new Date(
-        currentYear,
-        currentMonth - 1,
-        1
-      )
-    );
-  };
+              location:
+                application.location ||
+                undefined,
+            };
 
-  const goToNextMonth = () => {
-    setCurrentDate(
-      new Date(
-        currentYear,
-        currentMonth + 1,
-        1
-      )
-    );
-  };
+          return [event];
+        }
+      );
+    }, [applications]);
 
-  const goToToday = () => {
-    setCurrentDate(
-      new Date(2026, 7, 1)
-    );
-  };
+  /*
+   * Combined calendar source.
+   */
+  const events = useMemo(
+    () => [
+      ...deadlineEvents,
+      ...manualEvents,
+    ],
+    [
+      deadlineEvents,
+      manualEvents,
+    ]
+  );
+
+  const calendarDays =
+    useMemo(() => {
+      const firstDay =
+        new Date(
+          currentYear,
+          currentMonth,
+          1
+        );
+
+      const lastDay =
+        new Date(
+          currentYear,
+          currentMonth + 1,
+          0
+        );
+
+      const daysInMonth =
+        lastDay.getDate();
+
+      const firstWeekday =
+        firstDay.getDay() === 0
+          ? 6
+          : firstDay.getDay() -
+            1;
+
+      const previousMonthLastDay =
+        new Date(
+          currentYear,
+          currentMonth,
+          0
+        ).getDate();
+
+      const days: {
+        date: Date;
+        currentMonth: boolean;
+      }[] = [];
+
+      for (
+        let index =
+          firstWeekday - 1;
+        index >= 0;
+        index--
+      ) {
+        days.push({
+          date: new Date(
+            currentYear,
+            currentMonth - 1,
+            previousMonthLastDay -
+              index
+          ),
+
+          currentMonth: false,
+        });
+      }
+
+      for (
+        let day = 1;
+        day <= daysInMonth;
+        day++
+      ) {
+        days.push({
+          date: new Date(
+            currentYear,
+            currentMonth,
+            day
+          ),
+
+          currentMonth: true,
+        });
+      }
+
+      while (
+        days.length < 42
+      ) {
+        const day =
+          days.length -
+          (firstWeekday +
+            daysInMonth) +
+          1;
+
+        days.push({
+          date: new Date(
+            currentYear,
+            currentMonth + 1,
+            day
+          ),
+
+          currentMonth: false,
+        });
+      }
+
+      return days;
+    }, [
+      currentYear,
+      currentMonth,
+    ]);
+
+  const upcomingEvents =
+    useMemo(() => {
+      const todayKey =
+        formatDateKey(
+          new Date()
+        );
+
+      return [...events]
+        .filter(
+          (event) =>
+            event.date >=
+            todayKey
+        )
+        .sort(
+          (a, b) =>
+            new Date(
+              `${a.date}T00:00:00`
+            ).getTime() -
+            new Date(
+              `${b.date}T00:00:00`
+            ).getTime()
+        )
+        .slice(0, 6);
+    }, [events]);
+
+  const resetEventForm =
+    () => {
+      const firstApplication =
+        applications[0];
+
+      setEventType(
+        "interview"
+      );
+
+      setApplicationId(
+        firstApplication
+          ? String(
+              firstApplication.id
+            )
+          : ""
+      );
+
+      setOrganisation(
+        firstApplication
+          ? firstApplication.organisation
+          : ""
+      );
+
+      setEventTitle("");
+      setEventDate("");
+      setEventTime("");
+      setEventLocation("");
+      setEventNotes("");
+    };
+
+  const openCreateEvent =
+    () => {
+      resetEventForm();
+
+      setEditingEventId(
+        null
+      );
+
+      setFormMode("create");
+
+      setShowEventForm(
+        true
+      );
+    };
+
+  const openEditEvent =
+    () => {
+      if (
+        !selectedEvent
+      ) {
+        return;
+      }
+
+      /*
+       * Automatic deadlines cannot
+       * be edited directly.
+       */
+      if (
+        selectedEvent.type ===
+          "deadline" &&
+        selectedEvent.id < 0
+      ) {
+        return;
+      }
+
+      setEditingEventId(
+        selectedEvent.id
+      );
+
+      setEventType(
+        selectedEvent.type
+      );
+
+      setOrganisation(
+        selectedEvent.organisation
+      );
+
+      setApplicationId(
+        String(
+          selectedEvent.applicationId
+        )
+      );
+
+      setEventTitle(
+        selectedEvent.title
+      );
+
+      setEventDate(
+        selectedEvent.date
+      );
+
+      setEventTime(
+        selectedEvent.time ?? ""
+      );
+
+      setEventLocation(
+        selectedEvent.location ??
+          ""
+      );
+
+      setEventNotes(
+        selectedEvent.notes ?? ""
+      );
+
+      setFormMode("edit");
+
+      setShowEventForm(
+        true
+      );
+    };
+
+  const closeEventForm =
+    () => {
+      if (isSavingEvent) {
+        return;
+      }
+
+      setShowEventForm(
+        false
+      );
+
+      setEditingEventId(
+        null
+      );
+
+      resetEventForm();
+    };
+
+  const handleSaveEvent =
+    async () => {
+      if (
+        !applicationId ||
+        !organisation.trim() ||
+        !eventDate.trim()
+      ) {
+        return;
+      }
+
+      setIsSavingEvent(
+        true
+      );
+
+      /*
+       * Temporary manual event save.
+       *
+       * Later:
+       * POST /api/events
+       * PUT /api/events/:id
+       */
+      await new Promise(
+        (resolve) =>
+          setTimeout(
+            resolve,
+            700
+          )
+      );
+
+      const eventData = {
+        applicationId:
+          Number(
+            applicationId
+          ),
+
+        type: eventType,
+
+        title:
+          eventTitle.trim() ||
+          (eventType ===
+          "interview"
+            ? "Interview"
+            : "Reminder"),
+
+        organisation:
+          organisation.trim(),
+
+        date:
+          eventDate.trim(),
+
+        time:
+          eventTime.trim() ||
+          undefined,
+
+        location:
+          eventLocation.trim() ||
+          undefined,
+
+        notes:
+          eventNotes.trim() ||
+          undefined,
+      };
+
+      if (
+        formMode === "edit" &&
+        editingEventId !==
+          null
+      ) {
+        setManualEvents(
+          (current) =>
+            current.map(
+              (event) =>
+                event.id ===
+                editingEventId
+                  ? {
+                      ...event,
+                      ...eventData,
+                    }
+                  : event
+            )
+        );
+      } else {
+        const newEvent: CalendarEvent =
+          {
+            id: Date.now(),
+            ...eventData,
+          };
+
+        setManualEvents(
+          (current) => [
+            ...current,
+            newEvent,
+          ]
+        );
+      }
+
+      const selectedDate =
+        new Date(
+          `${eventDate}T00:00:00`
+        );
+
+      setCurrentDate(
+        new Date(
+          selectedDate.getFullYear(),
+          selectedDate.getMonth(),
+          1
+        )
+      );
+
+      if (
+        formMode === "edit" &&
+        editingEventId !==
+          null
+      ) {
+        setSelectedEvent({
+          id: editingEventId,
+          ...eventData,
+        });
+      }
+
+      setIsSavingEvent(
+        false
+      );
+
+      setShowEventForm(
+        false
+      );
+
+      setEditingEventId(
+        null
+      );
+
+      resetEventForm();
+    };
+
+  const handleDeleteEvent =
+    async () => {
+      if (
+        !selectedEvent
+      ) {
+        return;
+      }
+
+      /*
+       * Automatic deadlines cannot
+       * be deleted directly.
+       */
+      if (
+        selectedEvent.type ===
+          "deadline" &&
+        selectedEvent.id < 0
+      ) {
+        return;
+      }
+
+      setIsDeletingEvent(
+        true
+      );
+
+      /*
+       * Temporary manual delete.
+       *
+       * Later:
+       * DELETE /api/events/:id
+       */
+      await new Promise(
+        (resolve) =>
+          setTimeout(
+            resolve,
+            700
+          )
+      );
+
+      setManualEvents(
+        (current) =>
+          current.filter(
+            (event) =>
+              event.id !==
+              selectedEvent.id
+          )
+      );
+
+      setIsDeletingEvent(
+        false
+      );
+
+      setShowDeleteModal(
+        false
+      );
+
+      setSelectedEvent(
+        null
+      );
+    };
+
+  const retryApplications =
+    async () => {
+      setIsLoadingApplications(
+        true
+      );
+
+      setApplicationsError("");
+
+      try {
+        const response =
+          await fetch(
+            "/api/applications",
+            {
+              method: "GET",
+              cache:
+                "no-store",
+            }
+          );
+
+        const result: ApplicationsApiResponse =
+          await response.json();
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+          throw new Error(
+            result.message ||
+              "Failed to load applications."
+          );
+        }
+
+        setApplications(
+          Array.isArray(
+            result.data
+          )
+            ? result.data
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Calendar application load error:",
+          error
+        );
+
+        setApplicationsError(
+          error instanceof
+            Error
+            ? error.message
+            : "Unable to load application deadlines."
+        );
+      } finally {
+        setIsLoadingApplications(
+          false
+        );
+      }
+    };
+
+  const goToPreviousMonth =
+    () => {
+      setCurrentDate(
+        new Date(
+          currentYear,
+          currentMonth - 1,
+          1
+        )
+      );
+    };
+
+  const goToNextMonth =
+    () => {
+      setCurrentDate(
+        new Date(
+          currentYear,
+          currentMonth + 1,
+          1
+        )
+      );
+    };
+
+  const goToToday =
+    () => {
+      const today =
+        new Date();
+
+      setCurrentDate(
+        new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          1
+        )
+      );
+    };
+
+  const isAutomaticDeadline =
+    selectedEvent?.type ===
+      "deadline" &&
+    selectedEvent.id < 0;
 
   return (
     <DashboardLayout>
@@ -473,8 +1010,10 @@ export default function CalendarPage() {
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Keep track of application deadlines,
-              interviews, reminders, and important
+              Keep track of
+              application deadlines,
+              interviews, reminders,
+              and important
               recruitment dates.
             </p>
           </div>
@@ -482,8 +1021,15 @@ export default function CalendarPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={openCreateEvent}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+              onClick={
+                openCreateEvent
+              }
+              disabled={
+                applications.length ===
+                  0 ||
+                isLoadingApplications
+              }
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Plus className="h-4 w-4" />
               Add event
@@ -491,7 +1037,9 @@ export default function CalendarPage() {
 
             <button
               type="button"
-              onClick={goToToday}
+              onClick={
+                goToToday
+              }
               className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
             >
               Today
@@ -499,7 +1047,9 @@ export default function CalendarPage() {
 
             <button
               type="button"
-              onClick={goToPreviousMonth}
+              onClick={
+                goToPreviousMonth
+              }
               aria-label="Previous month"
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-950"
             >
@@ -508,7 +1058,9 @@ export default function CalendarPage() {
 
             <button
               type="button"
-              onClick={goToNextMonth}
+              onClick={
+                goToNextMonth
+              }
               aria-label="Next month"
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-950"
             >
@@ -516,6 +1068,62 @@ export default function CalendarPage() {
             </button>
           </div>
         </div>
+
+        {/* API status */}
+        {isLoadingApplications && (
+          <div className="mt-6 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+            <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" />
+
+            <div>
+              <p className="text-sm font-medium text-slate-700">
+                Loading application
+                deadlines...
+              </p>
+
+              <p className="mt-0.5 text-xs text-slate-400">
+                Calendar deadlines
+                are synchronised from
+                your applications.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!isLoadingApplications &&
+          applicationsError && (
+            <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-rose-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                  <AlertCircle className="h-4 w-4" />
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    Unable to load
+                    application
+                    deadlines
+                  </p>
+
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    {
+                      applicationsError
+                    }
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  void retryApplications()
+                }
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Try again
+              </button>
+            </div>
+          )}
 
         <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
           {/* Calendar */}
@@ -528,7 +1136,11 @@ export default function CalendarPage() {
 
                 <div>
                   <h2 className="text-base font-semibold text-slate-950">
-                    {monthNames[currentMonth]}{" "}
+                    {
+                      monthNames[
+                        currentMonth
+                      ]
+                    }{" "}
                     {currentYear}
                   </h2>
 
@@ -558,14 +1170,16 @@ export default function CalendarPage() {
 
             {/* Weekdays */}
             <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/70">
-              {weekdayNames.map((day) => (
-                <div
-                  key={day}
-                  className="px-2 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-400"
-                >
-                  {day}
-                </div>
-              ))}
+              {weekdayNames.map(
+                (day) => (
+                  <div
+                    key={day}
+                    className="px-2 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-400"
+                  >
+                    {day}
+                  </div>
+                )
+              )}
             </div>
 
             {/* Calendar grid */}
@@ -577,7 +1191,9 @@ export default function CalendarPage() {
                     isCurrentMonth,
                 }) => {
                   const dateKey =
-                    formatDateKey(date);
+                    formatDateKey(
+                      date
+                    );
 
                   const dayEvents =
                     events.filter(
@@ -588,11 +1204,15 @@ export default function CalendarPage() {
 
                   const isToday =
                     dateKey ===
-                    "2026-08-16";
+                    formatDateKey(
+                      new Date()
+                    );
 
                   return (
                     <div
-                      key={dateKey}
+                      key={
+                        dateKey
+                      }
                       className={`min-h-35 border-b border-r border-slate-100 p-2.5 ${
                         isCurrentMonth
                           ? "bg-white"
@@ -609,7 +1229,9 @@ export default function CalendarPage() {
                                 : "text-slate-300"
                           }`}
                         >
-                          {date.getDate()}
+                          {
+                            date.getDate()
+                          }
                         </span>
                       </div>
 
@@ -617,7 +1239,9 @@ export default function CalendarPage() {
                         {dayEvents.map(
                           (event) => (
                             <button
-                              key={event.id}
+                              key={
+                                event.id
+                              }
                               type="button"
                               onClick={() =>
                                 setSelectedEvent(
@@ -665,79 +1289,101 @@ export default function CalendarPage() {
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                Your next important dates.
+                Your next important
+                dates.
               </p>
 
               <div className="mt-5 space-y-3">
-                {upcomingEvents.map(
-                  (event) => (
-                    <button
-                      key={event.id}
-                      type="button"
-                      onClick={() =>
-                        setSelectedEvent(
-                          event
-                        )
-                      }
-                      className="block w-full rounded-xl border border-slate-100 p-4 text-left transition hover:border-slate-200 hover:bg-slate-50"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                            eventIconStyles[
-                              event.type
-                            ]
-                          }`}
-                        >
-                          {event.type ===
-                          "interview" ? (
-                            <Clock3 className="h-4 w-4" />
-                          ) : (
-                            <CalendarDays className="h-4 w-4" />
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-900">
-                            {
-                              event.organisation
-                            }
-                          </p>
-
-                          <p className="mt-1 text-xs text-slate-500">
-                            {event.title}
-                          </p>
-
-                          <p className="mt-2 text-xs font-medium text-slate-600">
-                            {new Date(
-                              `${event.date}T00:00:00`
-                            ).toLocaleDateString(
-                              "en-NZ",
-                              {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              }
+                {upcomingEvents.length >
+                0 ? (
+                  upcomingEvents.map(
+                    (event) => (
+                      <button
+                        key={
+                          event.id
+                        }
+                        type="button"
+                        onClick={() =>
+                          setSelectedEvent(
+                            event
+                          )
+                        }
+                        className="block w-full rounded-xl border border-slate-100 p-4 text-left transition hover:border-slate-200 hover:bg-slate-50"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                              eventIconStyles[
+                                event
+                                  .type
+                              ]
+                            }`}
+                          >
+                            {event.type ===
+                            "interview" ? (
+                              <Clock3 className="h-4 w-4" />
+                            ) : (
+                              <CalendarDays className="h-4 w-4" />
                             )}
-                          </p>
+                          </div>
 
-                          {event.time && (
-                            <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
-                              <Clock3 className="h-3.5 w-3.5" />
-                              {event.time}
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {
+                                event.organisation
+                              }
                             </p>
-                          )}
 
-                          {event.location && (
-                            <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
-                              <MapPin className="h-3.5 w-3.5" />
-                              {event.location}
+                            <p className="mt-1 text-xs text-slate-500">
+                              {
+                                event.title
+                              }
                             </p>
-                          )}
+
+                            <p className="mt-2 text-xs font-medium text-slate-600">
+                              {formatDisplayDate(
+                                event.date
+                              )}
+                            </p>
+
+                            {event.time && (
+                              <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
+                                <Clock3 className="h-3.5 w-3.5" />
+                                {
+                                  event.time
+                                }
+                              </p>
+                            )}
+
+                            {event.location && (
+                              <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
+                                <MapPin className="h-3.5 w-3.5" />
+                                {
+                                  event.location
+                                }
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </button>
+                      </button>
+                    )
                   )
+                ) : (
+                  <div className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center">
+                    <CalendarDays className="mx-auto h-5 w-5 text-slate-300" />
+
+                    <p className="mt-3 text-sm font-medium text-slate-700">
+                      No upcoming
+                      events
+                    </p>
+
+                    <p className="mt-1 text-xs leading-5 text-slate-400">
+                      Future deadlines,
+                      interviews, and
+                      reminders will
+                      appear here.
+                    </p>
+                  </div>
                 )}
               </div>
             </section>
@@ -746,14 +1392,19 @@ export default function CalendarPage() {
               <CalendarDays className="h-5 w-5 text-slate-300" />
 
               <h2 className="mt-4 text-base font-semibold">
-                Stay ahead of deadlines
+                Stay ahead of
+                deadlines
               </h2>
 
               <p className="mt-2 text-sm leading-6 text-slate-400">
-                Important application and
-                interview dates will appear
-                automatically once they are
-                saved to your tracker.
+                Application
+                deadlines are
+                automatically
+                synchronised from
+                your tracker.
+                Interviews and
+                reminders can be
+                added manually.
               </p>
             </section>
           </aside>
@@ -761,7 +1412,7 @@ export default function CalendarPage() {
       </div>
 
       {/* Event detail modal */}
-        {selectedEvent &&
+      {selectedEvent &&
         !showDeleteModal &&
         !showEventForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8">
@@ -769,7 +1420,9 @@ export default function CalendarPage() {
               type="button"
               aria-label="Close event details"
               onClick={() =>
-                setSelectedEvent(null)
+                setSelectedEvent(
+                  null
+                )
               }
               className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
             />
@@ -780,7 +1433,8 @@ export default function CalendarPage() {
                   <div
                     className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
                       eventIconStyles[
-                        selectedEvent.type
+                        selectedEvent
+                          .type
                       ]
                     }`}
                   >
@@ -795,18 +1449,23 @@ export default function CalendarPage() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-lg font-semibold text-slate-950">
-                        {selectedEvent.title}
+                        {
+                          selectedEvent.title
+                        }
                       </h2>
 
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
                           eventStyles[
-                            selectedEvent.type
+                            selectedEvent
+                              .type
                           ]
                         }`}
                       >
                         {selectedEvent.type
-                          .charAt(0)
+                          .charAt(
+                            0
+                          )
                           .toUpperCase() +
                           selectedEvent.type.slice(
                             1
@@ -843,15 +1502,9 @@ export default function CalendarPage() {
                     </p>
 
                     <p className="mt-2 text-sm font-medium text-slate-800">
-                      {new Date(
-                        `${selectedEvent.date}T00:00:00`
-                      ).toLocaleDateString(
-                        "en-NZ",
-                        {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        }
+                      {formatDisplayDate(
+                        selectedEvent.date,
+                        true
                       )}
                     </p>
                   </div>
@@ -870,7 +1523,8 @@ export default function CalendarPage() {
 
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                    Location / meeting link
+                    Location /
+                    meeting link
                   </p>
 
                   <p className="mt-2 flex items-center gap-2 text-sm text-slate-700">
@@ -888,13 +1542,16 @@ export default function CalendarPage() {
 
                   <div className="mt-2 rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
                     {selectedEvent.notes ||
-                      "No notes added for this event."}
+                      (isAutomaticDeadline
+                        ? "This deadline is automatically synchronised from the related application."
+                        : "No notes added for this event.")}
                   </div>
                 </div>
 
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                    Related application
+                    Related
+                    application
                   </p>
 
                   <p className="mt-2 text-sm font-medium text-slate-800">
@@ -906,38 +1563,61 @@ export default function CalendarPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 border-t border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowDeleteModal(
-                      true
-                    )
-                  }
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete event
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={openEditEvent}
-                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                  >
-                    <Pencil className="h-4 w-4" />
-                    Edit event
-                  </button>
+              {/* Automatic deadline actions */}
+              {isAutomaticDeadline ? (
+                <div className="flex flex-col gap-3 border-t border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs leading-5 text-slate-400">
+                    This deadline is
+                    managed by the
+                    related
+                    application.
+                  </p>
 
                   <Link
-                    href={`/applications/${selectedEvent.applicationId}`}
-                    className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                    href={`/applications/${selectedEvent.applicationId}/edit`}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
                   >
-                    Go to application
+                    <Pencil className="h-4 w-4" />
+                    Edit application
                   </Link>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col gap-3 border-t border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowDeleteModal(
+                        true
+                      )
+                    }
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete event
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={
+                        openEditEvent
+                      }
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Edit event
+                    </button>
+
+                    <Link
+                      href={`/applications/${selectedEvent.applicationId}`}
+                      className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                    >
+                      Go to
+                      application
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -948,8 +1628,12 @@ export default function CalendarPage() {
           <button
             type="button"
             aria-label="Close event form"
-            disabled={isSavingEvent}
-            onClick={closeEventForm}
+            disabled={
+              isSavingEvent
+            }
+            onClick={
+              closeEventForm
+            }
             className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
           />
 
@@ -957,7 +1641,8 @@ export default function CalendarPage() {
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white">
-                  {formMode === "edit" ? (
+                  {formMode ===
+                  "edit" ? (
                     <Pencil className="h-5 w-5" />
                   ) : (
                     <CalendarDays className="h-5 w-5" />
@@ -966,23 +1651,29 @@ export default function CalendarPage() {
 
                 <div>
                   <h2 className="text-lg font-semibold text-slate-950">
-                    {formMode === "edit"
+                    {formMode ===
+                    "edit"
                       ? "Edit calendar event"
                       : "Add calendar event"}
                   </h2>
 
                   <p className="mt-1 text-sm text-slate-500">
-                    {formMode === "edit"
-                      ? "Update the selected calendar event."
-                      : "Add a deadline, interview, or reminder."}
+                    {formMode ===
+                    "edit"
+                      ? "Update the selected interview or reminder."
+                      : "Add an interview or reminder related to an application."}
                   </p>
                 </div>
               </div>
 
               <button
                 type="button"
-                disabled={isSavingEvent}
-                onClick={closeEventForm}
+                disabled={
+                  isSavingEvent
+                }
+                onClick={
+                  closeEventForm
+                }
                 className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <X className="h-5 w-5" />
@@ -990,25 +1681,33 @@ export default function CalendarPage() {
             </div>
 
             <div className="space-y-5 p-6">
+              {/* Event type */}
               <div>
-                <label className="text-sm font-medium text-slate-700">
+                <label
+                  htmlFor="eventType"
+                  className="text-sm font-medium text-slate-700"
+                >
                   Event type
                 </label>
 
                 <select
-                  value={eventType}
-                  onChange={(event) =>
+                  id="eventType"
+                  value={
+                    eventType
+                  }
+                  disabled={
+                    isSavingEvent
+                  }
+                  onChange={(
+                    event
+                  ) =>
                     setEventType(
                       event.target
                         .value as EventType
                     )
                   }
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:opacity-60"
                 >
-                  <option value="deadline">
-                    Deadline
-                  </option>
-
                   <option value="interview">
                     Interview
                   </option>
@@ -1017,95 +1716,168 @@ export default function CalendarPage() {
                     Reminder
                   </option>
                 </select>
+
+                <p className="mt-2 text-xs leading-5 text-slate-400">
+                  Application
+                  deadlines are
+                  generated
+                  automatically and
+                  cannot be created
+                  manually.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                {/* Application */}
                 <div>
-                  <label className="text-sm font-medium text-slate-700">
-                    Organisation{" "}
+                  <label
+                    htmlFor="applicationId"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    Application{" "}
                     <span className="text-rose-500">
                       *
                     </span>
                   </label>
 
-                  <input
-                    type="text"
-                    value={organisation}
-                    onChange={(event) =>
-                      setOrganisation(
-                        event.target.value
-                      )
+                  <select
+                    id="applicationId"
+                    value={
+                      applicationId
                     }
-                    placeholder="e.g. Xero"
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                  />
+                    disabled={
+                      isSavingEvent
+                    }
+                    onChange={(
+                      event
+                    ) => {
+                      const value =
+                        event.target
+                          .value;
+
+                      setApplicationId(
+                        value
+                      );
+
+                      const relatedApplication =
+                        applications.find(
+                          (
+                            application
+                          ) =>
+                            String(
+                              application.id
+                            ) ===
+                            value
+                        );
+
+                      if (
+                        relatedApplication
+                      ) {
+                        setOrganisation(
+                          relatedApplication.organisation
+                        );
+                      }
+                    }}
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:opacity-60"
+                  >
+                    {applications.length >
+                    0 ? (
+                      applications.map(
+                        (
+                          application
+                        ) => (
+                          <option
+                            key={
+                              application.id
+                            }
+                            value={
+                              application.id
+                            }
+                          >
+                            {
+                              application.organisation
+                            }{" "}
+                            —{" "}
+                            {
+                              application.roleTitle
+                            }
+                          </option>
+                        )
+                      )
+                    ) : (
+                      <option value="">
+                        No
+                        applications
+                        available
+                      </option>
+                    )}
+                  </select>
                 </div>
 
+                {/* Organisation */}
                 <div>
-                  <label className="text-sm font-medium text-slate-700">
-                    Application
+                  <label
+                    htmlFor="organisation"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    Organisation
                   </label>
 
-                  <select
-                    value={applicationId}
-                    onChange={(event) =>
-                      setApplicationId(
-                        event.target.value
-                      )
+                  <input
+                    id="organisation"
+                    type="text"
+                    value={
+                      organisation
                     }
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                  >
-                    <option value="1">
-                      Application #1
-                    </option>
-
-                    <option value="2">
-                      Application #2
-                    </option>
-
-                    <option value="3">
-                      Application #3
-                    </option>
-
-                    <option value="4">
-                      Application #4
-                    </option>
-
-                    <option value="5">
-                      Application #5
-                    </option>
-                  </select>
+                    readOnly
+                    className="mt-2 w-full cursor-default rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-600 outline-none"
+                  />
                 </div>
               </div>
 
+              {/* Event title */}
               <div>
-                <label className="text-sm font-medium text-slate-700">
+                <label
+                  htmlFor="eventTitle"
+                  className="text-sm font-medium text-slate-700"
+                >
                   Event title
                 </label>
 
                 <input
+                  id="eventTitle"
                   type="text"
-                  value={eventTitle}
-                  onChange={(event) =>
+                  value={
+                    eventTitle
+                  }
+                  disabled={
+                    isSavingEvent
+                  }
+                  onChange={(
+                    event
+                  ) =>
                     setEventTitle(
-                      event.target.value
+                      event.target
+                        .value
                     )
                   }
                   placeholder={
-                    eventType === "deadline"
-                      ? "Application deadline"
-                      : eventType ===
-                          "interview"
-                        ? "Technical interview"
-                        : "Follow-up reminder"
+                    eventType ===
+                    "interview"
+                      ? "Technical interview"
+                      : "Follow-up reminder"
                   }
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:opacity-60"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                {/* Date */}
                 <div>
-                  <label className="text-sm font-medium text-slate-700">
+                  <label
+                    htmlFor="eventDate"
+                    className="text-sm font-medium text-slate-700"
+                  >
                     Date{" "}
                     <span className="text-rose-500">
                       *
@@ -1113,70 +1885,120 @@ export default function CalendarPage() {
                   </label>
 
                   <input
+                    id="eventDate"
                     type="text"
-                    value={eventDate}
-                    onChange={(event) =>
+                    inputMode="numeric"
+                    value={
+                      eventDate
+                    }
+                    disabled={
+                      isSavingEvent
+                    }
+                    onChange={(
+                      event
+                    ) =>
                       setEventDate(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     placeholder="YYYY-MM-DD"
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:opacity-60"
                   />
                 </div>
 
+                {/* Time */}
                 <div>
-                  <label className="text-sm font-medium text-slate-700">
+                  <label
+                    htmlFor="eventTime"
+                    className="text-sm font-medium text-slate-700"
+                  >
                     Time
                   </label>
 
                   <input
+                    id="eventTime"
                     type="text"
-                    value={eventTime}
-                    onChange={(event) =>
+                    value={
+                      eventTime
+                    }
+                    disabled={
+                      isSavingEvent
+                    }
+                    onChange={(
+                      event
+                    ) =>
                       setEventTime(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     placeholder="e.g. 10:30 AM"
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:opacity-60"
                   />
                 </div>
               </div>
 
+              {/* Location */}
               <div>
-                <label className="text-sm font-medium text-slate-700">
-                  Location / meeting link
+                <label
+                  htmlFor="eventLocation"
+                  className="text-sm font-medium text-slate-700"
+                >
+                  Location /
+                  meeting link
                 </label>
 
                 <input
+                  id="eventLocation"
                   type="text"
-                  value={eventLocation}
-                  onChange={(event) =>
+                  value={
+                    eventLocation
+                  }
+                  disabled={
+                    isSavingEvent
+                  }
+                  onChange={(
+                    event
+                  ) =>
                     setEventLocation(
-                      event.target.value
+                      event.target
+                        .value
                     )
                   }
                   placeholder="e.g. Zoom, Teams, Auckland CBD"
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:opacity-60"
                 />
               </div>
 
+              {/* Notes */}
               <div>
-                <label className="text-sm font-medium text-slate-700">
+                <label
+                  htmlFor="eventNotes"
+                  className="text-sm font-medium text-slate-700"
+                >
                   Notes
                 </label>
 
                 <textarea
+                  id="eventNotes"
                   rows={4}
-                  value={eventNotes}
-                  onChange={(event) =>
+                  value={
+                    eventNotes
+                  }
+                  disabled={
+                    isSavingEvent
+                  }
+                  onChange={(
+                    event
+                  ) =>
                     setEventNotes(
-                      event.target.value
+                      event.target
+                        .value
                     )
                   }
                   placeholder="Add useful preparation notes or reminders..."
-                  className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                  className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:opacity-60"
                 />
               </div>
             </div>
@@ -1184,8 +2006,12 @@ export default function CalendarPage() {
             <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-5">
               <button
                 type="button"
-                disabled={isSavingEvent}
-                onClick={closeEventForm}
+                disabled={
+                  isSavingEvent
+                }
+                onClick={
+                  closeEventForm
+                }
                 className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
@@ -1195,25 +2021,36 @@ export default function CalendarPage() {
                 type="button"
                 disabled={
                   isSavingEvent ||
+                  !applicationId ||
                   !organisation.trim() ||
                   !eventDate.trim()
                 }
-                onClick={handleSaveEvent}
+                onClick={() =>
+                  void handleSaveEvent()
+                }
                 className="inline-flex min-w-34 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {formMode === "edit" ? (
-                  <Pencil className="h-4 w-4" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
+                {isSavingEvent ? (
+                  <>
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
 
-                {isSavingEvent
-                  ? formMode === "edit"
-                    ? "Saving changes..."
-                    : "Saving..."
-                  : formMode === "edit"
-                    ? "Save changes"
-                    : "Add event"}
+                    {formMode ===
+                    "edit"
+                      ? "Saving changes..."
+                      : "Saving..."}
+                  </>
+                ) : formMode ===
+                  "edit" ? (
+                  <>
+                    <Pencil className="h-4 w-4" />
+                    Save changes
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4" />
+                    Add event
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -1222,12 +2059,15 @@ export default function CalendarPage() {
 
       {/* Delete confirmation modal */}
       {selectedEvent &&
-        showDeleteModal && (
+        showDeleteModal &&
+        !isAutomaticDeadline && (
           <div className="fixed inset-0 z-60 flex items-center justify-center px-4">
             <button
               type="button"
               aria-label="Close delete confirmation"
-              disabled={isDeletingEvent}
+              disabled={
+                isDeletingEvent
+              }
               onClick={() =>
                 setShowDeleteModal(
                   false
@@ -1246,9 +2086,12 @@ export default function CalendarPage() {
               </h2>
 
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                You are about to delete{" "}
+                You are about to
+                delete{" "}
                 <span className="font-medium text-slate-700">
-                  {selectedEvent.title}
+                  {
+                    selectedEvent.title
+                  }
                 </span>{" "}
                 for{" "}
                 <span className="font-medium text-slate-700">
@@ -1261,7 +2104,8 @@ export default function CalendarPage() {
 
               <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50/60 p-4">
                 <p className="text-xs leading-5 text-rose-700">
-                  This action cannot be undone.
+                  This action cannot
+                  be undone.
                 </p>
               </div>
 
@@ -1286,14 +2130,22 @@ export default function CalendarPage() {
                   disabled={
                     isDeletingEvent
                   }
-                  onClick={handleDeleteEvent}
+                  onClick={() =>
+                    void handleDeleteEvent()
+                  }
                   className="inline-flex min-w-32 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <Trash2 className="h-4 w-4" />
-
-                  {isDeletingEvent
-                    ? "Deleting..."
-                    : "Delete event"}
+                  {isDeletingEvent ? (
+                    <>
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4" />
+                      Delete event
+                    </>
+                  )}
                 </button>
               </div>
             </div>
