@@ -1,13 +1,17 @@
 import Link from "next/link";
-<<<<<<< HEAD
 
 import {
-  BriefcaseBusiness,
   ArrowUpRight,
+  CalendarDays,
 } from "lucide-react";
 
+import {
+  formatAppDateShort,
+  parseAppDate,
+} from "@/lib/date";
+
 type Application = {
-  id: number;
+  id: string;
   organisation: string;
   roleTitle: string;
   deadline: string;
@@ -18,47 +22,109 @@ type UpcomingTasksProps = {
   applications: Application[];
 };
 
-function formatDeadline(deadline: string) {
-  const date = new Date(`${deadline}T00:00:00`);
+function getDaysUntilDeadline(
+  deadline: string
+) {
+  const date = parseAppDate(deadline);
 
-  return date.toLocaleDateString("en-NZ", {
-    day: "numeric",
-    month: "short",
-  });
+  if (!date) {
+    return null;
+  }
+
+  const today = new Date();
+
+  today.setHours(
+    0,
+    0,
+    0,
+    0
+  );
+
+  date.setHours(
+    0,
+    0,
+    0,
+    0
+  );
+
+  const difference =
+    date.getTime() -
+    today.getTime();
+
+  return Math.ceil(
+    difference /
+      (1000 * 60 * 60 * 24)
+  );
 }
 
 export default function UpcomingTasks({
   applications,
 }: UpcomingTasksProps) {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
 
-  const fourteenDaysFromNow = new Date(today);
-  fourteenDaysFromNow.setDate(today.getDate() + 14);
+  today.setHours(
+    0,
+    0,
+    0,
+    0
+  );
 
-  // Create tasks from application deadlines within the next 14 days.
-  const upcomingTasks = applications
-    .filter((application) => {
-      if (!application.deadline) {
-        return false;
-      }
+  const fourteenDaysFromNow =
+    new Date(today);
 
-      const deadline = new Date(`${application.deadline}T00:00:00`);
+  fourteenDaysFromNow.setDate(
+    today.getDate() + 14
+  );
 
-      return deadline >= today && deadline <= fourteenDaysFromNow;
-    })
-    .sort((a, b) => {
-      const firstDeadline = new Date(
-        `${a.deadline}T00:00:00`
-      ).getTime();
+  const upcomingTasks =
+    applications
+      .filter((application) => {
+        const deadline =
+          parseAppDate(
+            application.deadline
+          );
 
-      const secondDeadline = new Date(
-        `${b.deadline}T00:00:00`
-      ).getTime();
+        if (!deadline) {
+          return false;
+        }
 
-      return firstDeadline - secondDeadline;
-    })
-    .slice(0, 3);
+        deadline.setHours(
+          0,
+          0,
+          0,
+          0
+        );
+
+        return (
+          deadline >= today &&
+          deadline <=
+            fourteenDaysFromNow
+        );
+      })
+      .sort((a, b) => {
+        const firstDeadline =
+          parseAppDate(
+            a.deadline
+          );
+
+        const secondDeadline =
+          parseAppDate(
+            b.deadline
+          );
+
+        if (
+          !firstDeadline ||
+          !secondDeadline
+        ) {
+          return 0;
+        }
+
+        return (
+          firstDeadline.getTime() -
+          secondDeadline.getTime()
+        );
+      })
+      .slice(0, 3);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -69,64 +135,97 @@ export default function UpcomingTasks({
           </h2>
 
           <p className="mt-1 text-sm text-slate-500">
-            Deadlines and actions requiring your attention.
+            Application deadlines
+            requiring your attention.
           </p>
         </div>
 
         <Link
-          href="/applications"
+          href="/calendar"
           className="flex items-center gap-1 text-sm font-medium text-slate-500 transition hover:text-slate-950"
         >
-          View all
+          View calendar
+
           <ArrowUpRight className="h-4 w-4" />
         </Link>
       </div>
 
       <div className="mt-6 divide-y divide-slate-100">
-        {upcomingTasks.map((application) => (
-          <Link
-            key={application.id}
-            href={`/applications/${application.id}`}
-            className="group flex items-center gap-4 py-4 first:pt-0 last:pb-0"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500">
-              <BriefcaseBusiness
-                className="h-4 w-4"
-                strokeWidth={1.8}
-              />
-            </div>
+        {upcomingTasks.map(
+          (application) => {
+            const daysRemaining =
+              getDaysUntilDeadline(
+                application.deadline
+              );
 
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-slate-900">
-                {application.organisation} {application.roleTitle}
-              </p>
+            return (
+              <Link
+                key={
+                  application.id
+                }
+                href={`/applications/${application.id}`}
+                className="group flex items-center gap-4 py-4 first:pt-0 last:pb-0"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 transition group-hover:bg-white">
+                  <CalendarDays
+                    className="h-4 w-4"
+                    strokeWidth={1.8}
+                  />
+                </div>
 
-              <p className="mt-1 text-xs text-slate-500">
-                Application deadline
-              </p>
-            </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-900">
+                    {
+                      application.organisation
+                    }
+                  </p>
 
-            <span className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-600">
-              {formatDeadline(application.deadline)}
-            </span>
-          </Link>
-        ))}
+                  <p className="mt-1 truncate text-xs text-slate-500">
+                    {
+                      application.roleTitle
+                    }
+                  </p>
 
-        {upcomingTasks.length === 0 && (
-          <p className="py-6 text-center text-sm text-slate-500">
-            No upcoming deadlines.
-          </p>
+                  {daysRemaining !==
+                    null && (
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      {daysRemaining ===
+                      0
+                        ? "Due today"
+                        : daysRemaining ===
+                            1
+                          ? "Due tomorrow"
+                          : `Due in ${daysRemaining} days`}
+                    </p>
+                  )}
+                </div>
+
+                <span className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-600">
+                  {formatAppDateShort(
+                    application.deadline
+                  )}
+                </span>
+              </Link>
+            );
+          }
+        )}
+
+        {upcomingTasks.length ===
+          0 && (
+          <div className="py-8 text-center">
+            <CalendarDays className="mx-auto h-5 w-5 text-slate-300" />
+
+            <p className="mt-3 text-sm font-medium text-slate-700">
+              No upcoming deadlines
+            </p>
+
+            <p className="mt-1 text-xs text-slate-400">
+              Nothing is due within
+              the next 14 days.
+            </p>
+          </div>
         )}
       </div>
     </section>
   );
 }
-=======
-import { BriefcaseBusiness } from "lucide-react";
-import type { Application } from "@/lib/application";
-
-export default function UpcomingTasks({ applications }: { applications: Application[] }) {
-  const tasks = applications.filter((item) => item.deadline && new Date(`${item.deadline}T23:59:59`) >= new Date()).sort((a, b) => a.deadline.localeCompare(b.deadline)).slice(0, 5);
-  return <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-start justify-between gap-4"><div><h2 className="text-base font-semibold text-slate-950">Upcoming deadlines</h2><p className="mt-1 text-sm text-slate-500">Applications requiring your attention.</p></div><Link href="/calendar" className="text-sm font-medium text-slate-500 hover:text-slate-950">View all</Link></div><div className="mt-6 divide-y divide-slate-100">{tasks.length ? tasks.map((task) => <Link href={`/applications/${task.id}`} key={task.id} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0"><span className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500"><BriefcaseBusiness className="h-4 w-4" /></span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-slate-900">{task.organisation} — {task.roleTitle}</span><span className="mt-1 block text-xs text-slate-500">Application deadline</span></span><span className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-600">{new Date(`${task.deadline}T00:00:00`).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}</span></Link>) : <p className="py-8 text-center text-sm text-slate-500">No upcoming deadlines.</p>}</div></section>;
-}
->>>>>>> c32dc60 (Complete database setup and improve frontend)

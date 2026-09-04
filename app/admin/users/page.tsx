@@ -1,0 +1,2 @@
+import AdminPageHeader from "@/components/admin/AdminPageHeader"; import AdminUsersTable from "@/components/admin/AdminUsersTable"; import BackendNotice from "@/components/admin/BackendNotice";
+export default function Page(){return <div><AdminPageHeader eyebrow="Account administration" title="Users" description="Review student accounts, roles, and account status across the platform."/><BackendNotice/><AdminUsersTable/></div>}
