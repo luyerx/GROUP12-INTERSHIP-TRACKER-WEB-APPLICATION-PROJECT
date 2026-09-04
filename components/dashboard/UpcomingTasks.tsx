@@ -5,8 +5,13 @@ import {
   CalendarDays,
 } from "lucide-react";
 
+import {
+  formatAppDateShort,
+  parseAppDate,
+} from "@/lib/date";
+
 type Application = {
-  id: number;
+  id: string;
   organisation: string;
   roleTitle: string;
   deadline: string;
@@ -17,85 +22,16 @@ type UpcomingTasksProps = {
   applications: Application[];
 };
 
-function parseDeadline(
-  deadline: string
-) {
-  if (!deadline) {
-    return null;
-  }
-
-  /*
-   * YYYY-MM-DD
-   */
-  const isoMatch =
-    deadline.match(
-      /^(\d{4})-(\d{2})-(\d{2})$/
-    );
-
-  if (isoMatch) {
-    const [, year, month, day] =
-      isoMatch;
-
-    return new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day)
-    );
-  }
-
-  /*
-   * DD/MM/YYYY
-   */
-  const nzMatch =
-    deadline.match(
-      /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/
-    );
-
-  if (nzMatch) {
-    const [, day, month, year] =
-      nzMatch;
-
-    return new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day)
-    );
-  }
-
-  return null;
-}
-
-function formatDeadline(
-  deadline: string
-) {
-  const date =
-    parseDeadline(deadline);
-
-  if (!date) {
-    return "—";
-  }
-
-  return date.toLocaleDateString(
-    "en-NZ",
-    {
-      day: "numeric",
-      month: "short",
-    }
-  );
-}
-
 function getDaysUntilDeadline(
   deadline: string
 ) {
-  const date =
-    parseDeadline(deadline);
+  const date = parseAppDate(deadline);
 
   if (!date) {
     return null;
   }
 
-  const today =
-    new Date();
+  const today = new Date();
 
   today.setHours(
     0,
@@ -117,10 +53,7 @@ function getDaysUntilDeadline(
 
   return Math.ceil(
     difference /
-      (1000 *
-        60 *
-        60 *
-        24)
+      (1000 * 60 * 60 * 24)
   );
 }
 
@@ -145,39 +78,37 @@ export default function UpcomingTasks({
 
   const upcomingTasks =
     applications
-      .filter(
-        (application) => {
-          const deadline =
-            parseDeadline(
-              application.deadline
-            );
-
-          if (!deadline) {
-            return false;
-          }
-
-          deadline.setHours(
-            0,
-            0,
-            0,
-            0
+      .filter((application) => {
+        const deadline =
+          parseAppDate(
+            application.deadline
           );
 
-          return (
-            deadline >= today &&
-            deadline <=
-              fourteenDaysFromNow
-          );
+        if (!deadline) {
+          return false;
         }
-      )
+
+        deadline.setHours(
+          0,
+          0,
+          0,
+          0
+        );
+
+        return (
+          deadline >= today &&
+          deadline <=
+            fourteenDaysFromNow
+        );
+      })
       .sort((a, b) => {
         const firstDeadline =
-          parseDeadline(
+          parseAppDate(
             a.deadline
           );
 
         const secondDeadline =
-          parseDeadline(
+          parseAppDate(
             b.deadline
           );
 
@@ -238,9 +169,7 @@ export default function UpcomingTasks({
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 transition group-hover:bg-white">
                   <CalendarDays
                     className="h-4 w-4"
-                    strokeWidth={
-                      1.8
-                    }
+                    strokeWidth={1.8}
                   />
                 </div>
 
@@ -272,7 +201,7 @@ export default function UpcomingTasks({
                 </div>
 
                 <span className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-600">
-                  {formatDeadline(
+                  {formatAppDateShort(
                     application.deadline
                   )}
                 </span>

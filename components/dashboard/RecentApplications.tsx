@@ -5,8 +5,10 @@ import {
   BriefcaseBusiness,
 } from "lucide-react";
 
+import { formatAppDateShort } from "@/lib/date";
+
 type Application = {
-  id: number;
+  id: string;
   organisation: string;
   roleTitle: string;
   location: string;
@@ -44,67 +46,6 @@ const statusStyles: Record<
     "bg-slate-100 text-slate-500 ring-slate-500/20",
 };
 
-function parseDeadline(
-  deadline: string
-) {
-  if (!deadline) {
-    return null;
-  }
-
-  const isoMatch =
-    deadline.match(
-      /^(\d{4})-(\d{2})-(\d{2})$/
-    );
-
-  if (isoMatch) {
-    const [, year, month, day] =
-      isoMatch;
-
-    return new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day)
-    );
-  }
-
-  const nzMatch =
-    deadline.match(
-      /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/
-    );
-
-  if (nzMatch) {
-    const [, day, month, year] =
-      nzMatch;
-
-    return new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day)
-    );
-  }
-
-  return null;
-}
-
-function formatDeadline(
-  deadline: string
-) {
-  const date =
-    parseDeadline(deadline);
-
-  if (!date) {
-    return "—";
-  }
-
-  return date.toLocaleDateString(
-    "en-NZ",
-    {
-      day: "numeric",
-      month: "short",
-    }
-  );
-}
-
 export default function RecentApplications({
   applications,
 }: RecentApplicationsProps) {
@@ -123,9 +64,8 @@ export default function RecentApplications({
           </h2>
 
           <p className="mt-1 text-sm text-slate-500">
-            Recently added
-            internship opportunities
-            in your tracker.
+            Recently added internship
+            opportunities in your tracker.
           </p>
         </div>
 
@@ -139,8 +79,7 @@ export default function RecentApplications({
         </Link>
       </div>
 
-      {recentApplications.length >
-      0 ? (
+      {recentApplications.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full min-w-180 text-left">
             <thead>
@@ -171,22 +110,16 @@ export default function RecentApplications({
 
             <tbody className="divide-y divide-slate-100">
               {recentApplications.map(
-                (
-                  application
-                ) => (
+                (application) => (
                   <tr
-                    key={
-                      application.id
-                    }
+                    key={application.id}
                     className="transition-colors hover:bg-slate-50/80"
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700">
                           {application.organisation
-                            .charAt(
-                              0
-                            )
+                            .charAt(0)
                             .toUpperCase()}
                         </div>
 
@@ -213,7 +146,7 @@ export default function RecentApplications({
                     </td>
 
                     <td className="px-6 py-4 text-sm text-slate-500">
-                      {formatDeadline(
+                      {formatAppDateShort(
                         application.deadline
                       )}
                     </td>
@@ -260,9 +193,8 @@ export default function RecentApplications({
           </h3>
 
           <p className="mt-1 max-w-sm text-xs leading-5 text-slate-500">
-            Add an internship
-            opportunity and it will
-            appear here.
+            Add an internship opportunity
+            and it will appear here.
           </p>
 
           <Link

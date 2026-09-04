@@ -39,7 +39,7 @@ type ApplicationStatus =
   | "Withdrawn";
 
 type Application = {
-  id: number;
+  id: string;
   organisation: string;
   roleTitle: string;
   location: string;
@@ -54,8 +54,8 @@ type ApplicationsApiResponse = {
 };
 
 type CalendarEvent = {
-  id: number;
-  applicationId: number;
+  id: string | number;
+  applicationId: string;
   type: EventType;
   title: string;
   organisation: string;
@@ -235,7 +235,7 @@ export default function CalendarPage() {
     editingEventId,
     setEditingEventId,
   ] =
-    useState<number | null>(
+    useState<string | number | null>(
       null
     );
 
@@ -407,12 +407,12 @@ export default function CalendarPage() {
           const event: CalendarEvent =
             {
               /*
-               * Negative IDs separate
+               * Prefixed IDs separate
                * automatic application
                * deadlines from manual
                * events.
                */
-              id: -application.id,
+              id: `deadline-${application.id}`,
 
               applicationId:
                 application.id,
@@ -633,7 +633,7 @@ export default function CalendarPage() {
       if (
         selectedEvent.type ===
           "deadline" &&
-        selectedEvent.id < 0
+        String(selectedEvent.id).startsWith("deadline-")
       ) {
         return;
       }
@@ -731,10 +731,7 @@ export default function CalendarPage() {
       );
 
       const eventData = {
-        applicationId:
-          Number(
-            applicationId
-          ),
+        applicationId,
 
         type: eventType,
 
@@ -851,7 +848,7 @@ export default function CalendarPage() {
       if (
         selectedEvent.type ===
           "deadline" &&
-        selectedEvent.id < 0
+        String(selectedEvent.id).startsWith("deadline-")
       ) {
         return;
       }
@@ -993,7 +990,7 @@ export default function CalendarPage() {
   const isAutomaticDeadline =
     selectedEvent?.type ===
       "deadline" &&
-    selectedEvent.id < 0;
+    String(selectedEvent.id).startsWith("deadline-");
 
   return (
     <DashboardLayout>

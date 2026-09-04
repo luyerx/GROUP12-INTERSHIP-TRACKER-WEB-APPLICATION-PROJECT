@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { currentUser } from "@/lib/currentUser";
 
 type ProfileData = {
   fullName: string;
@@ -36,27 +37,32 @@ type ProfileData = {
 };
 
 const initialProfile: ProfileData = {
-  fullName: "Yanzhen Cheng",
-  email: "yanzhen.cheng@example.com",
-  university: "Massey University",
-  degree: "Bachelor's Degree",
-  major: "Software Engineering",
-  graduationYear: "2026",
-  location: "Auckland, New Zealand",
+  fullName: currentUser.fullName,
+  email: currentUser.email,
+
+  university: currentUser.university,
+  degree: currentUser.degree,
+  major: currentUser.major,
+  graduationYear: currentUser.graduationYear,
+
+  location: currentUser.location,
+
   preferredRoles:
-    "Software Engineer, Frontend Developer, Full Stack Developer",
+    currentUser.preferredRoles.join(", "),
+
   preferredLocations:
-    "Auckland, Wellington, Remote",
-  skills: [
-    "JavaScript",
-    "TypeScript",
-    "React",
-    "Next.js",
-    "Tailwind CSS",
-  ],
-  emailNotifications: true,
-  deadlineReminders: true,
-  interviewReminders: true,
+    currentUser.preferredLocations.join(", "),
+
+  skills: [...currentUser.skills],
+
+  emailNotifications:
+    currentUser.notifications.email,
+
+  deadlineReminders:
+    currentUser.notifications.deadlineReminders,
+
+  interviewReminders:
+    currentUser.notifications.interviewReminders,
 };
 
 export default function ProfilePage() {

@@ -1,5 +1,5 @@
 type Application = {
-  id: number;
+  id: string;
   status: string;
 };
 

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { parseAppDate } from "@/lib/date";
 
 type ApplicationStatus =
   | "Interested"
@@ -36,7 +37,7 @@ type ApplicationStatus =
   | "Withdrawn";
 
 type Application = {
-  id: number;
+  id: string;
   organisation: string;
   roleTitle: string;
   location: string;
@@ -103,7 +104,7 @@ function normaliseApplication(
   application: Partial<Application>
 ): Application {
   return {
-    id: Number(application.id),
+    id: String(application.id ?? ""),
     organisation:
       application.organisation ?? "",
     roleTitle:
@@ -132,43 +133,24 @@ function normaliseApplication(
   };
 }
 
-function parseDeadline(
+function parseDetailDeadline(
   deadline: string
-) {
+): Date | null {
+  const parsedDate =
+    parseAppDate(deadline);
+
+  if (parsedDate) {
+    return parsedDate;
+  }
+
   if (!deadline) {
     return null;
   }
 
-  const isoMatch = deadline.match(
-    /^(\d{4})-(\d{2})-(\d{2})$/
-  );
-
-  if (isoMatch) {
-    const [, year, month, day] =
-      isoMatch;
-
-    return new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day)
-    );
-  }
-
-  const nzMatch = deadline.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/
-  );
-
-  if (nzMatch) {
-    const [, day, month, year] =
-      nzMatch;
-
-    return new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day)
-    );
-  }
-
+  /*
+   * Keep the previous fallback behaviour
+   * for other browser-readable date strings.
+   */
   const fallback =
     new Date(deadline);
 
@@ -185,9 +167,9 @@ function parseDeadline(
 
 function formatDeadline(
   deadline: string
-) {
+): string {
   const date =
-    parseDeadline(deadline);
+    parseDetailDeadline(deadline);
 
   if (!date) {
     return "Not set";
@@ -505,33 +487,17 @@ export default function ApplicationDetailPage() {
       setIsUpdatingStatus(true);
 
       try {
-        /*
-         * The current backend only supports PUT,
-         * and PUT requires organisation + roleTitle.
-         * Therefore we send the full current record.
-         */
         const response =
           await fetch(
-            `/api/applications/${id}`,
+            `/api/applications/${id}/status`,
             {
-              method: "PUT",
+              method: "PATCH",
               headers: {
                 "Content-Type":
                   "application/json",
               },
               body: JSON.stringify(
-                {
-                  organisation:
-                    application.organisation,
-                  roleTitle:
-                    application.roleTitle,
-                  location:
-                    application.location,
-                  deadline:
-                    application.deadline,
-                  status:
-                    newStatus,
-                }
+                { status: newStatus }
               ),
             }
           );

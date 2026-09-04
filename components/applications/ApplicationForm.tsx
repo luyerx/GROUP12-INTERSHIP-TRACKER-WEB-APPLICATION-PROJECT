@@ -11,7 +11,6 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   FileText,
-  Info,
   Link2,
   LoaderCircle,
   MapPin,
@@ -90,7 +89,7 @@ type ApplicationApiResponse = {
   success: boolean;
   message?: string;
   data?: {
-    id: number;
+    id: string | number;
     organisation: string;
     roleTitle: string;
     location: string;
@@ -104,9 +103,6 @@ const inputClassName =
 
 const labelClassName =
   "text-sm font-medium text-slate-700";
-
-const disabledInputClassName =
-  "mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-400 outline-none cursor-not-allowed";
 
 export default function ApplicationForm({
   mode = "create",
@@ -176,15 +172,6 @@ export default function ApplicationForm({
   ) => {
     setSubmitError("");
 
-    /*
-     * IMPORTANT:
-     *
-     * The current backend API only
-     * persists these five fields.
-     *
-     * Additional fields will be added
-     * when the backend schema is extended.
-     */
     const payload = {
       organisation:
         data.organisation.trim(),
@@ -195,10 +182,25 @@ export default function ApplicationForm({
       location:
         data.location?.trim() ?? "",
 
+      sourceLink:
+        data.sourceLink?.trim() ?? "",
+
       deadline:
         data.deadline?.trim() ?? "",
 
       status: data.status,
+
+      jobDescription:
+        data.jobDescription?.trim() ?? "",
+
+      contactPerson:
+        data.contactPerson?.trim() ?? "",
+
+      outcome:
+        data.outcome?.trim() ?? "",
+
+      notes:
+        data.notes?.trim() ?? "",
     };
 
     try {
@@ -339,32 +341,6 @@ export default function ApplicationForm({
       )}
       className="space-y-6"
     >
-      {/* Integration notice */}
-      <section className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-blue-200">
-            <Info className="h-4 w-4" />
-          </div>
-
-          <div>
-            <p className="text-sm font-semibold text-slate-900">
-              Application data
-            </p>
-
-            <p className="mt-1 text-xs leading-5 text-slate-600">
-              Core application
-              information is currently
-              connected to the backend.
-              Additional fields such as
-              job descriptions, contacts,
-              and notes will become
-              available once backend
-              support is completed.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* Basic information */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-start gap-3">
@@ -496,32 +472,31 @@ export default function ApplicationForm({
             </div>
           </div>
 
-          {/* Source link pending */}
+          {/* Source link */}
           <div>
-            <div className="flex items-center justify-between gap-3">
-              <label
-                htmlFor="sourceLink"
-                className={
-                  labelClassName
-                }
-              >
-                Source link
-              </label>
-
-              <PendingBadge />
-            </div>
+            <label htmlFor="sourceLink" className={labelClassName}>
+              Source link
+            </label>
 
             <div className="relative">
-              <Link2 className="pointer-events-none absolute left-3.5 top-1/2 mt-1 h-4 w-4 -translate-y-1/2 text-slate-300" />
+              <Link2 className="pointer-events-none absolute left-3.5 top-1/2 mt-1 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
               <input
                 id="sourceLink"
-                type="text"
-                disabled
-                placeholder="Backend support pending"
-                className={`${disabledInputClassName} pl-10`}
+                type="url"
+                disabled={isSubmitting}
+                placeholder="https://example.com/job"
+                className={`${inputClassName} pl-10`}
+                aria-invalid={Boolean(errors.sourceLink)}
+                aria-describedby={errors.sourceLink ? "sourceLink-error" : undefined}
+                {...register("sourceLink")}
               />
             </div>
+            {errors.sourceLink && (
+              <p id="sourceLink-error" className="mt-2 text-xs font-medium text-rose-600">
+                {errors.sourceLink.message}
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -621,30 +596,22 @@ export default function ApplicationForm({
           </div>
         </div>
 
-        {/* Job description pending */}
+        {/* Job description */}
         <div className="mt-5">
-          <div className="flex items-center justify-between gap-3">
-            <label
-              htmlFor="jobDescription"
-              className={
-                labelClassName
-              }
-            >
-              Job description
-            </label>
-
-            <PendingBadge />
-          </div>
+          <label htmlFor="jobDescription" className={labelClassName}>
+            Job description
+          </label>
 
           <div className="relative">
-            <FileText className="pointer-events-none absolute left-3.5 top-4 h-4 w-4 text-slate-300" />
+            <FileText className="pointer-events-none absolute left-3.5 top-4 h-4 w-4 text-slate-400" />
 
             <textarea
               id="jobDescription"
               rows={6}
-              disabled
-              placeholder="Job description storage will be enabled when backend support is available."
-              className={`${disabledInputClassName} resize-none pl-10`}
+              disabled={isSubmitting}
+              placeholder="Paste the job description or key requirements..."
+              className={`${inputClassName} resize-none pl-10`}
+              {...register("jobDescription")}
             />
           </div>
         </div>
@@ -661,22 +628,13 @@ export default function ApplicationForm({
           </div>
 
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-base font-semibold text-slate-950">
-                Additional
-                information
-              </h2>
-
-              <PendingBadge />
-            </div>
+            <h2 className="text-base font-semibold text-slate-950">
+              Additional information
+            </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              These optional fields
-              are prepared in the
-              frontend and will be
-              enabled after the
-              backend schema is
-              extended.
+              Add optional contact,
+              outcome, and personal notes.
             </p>
           </div>
         </div>
@@ -695,11 +653,10 @@ export default function ApplicationForm({
             <input
               id="contactPerson"
               type="text"
-              disabled
-              placeholder="Backend support pending"
-              className={
-                disabledInputClassName
-              }
+              disabled={isSubmitting}
+              placeholder="e.g. Hiring manager name"
+              className={inputClassName}
+              {...register("contactPerson")}
             />
           </div>
 
@@ -715,15 +672,16 @@ export default function ApplicationForm({
 
             <select
               id="outcome"
-              disabled
-              className={
-                disabledInputClassName
-              }
+              disabled={isSubmitting}
+              className={inputClassName}
+              {...register("outcome")}
             >
-              <option>
-                Backend support
-                pending
-              </option>
+              <option value="">Not recorded</option>
+              <option value="Pending">Pending</option>
+              <option value="Interview">Interview</option>
+              <option value="Offer">Offer</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Withdrawn">Withdrawn</option>
             </select>
           </div>
         </div>
@@ -741,9 +699,10 @@ export default function ApplicationForm({
           <textarea
             id="notes"
             rows={4}
-            disabled
-            placeholder="Notes storage will be enabled when backend support is available."
-            className={`${disabledInputClassName} resize-none`}
+            disabled={isSubmitting}
+            placeholder="Add preparation notes, follow-ups, or reminders..."
+            className={`${inputClassName} resize-none`}
+            {...register("notes")}
           />
         </div>
       </section>
@@ -803,13 +762,5 @@ export default function ApplicationForm({
         </button>
       </div>
     </form>
-  );
-}
-
-function PendingBadge() {
-  return (
-    <span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-amber-700 ring-1 ring-inset ring-amber-200">
-      Integration pending
-    </span>
   );
 }

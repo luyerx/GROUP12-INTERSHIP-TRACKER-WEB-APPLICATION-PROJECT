@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { parseAppDate } from "@/lib/date";
 
 type ApplicationStatus =
   | "Interested"
@@ -32,7 +33,7 @@ type ApplicationStatus =
   | "Withdrawn";
 
 type Application = {
-  id: number;
+  id: string;
   organisation: string;
   roleTitle: string;
   location: string;
@@ -46,19 +47,28 @@ type ApplicationsApiResponse = {
   message?: string;
 };
 
-const statusStyles: Record<ApplicationStatus, string> = {
+const statusStyles: Record<
+  ApplicationStatus,
+  string
+> = {
   Interested:
     "bg-slate-100 text-slate-700 ring-slate-500/20",
+
   Preparing:
     "bg-violet-50 text-violet-700 ring-violet-600/20",
+
   Applied:
     "bg-blue-50 text-blue-700 ring-blue-600/20",
+
   Interview:
     "bg-amber-50 text-amber-700 ring-amber-600/20",
+
   Offer:
     "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+
   Rejected:
     "bg-rose-50 text-rose-700 ring-rose-600/20",
+
   Withdrawn:
     "bg-slate-100 text-slate-500 ring-slate-500/20",
 };
@@ -76,127 +86,153 @@ const validStatuses: ApplicationStatus[] = [
 function normaliseApplication(
   application: Partial<Application>
 ): Application {
-  const status = validStatuses.includes(
-    application.status as ApplicationStatus
-  )
-    ? (application.status as ApplicationStatus)
-    : "Interested";
+  const status =
+    validStatuses.includes(
+      application.status as ApplicationStatus
+    )
+      ? (application.status as ApplicationStatus)
+      : "Interested";
 
   return {
-    id: Number(application.id),
-    organisation: application.organisation ?? "",
-    roleTitle: application.roleTitle ?? "",
-    location: application.location ?? "",
-    deadline: application.deadline ?? "",
+    id: String(
+      application.id ?? ""
+    ),
+
+    organisation:
+      application.organisation ?? "",
+
+    roleTitle:
+      application.roleTitle ?? "",
+
+    location:
+      application.location ?? "",
+
+    deadline:
+      application.deadline ?? "",
+
     status,
   };
 }
 
-function parseDeadline(deadline: string) {
+/*
+ * Use the shared parser first.
+ * Keep the previous browser-readable
+ * fallback behaviour for compatibility.
+ */
+function parseApplicationsDeadline(
+  deadline: string
+): Date | null {
+  const parsedDate =
+    parseAppDate(deadline);
+
+  if (parsedDate) {
+    return parsedDate;
+  }
+
   if (!deadline) {
     return null;
   }
 
-  /*
-   * Supports:
-   * YYYY-MM-DD
-   * DD/MM/YYYY
-   * Other browser-readable date strings
-   */
+  const fallbackDate =
+    new Date(deadline);
 
-  const isoMatch = deadline.match(
-    /^(\d{4})-(\d{2})-(\d{2})$/
-  );
-
-  if (isoMatch) {
-    const [, year, month, day] = isoMatch;
-
-    return new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day)
-    );
-  }
-
-  const nzMatch = deadline.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/
-  );
-
-  if (nzMatch) {
-    const [, day, month, year] = nzMatch;
-
-    return new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day)
-    );
-  }
-
-  const fallbackDate = new Date(deadline);
-
-  if (Number.isNaN(fallbackDate.getTime())) {
+  if (
+    Number.isNaN(
+      fallbackDate.getTime()
+    )
+  ) {
     return null;
   }
 
   return fallbackDate;
 }
 
-function formatDeadline(deadline: string) {
-  const date = parseDeadline(deadline);
+function formatApplicationsDeadline(
+  deadline: string
+): string {
+  const date =
+    parseApplicationsDeadline(
+      deadline
+    );
 
   if (!date) {
     return "Not set";
   }
 
-  return date.toLocaleDateString("en-NZ", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return date.toLocaleDateString(
+    "en-NZ",
+    {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }
+  );
 }
 
 export default function ApplicationsPage() {
-  const [applications, setApplications] =
-    useState<Application[]>([]);
+  const [
+    applications,
+    setApplications,
+  ] = useState<Application[]>([]);
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] =
+    useState("");
 
-  const [statusFilter, setStatusFilter] =
-    useState("All");
+  const [
+    statusFilter,
+    setStatusFilter,
+  ] = useState("All");
 
-  const [locationFilter, setLocationFilter] =
-    useState("All");
+  const [
+    locationFilter,
+    setLocationFilter,
+  ] = useState("All");
 
-  const [sortDirection, setSortDirection] =
-    useState<"asc" | "desc">("asc");
+  const [
+    sortDirection,
+    setSortDirection,
+  ] = useState<"asc" | "desc">(
+    "asc"
+  );
 
-  const [isLoading, setIsLoading] =
-    useState(true);
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(true);
 
   const [error, setError] =
     useState("");
 
   const fetchApplications =
-    async (): Promise<Application[]> => {
-      const response = await fetch(
-        "/api/applications",
-        {
-          method: "GET",
-          cache: "no-store",
-        }
-      );
+    async (): Promise<
+      Application[]
+    > => {
+      const response =
+        await fetch(
+          "/api/applications",
+          {
+            method: "GET",
+            cache: "no-store",
+          }
+        );
 
-      const result: ApplicationsApiResponse =
+      const result:
+        ApplicationsApiResponse =
         await response.json();
 
-      if (!response.ok || !result.success) {
+      if (
+        !response.ok ||
+        !result.success
+      ) {
         throw new Error(
           result.message ||
             "Failed to load applications."
         );
       }
 
-      return Array.isArray(result.data)
+      return Array.isArray(
+        result.data
+      )
         ? result.data.map(
             normaliseApplication
           )
@@ -294,7 +330,9 @@ export default function ApplicationsPage() {
   const filteredApplications =
     useMemo(() => {
       const searchText =
-        search.trim().toLowerCase();
+        search
+          .trim()
+          .toLowerCase();
 
       const filtered =
         applications.filter(
@@ -335,12 +373,12 @@ export default function ApplicationsPage() {
       return [...filtered].sort(
         (a, b) => {
           const firstDate =
-            parseDeadline(
+            parseApplicationsDeadline(
               a.deadline
             );
 
           const secondDate =
-            parseDeadline(
+            parseApplicationsDeadline(
               b.deadline
             );
 
@@ -718,7 +756,7 @@ export default function ApplicationsPage() {
                             {/* Deadline */}
                             <td className="px-6 py-4">
                               <span className="text-sm text-slate-600">
-                                {formatDeadline(
+                                {formatApplicationsDeadline(
                                   application.deadline
                                 )}
                               </span>

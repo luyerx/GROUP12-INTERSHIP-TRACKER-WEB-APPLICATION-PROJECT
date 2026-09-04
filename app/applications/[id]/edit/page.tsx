@@ -24,7 +24,7 @@ type ApplicationStatus =
   | "Withdrawn";
 
 type Application = {
-  id: number;
+  id: string;
   organisation: string;
   roleTitle: string;
   location: string;
@@ -63,7 +63,7 @@ function normaliseApplication(
     : "Interested";
 
   return {
-    id: Number(application.id),
+    id: String(application.id ?? ""),
     organisation: application.organisation ?? "",
     roleTitle: application.roleTitle ?? "",
     location: application.location ?? "",

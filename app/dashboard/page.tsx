@@ -22,6 +22,9 @@ import ApplicationPipeline from "@/components/dashboard/ApplicationPipeline";
 import UpcomingTasks from "@/components/dashboard/UpcomingTasks";
 import RecentApplications from "@/components/dashboard/RecentApplications";
 
+import { currentUser } from "@/lib/currentUser";
+import { parseAppDate } from "@/lib/date";
+
 type ApplicationStatus =
   | "Interested"
   | "Preparing"
@@ -32,7 +35,7 @@ type ApplicationStatus =
   | "Withdrawn";
 
 type Application = {
-  id: number;
+  id: string;
   organisation: string;
   roleTitle: string;
   location: string;
@@ -46,47 +49,24 @@ type ApplicationsApiResponse = {
   message?: string;
 };
 
-function parseDeadline(
+/*
+ * Use the shared application date parser first.
+ * Keep the previous fallback behaviour so the
+ * Dashboard continues to accept other valid
+ * JavaScript date strings if they appear.
+ */
+function parseDashboardDeadline(
   deadline: string
-) {
+): Date | null {
+  const parsedDate =
+    parseAppDate(deadline);
+
+  if (parsedDate) {
+    return parsedDate;
+  }
+
   if (!deadline) {
     return null;
-  }
-
-  /*
-   * YYYY-MM-DD
-   */
-  const isoMatch = deadline.match(
-    /^(\d{4})-(\d{2})-(\d{2})$/
-  );
-
-  if (isoMatch) {
-    const [, year, month, day] =
-      isoMatch;
-
-    return new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day)
-    );
-  }
-
-  /*
-   * DD/MM/YYYY
-   */
-  const nzMatch = deadline.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/
-  );
-
-  if (nzMatch) {
-    const [, day, month, year] =
-      nzMatch;
-
-    return new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day)
-    );
   }
 
   const fallback =
@@ -250,7 +230,7 @@ export default function DashboardPage() {
         applications.filter(
           (application) => {
             const deadline =
-              parseDeadline(
+              parseDashboardDeadline(
                 application.deadline
               );
 
@@ -302,7 +282,8 @@ export default function DashboardPage() {
         <div className="mt-2 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-              Welcome back, Yanzhen
+              Welcome back,{" "}
+              {currentUser.firstName}
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">

@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { adminResources } from "@/lib/adminDemoData";
+import { useAdminDemoData } from "@/lib/useAdminDemoData";
 
 type ResourceCategory =
   | "All"
@@ -31,7 +33,7 @@ type ResourceType =
   | "Template";
 
 type Resource = {
-  id: number;
+  id: string;
   title: string;
   description: string;
   category: Exclude<
@@ -44,9 +46,17 @@ type Resource = {
   url: string;
 };
 
+type AdminManagedResource = {
+  id: string;
+  title: string;
+  category: string;
+  type: string;
+  status: string;
+};
+
 const resources: Resource[] = [
   {
-    id: 1,
+    id: "resource-1",
     title:
       "How to Write a Strong Internship CV",
     description:
@@ -58,7 +68,7 @@ const resources: Resource[] = [
     url: "#",
   },
   {
-    id: 2,
+    id: "resource-2",
     title:
       "Preparing for Behavioural Interviews",
     description:
@@ -70,7 +80,7 @@ const resources: Resource[] = [
     url: "#",
   },
   {
-    id: 3,
+    id: "resource-3",
     title:
       "Internship Application Checklist",
     description:
@@ -82,7 +92,7 @@ const resources: Resource[] = [
     url: "#",
   },
   {
-    id: 4,
+    id: "resource-4",
     title:
       "Writing an Effective Cover Letter",
     description:
@@ -93,7 +103,7 @@ const resources: Resource[] = [
     url: "#",
   },
   {
-    id: 5,
+    id: "resource-5",
     title:
       "STAR Interview Response Framework",
     description:
@@ -104,7 +114,7 @@ const resources: Resource[] = [
     url: "#",
   },
   {
-    id: 6,
+    id: "resource-6",
     title:
       "Researching a Company Before Applying",
     description:
@@ -115,7 +125,7 @@ const resources: Resource[] = [
     url: "#",
   },
   {
-    id: 7,
+    id: "resource-7",
     title:
       "Graduate Career Planning Guide",
     description:
@@ -126,7 +136,7 @@ const resources: Resource[] = [
     url: "#",
   },
   {
-    id: 8,
+    id: "resource-8",
     title:
       "Technical Interview Preparation",
     description:
@@ -147,6 +157,44 @@ const categories: ResourceCategory[] = [
 ];
 
 export default function ResourcesPage() {
+  const [managedResourcesRaw] = useAdminDemoData(
+    "admin-demo-resources",
+    adminResources
+  );
+
+const managedResources =
+  managedResourcesRaw as AdminManagedResource[];
+
+    const visibleResources = useMemo<Resource[]>(
+    () => [
+      ...resources,
+      ...managedResources
+        .filter(
+          (resource) =>
+            resource.status === "Published"
+        )
+        .map(
+          (resource): Resource => ({
+            id: resource.id,
+            title: resource.title,
+            description:
+              "Published by the Internship Tracker team.",
+            category: (
+              resource.category ===
+              "CV & Cover Letters"
+                ? "CV & Cover Letter"
+                : resource.category
+            ) as Resource["category"],
+            type:
+              resource.type as ResourceType,
+            source: "Internship Tracker",
+            url: "#",
+          })
+        ),
+    ],
+    [managedResources]
+  );
+
   const [searchQuery, setSearchQuery] =
     useState("");
 
@@ -163,42 +211,45 @@ export default function ResourcesPage() {
     const query =
       searchQuery.trim().toLowerCase();
 
-    return resources.filter((resource) => {
-      const matchesSearch =
-        !query ||
-        resource.title
-          .toLowerCase()
-          .includes(query) ||
-        resource.description
-          .toLowerCase()
-          .includes(query) ||
-        resource.source
-          .toLowerCase()
-          .includes(query);
+    return visibleResources.filter(
+      (resource) => {
+        const matchesSearch =
+          !query ||
+          resource.title
+            .toLowerCase()
+            .includes(query) ||
+          resource.description
+            .toLowerCase()
+            .includes(query) ||
+          resource.source
+            .toLowerCase()
+            .includes(query);
 
-      const matchesCategory =
-        selectedCategory === "All" ||
-        resource.category ===
-          selectedCategory;
+        const matchesCategory =
+          selectedCategory === "All" ||
+          resource.category ===
+            selectedCategory;
 
-      const matchesType =
-        selectedType === "All" ||
-        resource.type === selectedType;
+        const matchesType =
+          selectedType === "All" ||
+          resource.type === selectedType;
 
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesType
-      );
-    });
+        return (
+          matchesSearch &&
+          matchesCategory &&
+          matchesType
+        );
+      }
+    );
   }, [
     searchQuery,
     selectedCategory,
     selectedType,
+    visibleResources,
   ]);
 
   const featuredResources =
-    resources.filter(
+    visibleResources.filter(
       (resource) => resource.featured
     );
 
@@ -365,8 +416,7 @@ export default function ResourcesPage() {
             </p>
           </div>
 
-          {selectedCategory !==
-            "All" && (
+          {selectedCategory !== "All" && (
             <span className="w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
               {selectedCategory}
             </span>
@@ -374,8 +424,7 @@ export default function ResourcesPage() {
         </div>
 
         {/* Resource grid */}
-        {filteredResources.length >
-        0 ? (
+        {filteredResources.length > 0 ? (
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredResources.map(
               (resource) => (
