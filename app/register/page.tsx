@@ -174,17 +174,28 @@ export default function RegisterPage() {
       setRegisterError("");
 
       try {
-        /*
-         * Temporary registration simulation.
-         * Later this will be replaced
-         * with the real authentication API.
-         */
-        await new Promise(
-          (resolve) =>
-            setTimeout(resolve, 1000)
-        );
+        const response = await fetch("/api/auth/register", {
+           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fullName,
+            email,
+            password,
+          }),
+        });
 
-        router.push("/dashboard");
+        const result = await response.json();
+
+        if (!response.ok) {
+           setRegisterError(
+            result.message || "Unable to create your account."
+          );
+         return;
+         }
+
+        router.push("/login");
         router.refresh();
       } catch (error) {
         console.error(

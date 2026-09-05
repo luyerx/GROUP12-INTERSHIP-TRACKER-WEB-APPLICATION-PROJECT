@@ -15,6 +15,7 @@ import AuthLayout from "@/components/auth/AuthLayout";
 
 export default function LoginPage() {
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -62,9 +63,9 @@ export default function LoginPage() {
         "Password is required."
       );
       isValid = false;
-    } else if (password.length < 6) {
+    } else if (password.length < 8) {
       setPasswordError(
-        "Password must contain at least 6 characters."
+        "Password must contain at least 8 characters."
       );
       isValid = false;
     }
@@ -81,17 +82,34 @@ export default function LoginPage() {
     setLoginError("");
 
     try {
-      /*
-       * Temporary login simulation.
-       * Later this will be replaced with
-       * Auth.js / NextAuth.
-       */
-      await new Promise((resolve) =>
-        setTimeout(resolve, 900)
+      const response = await fetch(
+        "/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            rememberMe,
+          }),
+        }
       );
 
-    router.push("/dashboard");
-    router.refresh();
+      const result = await response.json();
+
+      if (!response.ok) {
+        setLoginError(
+          result.message ||
+            "Unable to sign in. Please check your details and try again."
+        );
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
     } catch (error) {
       console.error(
         "Login error:",
@@ -148,6 +166,10 @@ export default function LoginPage() {
               if (emailError) {
                 setEmailError("");
               }
+
+              if (loginError) {
+                setLoginError("");
+              }
             }}
             onKeyDown={(event) => {
               if (
@@ -182,10 +204,10 @@ export default function LoginPage() {
             </label>
 
             <Link
-            href="/forgot-password"
-            className="text-xs font-medium text-slate-500 transition hover:text-slate-950"
+              href="/forgot-password"
+              className="text-xs font-medium text-slate-500 transition hover:text-slate-950"
             >
-            Forgot password?
+              Forgot password?
             </Link>
           </div>
 
@@ -207,6 +229,10 @@ export default function LoginPage() {
 
                 if (passwordError) {
                   setPasswordError("");
+                }
+
+                if (loginError) {
+                  setLoginError("");
                 }
               }}
               onKeyDown={(event) => {

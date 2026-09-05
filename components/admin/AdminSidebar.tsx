@@ -43,14 +43,31 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const handleLogout = () => {
-    /*
-     * Temporary frontend-only logout.
-     * Replace this with real session clearing
-     * after Auth integration is complete.
-     */
-    router.push("/login");
-    router.refresh();
+  const handleLogout = async () => {
+    try {
+      const response = await fetch(
+        "/api/auth/logout",
+        {
+          method: "POST",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Unable to log out."
+        );
+      }
+
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error(
+        "Logout error:",
+        error
+      );
+    }
   };
 
   return (
@@ -117,7 +134,9 @@ export default function AdminSidebar() {
 
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() =>
+            void handleLogout()
+          }
           className="mt-1 flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs font-medium text-slate-400 transition hover:bg-white/5 hover:text-white"
         >
           <LogOut className="h-3.5 w-3.5" />
