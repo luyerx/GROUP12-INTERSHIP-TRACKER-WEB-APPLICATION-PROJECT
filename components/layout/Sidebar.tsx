@@ -16,14 +16,25 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const handleLogout = () => {
-    /*
-     * Temporary frontend-only logout.
-     * Replace this with real signOut/session clearing
-     * after authentication integration is complete.
-     */
-    router.push("/login");
-    router.refresh();
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Unable to log out."
+        );
+      }
+
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   return (
@@ -62,7 +73,7 @@ export default function Sidebar() {
       <div className="mt-auto hidden border-t border-slate-200 p-3 lg:block">
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => void handleLogout()}
           className="w-full rounded-md px-3 py-2 text-left text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-950"
         >
           Log out
