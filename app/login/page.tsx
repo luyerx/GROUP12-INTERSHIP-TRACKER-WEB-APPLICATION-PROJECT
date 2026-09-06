@@ -108,7 +108,13 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/dashboard");
+      // Redirect users to the correct workspace based on their role.
+      if (result.user?.role === "admin") {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
+
       router.refresh();
     } catch (error) {
       console.error(

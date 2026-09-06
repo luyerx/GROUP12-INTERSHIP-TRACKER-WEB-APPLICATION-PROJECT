@@ -3,10 +3,19 @@ import {
   isApplicationStatus,
 } from "@/lib/applicationsStore";
 
+import { authorizeRole } from "@/lib/authorization";
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authorization =
+    await authorizeRole("student");
+
+  if (!authorization.authorized) {
+    return authorization.response;
+  }
+
   const { id } = await params;
   const applicationId = Number(id);
 
@@ -34,6 +43,13 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authorization =
+    await authorizeRole("student");
+
+  if (!authorization.authorized) {
+    return authorization.response;
+  }
+
   const { id } = await params;
   const applicationId = Number(id);
 
@@ -57,21 +73,32 @@ export async function PUT(
     return Response.json(
       {
         success: false,
-        message: "Organisation and role title are required.",
+        message:
+          "Organisation and role title are required.",
       },
       { status: 400 }
     );
   }
 
-  application.organisation = body.organisation;
-  application.roleTitle = body.roleTitle;
-  application.location = body.location || "";
-  application.sourceLink = body.sourceLink || "";
-  application.deadline = body.deadline || "";
+  application.organisation =
+    body.organisation;
 
-  application.status = isApplicationStatus(body.status)
-    ? body.status
-    : "Interested";
+  application.roleTitle =
+    body.roleTitle;
+
+  application.location =
+    body.location || "";
+
+  application.sourceLink =
+    body.sourceLink || "";
+
+  application.deadline =
+    body.deadline || "";
+
+  application.status =
+    isApplicationStatus(body.status)
+      ? body.status
+      : "Interested";
 
   application.jobDescription =
     body.jobDescription || "";
@@ -99,12 +126,20 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authorization =
+    await authorizeRole("student");
+
+  if (!authorization.authorized) {
+    return authorization.response;
+  }
+
   const { id } = await params;
   const applicationId = Number(id);
 
-  const applicationIndex = applications.findIndex(
-    (item) => item.id === applicationId
-  );
+  const applicationIndex =
+    applications.findIndex(
+      (item) => item.id === applicationId
+    );
 
   if (applicationIndex === -1) {
     return Response.json(
@@ -117,7 +152,10 @@ export async function DELETE(
   }
 
   const deletedApplication =
-    applications.splice(applicationIndex, 1)[0];
+    applications.splice(
+      applicationIndex,
+      1
+    )[0];
 
   return Response.json({
     success: true,
