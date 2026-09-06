@@ -3,11 +3,20 @@ import {
   isApplicationStatus,
 } from "@/lib/applicationsStore";
 
+import { authorizeRole } from "@/lib/authorization";
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authorization =
+      await authorizeRole("student");
+
+    if (!authorization.authorized) {
+      return authorization.response;
+    }
+
     const { id } = await params;
     const applicationId = Number(id);
 
@@ -38,20 +47,26 @@ export async function PATCH(
     }
 
     application.status = body.status;
-    application.updatedAt = new Date().toISOString();
+    application.updatedAt =
+      new Date().toISOString();
 
     return Response.json({
       success: true,
-      message: "Application status updated successfully.",
+      message:
+        "Application status updated successfully.",
       data: application,
     });
   } catch (error) {
-    console.error("Failed to update application status:", error);
+    console.error(
+      "Failed to update application status:",
+      error
+    );
 
     return Response.json(
       {
         success: false,
-        message: "Failed to update application status.",
+        message:
+          "Failed to update application status.",
       },
       { status: 500 }
     );
