@@ -33,7 +33,10 @@ export default function AdminDashboardPage() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/applications", { cache: "no-store" }).then((response) => response.json()).then((result: { data?: unknown[] }) => setApplications(result.data?.length || 0)).catch(() => undefined);
+    fetch("/api/admin/stats", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((result: { data?: { applications?: number } }) => setApplications(result.data?.applications || 0))
+      .catch(() => undefined);
   }, []);
 
   const stats = [
