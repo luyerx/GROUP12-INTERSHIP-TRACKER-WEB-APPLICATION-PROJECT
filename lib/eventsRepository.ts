@@ -4,6 +4,7 @@ import { isObjectIdOrHexString } from "mongoose";
 import type { CalendarEventInput } from "@/lib/calendarEvent";
 import { connectToDatabase } from "@/lib/mongodb";
 import { CalendarEventModel } from "@/lib/models/CalendarEvent";
+import { ApplicationModel } from "@/lib/models/Application";
 
 function serialize(document: Record<string, unknown>) {
   return {
@@ -21,6 +22,8 @@ export async function listCalendarEvents(userId: string) {
 
 export async function createCalendarEvent(userId: string, input: CalendarEventInput) {
   await connectToDatabase();
+  const application = await ApplicationModel.findOne({ _id: input.applicationId, userId }).select("_id").lean();
+  if (!application) return null;
   const row = await CalendarEventModel.create({ ...input, userId });
   return serialize(row.toObject());
 }
@@ -28,6 +31,8 @@ export async function createCalendarEvent(userId: string, input: CalendarEventIn
 export async function updateCalendarEvent(id: string, userId: string, input: CalendarEventInput) {
   if (!isObjectIdOrHexString(id)) return null;
   await connectToDatabase();
+  const application = await ApplicationModel.findOne({ _id: input.applicationId, userId }).select("_id").lean();
+  if (!application) return null;
   const row = await CalendarEventModel.findOneAndUpdate(
     { _id: id, userId }, input, { new: true, runValidators: true }
   ).lean();

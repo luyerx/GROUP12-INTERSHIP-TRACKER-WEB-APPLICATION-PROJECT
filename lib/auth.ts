@@ -55,7 +55,7 @@ export async function getAuthenticatedUser():
     session.userId
   );
 
-  if (!user) {
+  if (!user || user.status === "Suspended") {
     return null;
   }
 

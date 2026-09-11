@@ -26,6 +26,9 @@ export default function ForgotPasswordPage() {
   const [isSent, setIsSent] =
     useState(false);
 
+  const [resetUrl, setResetUrl] =
+    useState("");
+
   const validateEmail = () => {
     setEmailError("");
     setRequestError("");
@@ -60,18 +63,14 @@ export default function ForgotPasswordPage() {
     setRequestError("");
 
     try {
-      /*
-       * Temporary password reset simulation.
-       *
-       * Later this should call the real
-       * authentication API, for example:
-       *
-       * POST /api/auth/forgot-password
-       */
-      await new Promise((resolve) =>
-        setTimeout(resolve, 1000)
-      );
-
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const result: { success: boolean; message?: string; resetUrl?: string } = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || "Unable to create reset instructions.");
+      setResetUrl(result.resetUrl || "");
       setIsSent(true);
     } catch (error) {
       console.error(
@@ -218,8 +217,10 @@ export default function ForgotPasswordPage() {
       ) : (
         <SuccessState
           email={email}
+          resetUrl={resetUrl}
           onTryAgain={() => {
             setIsSent(false);
+            setResetUrl("");
             setEmailError("");
             setRequestError("");
           }}
@@ -231,9 +232,11 @@ export default function ForgotPasswordPage() {
 
 function SuccessState({
   email,
+  resetUrl,
   onTryAgain,
 }: {
   email: string;
+  resetUrl: string;
   onTryAgain: () => void;
 }) {
   return (
@@ -259,6 +262,16 @@ function SuccessState({
         , password reset instructions have
         been sent to that address.
       </p>
+
+      {resetUrl && (
+        <Link
+          href={resetUrl}
+          className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+        >
+          Continue to reset password
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      )}
 
       <div className="mt-7 rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <p className="text-sm font-medium text-slate-800">

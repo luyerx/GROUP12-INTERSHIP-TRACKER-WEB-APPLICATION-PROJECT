@@ -1,6 +1,7 @@
 # Internship Tracker
 
 [Sep 10 SZY update](docs/Sep10-szy-update.md)
+[Sep 10 luyerx update](docs/Sep11-luyerx-update.md)
 
 A Next.js internship tracking application for managing opportunities, applications, deadlines, career resources, and student profiles.
 
@@ -97,5 +98,6 @@ Import the GitHub repository into Vercel and add `MONGODB_URI` and `MONGODB_DB` 
 ## Current limitations
 
 - External AI provider integration is not enabled yet; the current summary tool is local.
-- Rate limiting and production security hardening still require a security review.
+- Password reset links are generated securely; production deployments should connect the reset flow to an email provider.
+- Rate limiting is currently process-local; production deployments should move it to a shared store and complete security hardening.
 - Existing database migration scripts are available under `scripts/` for application ownership and initial shared content.

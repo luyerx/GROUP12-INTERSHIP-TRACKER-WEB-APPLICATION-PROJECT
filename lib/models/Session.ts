@@ -21,7 +21,6 @@ const sessionSchema = new Schema(
     expiresAt: {
       type: Date,
       required: true,
-      index: true,
     },
   },
   {

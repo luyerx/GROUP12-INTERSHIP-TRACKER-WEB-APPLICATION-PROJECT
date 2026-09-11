@@ -9,7 +9,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const input = calendarEventSchema.safeParse(await request.json());
   if (!input.success) return Response.json({ success: false, message: input.error.issues[0].message }, { status: 400 });
   const data = await updateCalendarEvent(id, authorization.user.id, input.data);
-  if (!data) return Response.json({ success: false, message: "Calendar event not found." }, { status: 404 });
+  if (!data) return Response.json({ success: false, message: "The event or selected application was not found." }, { status: 404 });
   return Response.json({ success: true, data });
 }
 

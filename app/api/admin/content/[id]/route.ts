@@ -15,11 +15,17 @@ const opportunitySchema = z.object({
   closingDate: z.string().trim().min(1).max(80), status: z.enum(["Published", "Draft", "Closed"]), applications: z.number().int().min(0),
 });
 
+function getKind(request: Request) {
+  const kind = new URL(request.url).searchParams.get("kind");
+  return kind === "resources" || kind === "opportunities" ? kind : null;
+}
+
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const authorization = await authorizeRole("admin");
   if (!authorization.authorized) return authorization.response;
   const { id } = await params;
-  const kind = new URL(request.url).searchParams.get("kind");
+  const kind = getKind(request);
+  if (!kind) return Response.json({ success: false, message: "A valid content kind is required." }, { status: 400 });
   const input = kind === "resources" ? resourceSchema.safeParse(await request.json()) : opportunitySchema.safeParse(await request.json());
   if (!input.success) return Response.json({ success: false, message: input.error.issues[0].message }, { status: 400 });
   await connectToDatabase();
@@ -34,7 +40,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const authorization = await authorizeRole("admin");
   if (!authorization.authorized) return authorization.response;
   const { id } = await params;
-  const kind = new URL(request.url).searchParams.get("kind");
+  const kind = getKind(request);
+  if (!kind) return Response.json({ success: false, message: "A valid content kind is required." }, { status: 400 });
   await connectToDatabase();
   const row = kind === "resources" ? await ResourceModel.findByIdAndDelete(id).lean() : await OpportunityModel.findByIdAndDelete(id).lean();
   if (!row) return Response.json({ success: false, message: "Content not found." }, { status: 404 });

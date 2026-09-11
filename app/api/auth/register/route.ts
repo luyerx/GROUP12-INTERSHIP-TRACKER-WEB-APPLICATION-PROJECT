@@ -3,9 +3,12 @@ import bcrypt from "bcryptjs";
 
 import { connectToDatabase } from "@/lib/mongodb";
 import { UserModel } from "@/lib/models/User";
+import { checkRateLimit, getClientIdentifier } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
   try {
+    const rate = checkRateLimit(`register:${getClientIdentifier(request)}`, 5, 60 * 60 * 1000);
+    if (!rate.allowed) return NextResponse.json({ success: false, message: "Too many registration attempts. Please try again later." }, { status: 429, headers: { "Retry-After": String(rate.retryAfter) } });
     const body = await request.json();
 
     const fullName = body.fullName?.trim();

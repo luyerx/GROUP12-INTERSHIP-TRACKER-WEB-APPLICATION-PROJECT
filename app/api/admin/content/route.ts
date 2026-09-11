@@ -26,15 +26,17 @@ const opportunitySchema = z.object({
 });
 
 function getKind(request: Request) {
-  return new URL(request.url).searchParams.get("kind");
+  const kind = new URL(request.url).searchParams.get("kind");
+  return kind === "resources" || kind === "opportunities" ? kind : null;
 }
 
 export async function GET(request: Request) {
   const authorization = await authorizeRole("admin");
   if (!authorization.authorized) return authorization.response;
+  const kind = getKind(request);
+  if (!kind) return Response.json({ success: false, message: "A valid content kind is required." }, { status: 400 });
   await connectToDatabase();
 
-  const kind = getKind(request);
   const rows = kind === "resources"
     ? await ResourceModel.find().sort({ updatedAt: -1 }).lean()
     : await OpportunityModel.find().sort({ updatedAt: -1 }).lean();
@@ -51,6 +53,7 @@ export async function POST(request: Request) {
   if (!authorization.authorized) return authorization.response;
 
   const kind = getKind(request);
+  if (!kind) return Response.json({ success: false, message: "A valid content kind is required." }, { status: 400 });
   const input = kind === "resources"
     ? resourceSchema.safeParse(await request.json())
     : opportunitySchema.safeParse(await request.json());

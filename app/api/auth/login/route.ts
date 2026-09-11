@@ -5,9 +5,12 @@ import crypto from "crypto";
 import { connectToDatabase } from "@/lib/mongodb";
 import { UserModel } from "@/lib/models/User";
 import { SessionModel } from "@/lib/models/Session";
+import { checkRateLimit, getClientIdentifier } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
   try {
+    const rate = checkRateLimit(`login:${getClientIdentifier(request)}`, 10, 15 * 60 * 1000);
+    if (!rate.allowed) return NextResponse.json({ success: false, message: "Too many login attempts. Please try again later." }, { status: 429, headers: { "Retry-After": String(rate.retryAfter) } });
     const body = await request.json();
 
     const email = body.email?.trim().toLowerCase();
@@ -38,6 +41,10 @@ export async function POST(request: Request) {
         },
         { status: 401 }
       );
+    }
+
+    if (user.status === "Suspended") {
+      return NextResponse.json({ success: false, message: "This account has been suspended." }, { status: 403 });
     }
 
     const passwordMatches =
