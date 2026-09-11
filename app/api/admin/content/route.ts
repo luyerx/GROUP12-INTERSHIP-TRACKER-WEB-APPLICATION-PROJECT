@@ -4,6 +4,7 @@ import { authorizeRole } from "@/lib/authorization";
 import { connectToDatabase } from "@/lib/mongodb";
 import { OpportunityModel } from "@/lib/models/Opportunity";
 import { ResourceModel } from "@/lib/models/Resource";
+import { ApplicationModel } from "@/lib/models/Application";
 
 const resourceSchema = z.object({
   title: z.string().trim().min(1).max(200),
@@ -20,9 +21,8 @@ const opportunitySchema = z.object({
   organisation: z.string().trim().min(1).max(160),
   role: z.string().trim().min(1).max(200),
   location: z.string().trim().min(1).max(160),
-  closingDate: z.string().trim().min(1).max(80),
+  closingDate: z.iso.date(),
   status: z.enum(["Published", "Draft", "Closed"]),
-  applications: z.number().int().min(0).default(0),
 });
 
 function getKind(request: Request) {
@@ -37,13 +37,29 @@ export async function GET(request: Request) {
   if (!kind) return Response.json({ success: false, message: "A valid content kind is required." }, { status: 400 });
   await connectToDatabase();
 
-  const rows = kind === "resources"
-    ? await ResourceModel.find().sort({ updatedAt: -1 }).lean()
-    : await OpportunityModel.find().sort({ updatedAt: -1 }).lean();
+  if (kind === "resources") {
+    const rows = await ResourceModel.find().sort({ updatedAt: -1 }).lean();
+    return Response.json({ success: true, data: rows.map((row) => ({
+      ...row,
+      id: String(row._id),
+      updated: new Date(row.updatedAt).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" }),
+    })) });
+  }
+
+  const [rows, applicationCounts] = await Promise.all([
+    OpportunityModel.find().sort({ updatedAt: -1 }).lean(),
+    ApplicationModel.aggregate([
+      { $group: { _id: { organisation: "$organisation", role: "$roleTitle" }, applications: { $sum: 1 } } },
+    ]),
+  ]);
+  const countByOpportunity = new Map(
+    applicationCounts.map((item) => [`${item._id.organisation}\u0000${item._id.role}`, item.applications])
+  );
 
   return Response.json({ success: true, data: rows.map((row) => ({
     ...row,
     id: String(row._id),
+    applications: countByOpportunity.get(`${row.organisation}\u0000${row.role}`) || 0,
     updated: new Date(row.updatedAt).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" }),
   })) });
 }

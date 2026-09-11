@@ -7,9 +7,8 @@ const opportunitySchema = new Schema(
     organisation: { type: String, required: true, trim: true, maxlength: 160 },
     role: { type: String, required: true, trim: true, maxlength: 200 },
     location: { type: String, required: true, trim: true, maxlength: 160 },
-    closingDate: { type: String, required: true, trim: true, maxlength: 80 },
+    closingDate: { type: String, required: true, match: /^\d{4}-\d{2}-\d{2}$/ },
     status: { type: String, enum: ["Published", "Draft", "Closed"], default: "Draft" },
-    applications: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }
 );

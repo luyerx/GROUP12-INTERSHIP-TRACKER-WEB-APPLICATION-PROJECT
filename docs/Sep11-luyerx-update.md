@@ -187,3 +187,12 @@ npm run build
 - 当前限流器使用进程内内存；多实例部署时应迁移到 Redis 等共享存储。
 - MongoDB 连接字符串必须使用环境变量，不能提交到 Git。
 - 测试账号和测试密码只应在本地或受控测试环境使用。
+
+## 机会数据可信度改进
+
+- `Opportunity.closingDate` 统一使用 `YYYY-MM-DD` ISO 日期格式。
+- 管理员新增或编辑机会时不能手动填写 `applications`。
+- 管理员机会列表返回的申请数量由 `Application` 集合聚合计算。
+- 聚合按 `organisation` 和 `roleTitle` 与机会的 `organisation` 和 `role` 精确匹配。
+- 因此，没有对应申请记录的机会显示为 `0`，不再使用可伪造的手动数量。
+- 已有机会数据已同步为 ISO 日期格式。

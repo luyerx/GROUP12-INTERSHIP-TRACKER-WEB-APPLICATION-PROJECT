@@ -12,7 +12,7 @@ const resourceSchema = z.object({
 });
 const opportunitySchema = z.object({
   organisation: z.string().trim().min(1).max(160), role: z.string().trim().min(1).max(200), location: z.string().trim().min(1).max(160),
-  closingDate: z.string().trim().min(1).max(80), status: z.enum(["Published", "Draft", "Closed"]), applications: z.number().int().min(0),
+  closingDate: z.iso.date(), status: z.enum(["Published", "Draft", "Closed"]),
 });
 
 function getKind(request: Request) {

@@ -21,10 +21,10 @@ const resources = [
 ];
 
 const opportunities = [
-  ["Xero", "Software Engineering Intern", "Auckland", "18 Sep 2026", "Published", 24],
-  ["Fonterra", "Data Analytics Intern", "Hamilton", "22 Sep 2026", "Published", 17],
-  ["Wellington City Council", "Digital Experience Intern", "Wellington", "28 Sep 2026", "Draft", 0],
-  ["Datacom", "Graduate Cloud Consultant", "Auckland", "31 Aug 2026", "Closed", 31],
+  ["Xero", "Software Engineering Intern", "Auckland", "2026-09-18", "Published"],
+  ["Fonterra", "Data Analytics Intern", "Hamilton", "2026-09-22", "Published"],
+  ["Wellington City Council", "Digital Experience Intern", "Wellington", "2026-09-28", "Draft"],
+  ["Datacom", "Graduate Cloud Consultant", "Auckland", "2026-08-31", "Closed"],
 ];
 
 const client = new MongoClient(uri);
@@ -43,10 +43,10 @@ try {
     );
   }
 
-  for (const [organisation, role, location, closingDate, status, applications] of opportunities) {
+  for (const [organisation, role, location, closingDate, status] of opportunities) {
     await opportunityCollection.updateOne(
       { organisation, role },
-      { $set: { organisation, role, location, closingDate, status, applications, updatedAt: timestamp }, $setOnInsert: { createdAt: timestamp } },
+      { $set: { organisation, role, location, closingDate, status, updatedAt: timestamp }, $unset: { applications: "" }, $setOnInsert: { createdAt: timestamp } },
       { upsert: true }
     );
   }
