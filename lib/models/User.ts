@@ -3,6 +3,7 @@ import "server-only";
 import { model, models, Schema } from "mongoose";
 
 export const userRoles = ["student", "admin"] as const;
+export const userStatuses = ["Active", "Suspended"] as const;
 
 const userSchema = new Schema(
   {
@@ -31,6 +32,12 @@ const userSchema = new Schema(
       type: String,
       enum: userRoles,
       default: "student",
+    },
+
+    status: {
+      type: String,
+      enum: userStatuses,
+      default: "Active",
     },
 
     university: {
@@ -83,6 +90,21 @@ const userSchema = new Schema(
     },
 
     openToInternships: {
+      type: Boolean,
+      default: true,
+    },
+
+    emailNotifications: {
+      type: Boolean,
+      default: true,
+    },
+
+    deadlineReminders: {
+      type: Boolean,
+      default: true,
+    },
+
+    interviewReminders: {
       type: Boolean,
       default: true,
     },

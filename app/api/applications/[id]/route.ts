@@ -1,165 +1,49 @@
-import {
-  applications,
-  isApplicationStatus,
-} from "@/lib/applicationsStore";
-
+import { applicationInputSchema } from "@/lib/application";
+import { applicationApiError, applicationNotFound } from "@/lib/applicationApi";
+import { getApplication, updateApplication, deleteApplication } from "@/lib/applicationsRepository";
 import { authorizeRole } from "@/lib/authorization";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const authorization =
-    await authorizeRole("student");
+type Context = { params: Promise<{ id: string }> };
 
-  if (!authorization.authorized) {
-    return authorization.response;
+export async function GET(request: Request, { params }: Context) {
+  try {
+    const authorization = await authorizeRole("student");
+    if (!authorization.authorized) return authorization.response;
+    const { id } = await params;
+    const data = await getApplication(id, authorization.user.id);
+    if (!data) return applicationNotFound();
+    return Response.json({ success: true, data });
+  } catch (error) {
+    return applicationApiError(error);
   }
-
-  const { id } = await params;
-  const applicationId = Number(id);
-
-  const application = applications.find(
-    (item) => item.id === applicationId
-  );
-
-  if (!application) {
-    return Response.json(
-      {
-        success: false,
-        message: "Application not found.",
-      },
-      { status: 404 }
-    );
-  }
-
-  return Response.json({
-    success: true,
-    data: application,
-  });
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const authorization =
-    await authorizeRole("student");
-
-  if (!authorization.authorized) {
-    return authorization.response;
+export async function PUT(request: Request, { params }: Context) {
+  try {
+    const authorization = await authorizeRole("student");
+    if (!authorization.authorized) return authorization.response;
+    const { id } = await params;
+    const input = applicationInputSchema.safeParse(await request.json());
+    if (!input.success) {
+      return Response.json({ success: false, message: input.error.issues[0].message }, { status: 400 });
+    }
+    const data = await updateApplication(id, authorization.user.id, input.data);
+    if (!data) return applicationNotFound();
+    return Response.json({ success: true, message: "Application updated successfully.", data });
+  } catch (error) {
+    return applicationApiError(error);
   }
-
-  const { id } = await params;
-  const applicationId = Number(id);
-
-  const application = applications.find(
-    (item) => item.id === applicationId
-  );
-
-  if (!application) {
-    return Response.json(
-      {
-        success: false,
-        message: "Application not found.",
-      },
-      { status: 404 }
-    );
-  }
-
-  const body = await request.json();
-
-  if (!body.organisation || !body.roleTitle) {
-    return Response.json(
-      {
-        success: false,
-        message:
-          "Organisation and role title are required.",
-      },
-      { status: 400 }
-    );
-  }
-
-  application.organisation =
-    body.organisation;
-
-  application.roleTitle =
-    body.roleTitle;
-
-  application.location =
-    body.location || "";
-
-  application.sourceLink =
-    body.sourceLink || "";
-
-  application.deadline =
-    body.deadline || "";
-
-  application.status =
-    isApplicationStatus(body.status)
-      ? body.status
-      : "Interested";
-
-  application.jobDescription =
-    body.jobDescription || "";
-
-  application.contactPerson =
-    body.contactPerson || "";
-
-  application.outcome =
-    body.outcome || "";
-
-  application.notes =
-    body.notes || "";
-
-  application.updatedAt =
-    new Date().toISOString();
-
-  return Response.json({
-    success: true,
-    message: "Application updated successfully.",
-    data: application,
-  });
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const authorization =
-    await authorizeRole("student");
-
-  if (!authorization.authorized) {
-    return authorization.response;
+export async function DELETE(request: Request, { params }: Context) {
+  try {
+    const authorization = await authorizeRole("student");
+    if (!authorization.authorized)return authorization.response;
+    const { id } = await params;
+    const data = await deleteApplication(id, authorization.user.id);
+    if (!data) return applicationNotFound();
+    return Response.json({ success: true, message: "Application deleted successfully.", data });
+  } catch (error) {
+    return applicationApiError(error);
   }
-
-  const { id } = await params;
-  const applicationId = Number(id);
-
-  const applicationIndex =
-    applications.findIndex(
-      (item) => item.id === applicationId
-    );
-
-  if (applicationIndex === -1) {
-    return Response.json(
-      {
-        success: false,
-        message: "Application not found.",
-      },
-      { status: 404 }
-    );
-  }
-
-  const deletedApplication =
-    applications.splice(
-      applicationIndex,
-      1
-    )[0];
-
-  return Response.json({
-    success: true,
-    message: "Application deleted successfully.",
-    data: deletedApplication,
-  });
 }

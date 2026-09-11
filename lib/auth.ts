@@ -11,6 +11,20 @@ export type AuthenticatedUser = {
   fullName: string;
   email: string;
   role: "student" | "admin";
+  university: string;
+  degree: string;
+  major: string;
+  graduationYear: string;
+  location: string;
+  preferredRoles: string[];
+  preferredLocations: string[];
+  skills: string[];
+  openToInternships: boolean;
+  notifications: {
+    email: boolean;
+    deadlineReminders: boolean;
+    interviewReminders: boolean;
+  };
 };
 
 export async function getAuthenticatedUser():
@@ -53,5 +67,19 @@ export async function getAuthenticatedUser():
       user.role === "admin"
         ? "admin"
         : "student",
+      university: user.university || "",
+      degree: user.degree || "",
+      major: user.major || "",
+      graduationYear: user.graduationYear || "",
+      location: user.location || "",
+      preferredRoles: user.preferredRoles || [],
+      preferredLocations: user.preferredLocations || [],
+      skills: user.skills || [],
+      openToInternships: user.openToInternships ?? true,
+      notifications: {
+        email: user.emailNotifications ?? true,
+        deadlineReminders: user.deadlineReminders ?? true,
+        interviewReminders: user.interviewReminders ?? true,
+      },
   };
 }

@@ -28,6 +28,7 @@ export type ApplicationStatus = (typeof applicationStatuses)[number];
 
 export type Application = ApplicationInput & {
   id: string;
+  userId: string;
   createdAt: string;
   updatedAt: string;
 };

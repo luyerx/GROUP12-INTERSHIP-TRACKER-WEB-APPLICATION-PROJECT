@@ -387,6 +387,27 @@ export default function CalendarPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadManualEvents = async () => {
+      try {
+        const response = await fetch("/api/events", { cache: "no-store" });
+        const result: { success: boolean; data?: CalendarEvent[]; message?: string } = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || "Unable to load calendar events.");
+        if (!cancelled) setManualEvents(result.data || []);
+      } catch (error) {
+        console.error("Calendar event load error:", error);
+      }
+    };
+
+    void loadManualEvents();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   /*
    * Application deadlines become
    * automatic calendar events.
@@ -715,21 +736,6 @@ export default function CalendarPage() {
         true
       );
 
-      /*
-       * Temporary manual event save.
-       *
-       * Later:
-       * POST /api/events
-       * PUT /api/events/:id
-       */
-      await new Promise(
-        (resolve) =>
-          setTimeout(
-            resolve,
-            700
-          )
-      );
-
       const eventData = {
         applicationId,
 
@@ -761,37 +767,25 @@ export default function CalendarPage() {
           undefined,
       };
 
-      if (
-        formMode === "edit" &&
-        editingEventId !==
-          null
-      ) {
-        setManualEvents(
-          (current) =>
-            current.map(
-              (event) =>
-                event.id ===
-                editingEventId
-                  ? {
-                      ...event,
-                      ...eventData,
-                    }
-                  : event
-            )
-        );
-      } else {
-        const newEvent: CalendarEvent =
-          {
-            id: Date.now(),
-            ...eventData,
-          };
+      const response = await fetch(
+        formMode === "edit" && editingEventId !== null
+          ? `/api/events/${editingEventId}`
+          : "/api/events",
+        {
+          method: formMode === "edit" && editingEventId !== null ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(eventData),
+        }
+      );
+      const result: { success: boolean; data?: CalendarEvent; message?: string } = await response.json();
+      if (!response.ok || !result.success || !result.data) {
+        throw new Error(result.message || "Unable to save calendar event.");
+      }
 
-        setManualEvents(
-          (current) => [
-            ...current,
-            newEvent,
-          ]
-        );
+      if (formMode === "edit" && editingEventId !== null) {
+        setManualEvents((current) => current.map((event) => event.id === editingEventId ? result.data as CalendarEvent : event));
+      } else {
+        setManualEvents((current) => [...current, result.data as CalendarEvent]);
       }
 
       const selectedDate =
@@ -818,9 +812,7 @@ export default function CalendarPage() {
         });
       }
 
-      setIsSavingEvent(
-        false
-      );
+      setIsSavingEvent(false);
 
       setShowEventForm(
         false
@@ -857,19 +849,10 @@ export default function CalendarPage() {
         true
       );
 
-      /*
-       * Temporary manual delete.
-       *
-       * Later:
-       * DELETE /api/events/:id
-       */
-      await new Promise(
-        (resolve) =>
-          setTimeout(
-            resolve,
-            700
-          )
-      );
+      const response = await fetch(`/api/events/${selectedEvent.id}`, { method: "DELETE" });
+      if (!response.ok) {
+        throw new Error("Unable to delete calendar event.");
+      }
 
       setManualEvents(
         (current) =>

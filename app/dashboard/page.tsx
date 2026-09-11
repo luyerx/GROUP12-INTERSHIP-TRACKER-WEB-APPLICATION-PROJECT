@@ -22,7 +22,6 @@ import ApplicationPipeline from "@/components/dashboard/ApplicationPipeline";
 import UpcomingTasks from "@/components/dashboard/UpcomingTasks";
 import RecentApplications from "@/components/dashboard/RecentApplications";
 
-import { currentUser } from "@/lib/currentUser";
 import { parseAppDate } from "@/lib/date";
 
 type ApplicationStatus =
@@ -47,6 +46,11 @@ type ApplicationsApiResponse = {
   success: boolean;
   data?: Application[];
   message?: string;
+};
+
+type CurrentUserResponse = {
+  success: boolean;
+  user?: { fullName: string };
 };
 
 /*
@@ -126,6 +130,9 @@ export default function DashboardPage() {
   const [error, setError] =
     useState("");
 
+  const [userName, setUserName] =
+    useState("there");
+
   useEffect(() => {
     let cancelled = false;
 
@@ -159,6 +166,29 @@ export default function DashboardPage() {
       };
 
     void initialiseDashboard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCurrentUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me", { cache: "no-store" });
+        const result: CurrentUserResponse = await response.json();
+
+        if (!cancelled && response.ok && result.success && result.user) {
+          setUserName(result.user.fullName.split(" ")[0] || "there");
+        }
+      } catch (error) {
+        console.error("Failed to load current user:", error);
+      }
+    };
+
+    void loadCurrentUser();
 
     return () => {
       cancelled = true;
@@ -283,7 +313,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
               Welcome back,{" "}
-              {currentUser.firstName}
+              {userName}
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">

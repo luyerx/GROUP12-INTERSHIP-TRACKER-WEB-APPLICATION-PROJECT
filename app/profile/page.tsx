@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   Bell,
@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { currentUser } from "@/lib/currentUser";
 
 type ProfileData = {
   fullName: string;
@@ -36,41 +35,70 @@ type ProfileData = {
   interviewReminders: boolean;
 };
 
-const initialProfile: ProfileData = {
-  fullName: currentUser.fullName,
-  email: currentUser.email,
-
-  university: currentUser.university,
-  degree: currentUser.degree,
-  major: currentUser.major,
-  graduationYear: currentUser.graduationYear,
-
-  location: currentUser.location,
-
-  preferredRoles:
-    currentUser.preferredRoles.join(", "),
-
-  preferredLocations:
-    currentUser.preferredLocations.join(", "),
-
-  skills: [...currentUser.skills],
-
-  emailNotifications:
-    currentUser.notifications.email,
-
-  deadlineReminders:
-    currentUser.notifications.deadlineReminders,
-
-  interviewReminders:
-    currentUser.notifications.interviewReminders,
+type CurrentUser = {
+  fullName: string;
+  email: string;
+  university: string;
+  degree: string;
+  major: string;
+  graduationYear: string;
+  location: string;
+  preferredRoles: string[];
+  preferredLocations: string[];
+  skills: string[];
+  notifications: {
+    email: boolean;
+    deadlineReminders: boolean;
+    interviewReminders: boolean;
+  };
 };
+
+const emptyProfile: ProfileData = {
+  fullName: "",
+  email: "",
+  university: "",
+  degree: "",
+  major: "",
+  graduationYear: "",
+  location: "",
+  preferredRoles: "",
+  preferredLocations: "",
+  skills: [],
+  emailNotifications: true,
+  deadlineReminders: true,
+  interviewReminders: true,
+};
+
+function toProfileData(user: CurrentUser): ProfileData {
+  return {
+    fullName: user.fullName,
+    email: user.email,
+    university: user.university,
+    degree: user.degree,
+    major: user.major,
+    graduationYear: user.graduationYear,
+    location: user.location,
+    preferredRoles: user.preferredRoles.join(", "),
+    preferredLocations: user.preferredLocations.join(", "),
+    skills: [...user.skills],
+    emailNotifications: user.notifications.email,
+    deadlineReminders: user.notifications.deadlineReminders,
+    interviewReminders: user.notifications.interviewReminders,
+  };
+}
 
 export default function ProfilePage() {
   const [profile, setProfile] =
-    useState<ProfileData>(initialProfile);
+    useState<ProfileData>(emptyProfile);
 
   const [draft, setDraft] =
-    useState<ProfileData>(initialProfile);
+    useState<ProfileData>(emptyProfile);
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [profileError, setProfileError] =
+    useState("");
 
   const [isEditing, setIsEditing] =
     useState(false);
@@ -91,6 +119,41 @@ export default function ProfilePage() {
     graduationYearError,
     setGraduationYearError,
   ] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProfile = async () => {
+      try {
+        const response = await fetch("/api/auth/me", { cache: "no-store" });
+        const result: { success: boolean; user?: CurrentUser; message?: string } = await response.json();
+
+        if (!response.ok || !result.success || !result.user) {
+          throw new Error(result.message || "Unable to load profile.");
+        }
+
+        if (!cancelled) {
+          const data = toProfileData(result.user);
+          setProfile(data);
+          setDraft(data);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setProfileError(error instanceof Error ? error.message : "Unable to load profile.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const initials = useMemo(() => {
     return profile.fullName
@@ -204,24 +267,42 @@ export default function ProfilePage() {
     }
 
     setIsSaving(true);
+    setProfileError("");
 
     try {
-      /*
-       * Temporary save simulation.
-       * Later this will become
-       * PATCH /api/profile.
-       */
-      await new Promise((resolve) =>
-        setTimeout(resolve, 800)
-      );
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: draft.fullName,
+          email: draft.email,
+          university: draft.university,
+          degree: draft.degree,
+          major: draft.major,
+          graduationYear: draft.graduationYear,
+          location: draft.location,
+          preferredRoles: draft.preferredRoles.split(",").map((value) => value.trim()).filter(Boolean),
+          preferredLocations: draft.preferredLocations.split(",").map((value) => value.trim()).filter(Boolean),
+          skills: draft.skills,
+          openToInternships: true,
+          emailNotifications: draft.emailNotifications,
+          deadlineReminders: draft.deadlineReminders,
+          interviewReminders: draft.interviewReminders,
+        }),
+      });
+      const result: { success: boolean; user?: CurrentUser; message?: string } = await response.json();
 
-      setProfile(draft);
+      if (!response.ok || !result.success || !result.user) {
+        throw new Error(result.message || "Unable to save profile.");
+      }
+
+      const savedProfile = toProfileData(result.user);
+      setProfile(savedProfile);
+      setDraft(savedProfile);
       setIsEditing(false);
     } catch (error) {
-      console.error(
-        "Save profile error:",
-        error
-      );
+      console.error("Save profile error:", error);
+      setProfileError(error instanceof Error ? error.message : "Unable to save profile.");
     } finally {
       setIsSaving(false);
     }
@@ -271,6 +352,16 @@ export default function ProfilePage() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-6xl">
+        {profileError && (
+          <p className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {profileError}
+          </p>
+        )}
+
+        {isLoading && (
+          <p className="mb-5 text-sm text-slate-500">Loading profile...</p>
+        )}
+
         {/* Page header */}
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>

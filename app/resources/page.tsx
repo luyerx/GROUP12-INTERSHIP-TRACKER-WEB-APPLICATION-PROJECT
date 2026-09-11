@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   ArrowUpRight,
@@ -16,8 +16,6 @@ import {
 } from "lucide-react";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { adminResources } from "@/lib/adminDemoData";
-import { useAdminDemoData } from "@/lib/useAdminDemoData";
 
 type ResourceCategory =
   | "All"
@@ -46,108 +44,6 @@ type Resource = {
   url: string;
 };
 
-type AdminManagedResource = {
-  id: string;
-  title: string;
-  category: string;
-  type: string;
-  status: string;
-};
-
-const resources: Resource[] = [
-  {
-    id: "resource-1",
-    title:
-      "How to Write a Strong Internship CV",
-    description:
-      "A practical guide to structuring a clear student CV and presenting skills, education, and experience effectively.",
-    category: "CV & Cover Letter",
-    type: "Guide",
-    featured: true,
-    source: "Career Centre",
-    url: "#",
-  },
-  {
-    id: "resource-2",
-    title:
-      "Preparing for Behavioural Interviews",
-    description:
-      "Learn how to answer common behavioural interview questions using a clear and structured approach.",
-    category: "Interviews",
-    type: "Guide",
-    featured: true,
-    source: "Career Centre",
-    url: "#",
-  },
-  {
-    id: "resource-3",
-    title:
-      "Internship Application Checklist",
-    description:
-      "Use this checklist before submitting an internship application to make sure important details are complete.",
-    category: "Applications",
-    type: "Template",
-    featured: true,
-    source: "Internship Tracker",
-    url: "#",
-  },
-  {
-    id: "resource-4",
-    title:
-      "Writing an Effective Cover Letter",
-    description:
-      "Understand how to tailor a cover letter to the organisation, position, and skills listed in a job advertisement.",
-    category: "CV & Cover Letter",
-    type: "Article",
-    source: "Career Centre",
-    url: "#",
-  },
-  {
-    id: "resource-5",
-    title:
-      "STAR Interview Response Framework",
-    description:
-      "A concise overview of the STAR framework for answering experience-based interview questions.",
-    category: "Interviews",
-    type: "Video",
-    source: "Student Careers",
-    url: "#",
-  },
-  {
-    id: "resource-6",
-    title:
-      "Researching a Company Before Applying",
-    description:
-      "Learn what information to research before applying and how company research can improve applications and interviews.",
-    category: "Applications",
-    type: "Article",
-    source: "Career Centre",
-    url: "#",
-  },
-  {
-    id: "resource-7",
-    title:
-      "Graduate Career Planning Guide",
-    description:
-      "A starting point for identifying career goals, preferred industries, and graduate opportunities.",
-    category: "Career Planning",
-    type: "Guide",
-    source: "Student Careers",
-    url: "#",
-  },
-  {
-    id: "resource-8",
-    title:
-      "Technical Interview Preparation",
-    description:
-      "Explore key preparation areas for technical internship and graduate interviews.",
-    category: "Interviews",
-    type: "Article",
-    source: "Internship Tracker",
-    url: "#",
-  },
-];
-
 const categories: ResourceCategory[] = [
   "All",
   "Applications",
@@ -157,43 +53,23 @@ const categories: ResourceCategory[] = [
 ];
 
 export default function ResourcesPage() {
-  const [managedResourcesRaw] = useAdminDemoData(
-    "admin-demo-resources",
-    adminResources
-  );
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [loading, setLoading] = useState(true);
 
-const managedResources =
-  managedResourcesRaw as AdminManagedResource[];
+  useEffect(() => {
+    const loadResources = async () => {
+      try {
+        const response = await fetch("/api/resources", { cache: "no-store" });
+        const result: { success: boolean; data?: Resource[] } = await response.json();
+        if (response.ok && result.success) setResources(result.data || []);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void loadResources();
+  }, []);
 
-    const visibleResources = useMemo<Resource[]>(
-    () => [
-      ...resources,
-      ...managedResources
-        .filter(
-          (resource) =>
-            resource.status === "Published"
-        )
-        .map(
-          (resource): Resource => ({
-            id: resource.id,
-            title: resource.title,
-            description:
-              "Published by the Internship Tracker team.",
-            category: (
-              resource.category ===
-              "CV & Cover Letters"
-                ? "CV & Cover Letter"
-                : resource.category
-            ) as Resource["category"],
-            type:
-              resource.type as ResourceType,
-            source: "Internship Tracker",
-            url: "#",
-          })
-        ),
-    ],
-    [managedResources]
-  );
+  const visibleResources = useMemo<Resource[]>(() => resources, [resources]);
 
   const [searchQuery, setSearchQuery] =
     useState("");
@@ -283,6 +159,7 @@ const managedResources =
             preparation materials to support
             your internship journey.
           </p>
+          {loading && <p className="mt-3 text-xs text-slate-400">Loading resources...</p>}
         </div>
 
         {/* Featured */}

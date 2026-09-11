@@ -1,76 +1,29 @@
-import {
-  applications,
-  getNextApplicationId,
-  isApplicationStatus,
-  type Application,
-} from "@/lib/applicationsStore";
-
+import { applicationInputSchema } from "@/lib/application";
+import { applicationApiError } from "@/lib/applicationApi";
+import { createApplication, listApplications } from "@/lib/applicationsRepository";
 import { authorizeRole } from "@/lib/authorization";
 
 export async function GET() {
-  const authorization =
-    await authorizeRole("student");
-
-  if (!authorization.authorized) {
-    return authorization.response;
+  try {
+    const authorization = await authorizeRole("student");
+    if (!authorization.authorized) return authorization.response;
+    return Response.json({ success: true, data: await listApplications(authorization.user.id) });
+  } catch (error) {
+    return applicationApiError(error);
   }
-
-  return Response.json({
-    success: true,
-    data: applications,
-  });
 }
 
 export async function POST(request: Request) {
-  const authorization =
-    await authorizeRole("student");
-
-  if (!authorization.authorized) {
-    return authorization.response;
+  try {
+    const authorization = await authorizeRole("student");
+    if (!authorization.authorized) return authorization.response;
+    const input = applicationInputSchema.safeParse(await request.json());
+    if (!input.success) {
+      return Response.json({ success: false, message: input.error.issues[0].message }, { status: 400 });
+    }
+    const data = await createApplication(authorization.user.id, input.data);
+    return Response.json({ success: true, message: "Application created successfully.", data }, { status: 201 });
+  } catch (error) {
+    return applicationApiError(error);
   }
-
-  const body = await request.json();
-
-  if (!body.organisation || !body.roleTitle) {
-    return Response.json(
-      {
-        success: false,
-        message:
-          "Organisation and role title are required.",
-      },
-      { status: 400 }
-    );
-  }
-
-  const now = new Date().toISOString();
-
-  const newApplication: Application = {
-    id: getNextApplicationId(),
-    organisation: body.organisation,
-    roleTitle: body.roleTitle,
-    location: body.location || "",
-    sourceLink: body.sourceLink || "",
-    deadline: body.deadline || "",
-    status: isApplicationStatus(body.status)
-      ? body.status
-      : "Interested",
-    jobDescription: body.jobDescription || "",
-    contactPerson: body.contactPerson || "",
-    outcome: body.outcome || "",
-    notes: body.notes || "",
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  applications.push(newApplication);
-
-  return Response.json(
-    {
-      success: true,
-      message:
-        "Application created successfully.",
-      data: newApplication,
-    },
-    { status: 201 }
-  );
 }

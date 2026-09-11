@@ -1,18 +1,24 @@
 # Internship Tracker
 
-A Next.js application for recording internship opportunities, tracking progress, reviewing deadlines, and preparing job-description summaries.
+[Sep 10 SZY update](docs/Sep10-szy-update.md)
+
+A Next.js internship tracking application for managing opportunities, applications, deadlines, career resources, and student profiles.
 
 ## Current features
 
-- Application create, read, update, and delete workflows
-- Shared client and server validation with Zod
+- User registration, login, logout, session management, and role-based authorization
+- Student profile loading and editing with MongoDB persistence
+- Per-user application data isolation using `userId`
+- Application create, read, update, status update, and delete workflows
 - MongoDB Atlas persistence through Mongoose
-- In-memory sample data when MongoDB is not configured
-- Live dashboard totals, pipeline, recent applications, and deadlines
-- Search, status filtering, location filtering, and deadline sorting
-- Calendar-style deadline list
-- Local, editable job-description summary tool
-- Responsive application layout and clear empty/error states
+- Live dashboard totals, application pipeline, recent applications, and upcoming deadlines
+- Application search, status filtering, location filtering, and deadline sorting
+- Persistent student calendar events with user-level isolation
+- Database-backed career resources and published-resource filtering
+- Database-backed administrator management for users, resources, and opportunities
+- Shared client and server validation with Zod
+- Responsive application, student, and administrator layouts
+- Local job-description summary tool
 
 ## Team installation
 
@@ -44,7 +50,32 @@ git pull origin main
 npm install
 ```
 
-Without environment variables, the app starts in demo mode. Demo changes are kept only while the Node.js process is running.
+The application uses MongoDB when `MONGODB_URI` and `MONGODB_DB` are configured in `.env`. Keep the MongoDB connection string server-side and do not commit `.env`.
+
+## Test accounts
+
+Student account:
+
+```text
+Email: test.student@example.com
+Password: test1234
+```
+
+Demo student account:
+
+```text
+Email: demo.student@example.com
+Password: demo1234
+```
+
+Administrator account:
+
+```text
+Email: admin.test@example.com
+Password: admin1234
+```
+
+The administrator account can manage shared users, resources, and opportunities. Student applications and calendar events remain isolated by user.
 
 ## Quality checks
 
@@ -63,6 +94,8 @@ npx next build --webpack
 
 Import the GitHub repository into Vercel and add `MONGODB_URI` and `MONGODB_DB` under Project Settings → Environment Variables. Secrets must remain server-side and must not use the `NEXT_PUBLIC_` prefix.
 
-## Planned next milestone
+## Current limitations
 
-Authentication, per-user authorization, administrator views, external AI integration, and rate limiting are intentionally not represented as complete. They require account/provider decisions and security review before production use.
+- External AI provider integration is not enabled yet; the current summary tool is local.
+- Rate limiting and production security hardening still require a security review.
+- Existing database migration scripts are available under `scripts/` for application ownership and initial shared content.

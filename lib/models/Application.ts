@@ -5,6 +5,7 @@ import { applicationStatuses } from "@/lib/application";
 
 const applicationSchema = new Schema(
   {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     organisation: { type: String, required: true, trim: true, maxlength: 120 },
     roleTitle: { type: String, required: true, trim: true, maxlength: 160 },
     location: { type: String, default: "", trim: true, maxlength: 120 },
