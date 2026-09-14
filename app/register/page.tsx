@@ -128,7 +128,7 @@ export default function RegisterPage() {
         return;
       }
 
-      router.push("/login");
+      router.push("/login?registered=success");
       router.refresh();
     } catch (error) {
       console.error("Registration error:", error);
@@ -152,9 +152,7 @@ export default function RegisterPage() {
       <div className="mt-7">
         <p className="text-sm font-medium text-slate-500">Create account</p>
 
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-          Create your workspace
-        </h1>
+        <h1 className="mt-2 page-title">Create your workspace</h1>
 
         <p className="mt-3 text-sm leading-6 text-slate-500">
           Set up your account to start tracking internship applications and
@@ -163,6 +161,7 @@ export default function RegisterPage() {
       </div>
 
       <form
+        noValidate
         className="mt-8 space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
@@ -176,7 +175,7 @@ export default function RegisterPage() {
           <legend className="px-2 text-sm font-semibold">
             I am joining as
           </legend>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {[
               ["student", "Student", "Discover and track internships"],
               ["employee", "Employee", "Publish company opportunities"],
@@ -185,8 +184,8 @@ export default function RegisterPage() {
                 key={value}
                 className={
                   role === value
-                    ? "rounded-lg border border-teal-600 bg-teal-50 p-3"
-                    : "rounded-lg border border-slate-200 p-3"
+                    ? "role-choice role-choice-active"
+                    : "role-choice"
                 }
               >
                 <input
@@ -219,6 +218,8 @@ export default function RegisterPage() {
 
           <input
             id="fullName"
+            aria-invalid={Boolean(fullNameError)}
+            aria-describedby={fullNameError ? "fullName-error" : undefined}
             type="text"
             autoComplete="name"
             value={fullName}
@@ -234,12 +235,16 @@ export default function RegisterPage() {
             className={`mt-2 w-full rounded-xl border bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 ${
               fullNameError
                 ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
-                : "border-slate-200 focus:border-slate-400 focus:ring-slate-100"
+                : "border-slate-200 focus:border-teal-600 focus:ring-teal-50"
             }`}
           />
 
           {fullNameError && (
-            <p className="mt-2 text-xs font-medium text-rose-600">
+            <p
+              id="fullName-error"
+              role="alert"
+              className="mt-2 text-xs font-medium text-rose-600"
+            >
               {fullNameError}
             </p>
           )}
@@ -253,6 +258,8 @@ export default function RegisterPage() {
 
           <input
             id="email"
+            aria-invalid={Boolean(emailError)}
+            aria-describedby={emailError ? "email-error" : undefined}
             type="email"
             autoComplete="email"
             value={email}
@@ -268,12 +275,16 @@ export default function RegisterPage() {
             className={`mt-2 w-full rounded-xl border bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 ${
               emailError
                 ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
-                : "border-slate-200 focus:border-slate-400 focus:ring-slate-100"
+                : "border-slate-200 focus:border-teal-600 focus:ring-teal-50"
             }`}
           />
 
           {emailError && (
-            <p className="mt-2 text-xs font-medium text-rose-600">
+            <p
+              id="email-error"
+              role="alert"
+              className="mt-2 text-xs font-medium text-rose-600"
+            >
               {emailError}
             </p>
           )}
@@ -291,6 +302,8 @@ export default function RegisterPage() {
           <div className="relative mt-2">
             <input
               id="password"
+              aria-invalid={Boolean(passwordError)}
+              aria-describedby={passwordError ? "password-error" : undefined}
               type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               value={password}
@@ -310,7 +323,7 @@ export default function RegisterPage() {
               className={`w-full rounded-xl border bg-white px-3.5 py-3 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 ${
                 passwordError
                   ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
-                  : "border-slate-200 focus:border-slate-400 focus:ring-slate-100"
+                  : "border-slate-200 focus:border-teal-600 focus:ring-teal-50"
               }`}
             />
 
@@ -319,7 +332,7 @@ export default function RegisterPage() {
               aria-label={showPassword ? "Hide password" : "Show password"}
               disabled={isSubmitting}
               onClick={() => setShowPassword((current) => !current)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4" />
@@ -330,7 +343,11 @@ export default function RegisterPage() {
           </div>
 
           {passwordError && (
-            <p className="mt-2 text-xs font-medium text-rose-600">
+            <p
+              id="password-error"
+              role="alert"
+              className="mt-2 text-xs font-medium text-rose-600"
+            >
               {passwordError}
             </p>
           )}
@@ -348,6 +365,10 @@ export default function RegisterPage() {
           <div className="relative mt-2">
             <input
               id="confirmPassword"
+              aria-invalid={Boolean(confirmPasswordError)}
+              aria-describedby={
+                confirmPasswordError ? "confirmPassword-error" : undefined
+              }
               type={showConfirmPassword ? "text" : "password"}
               autoComplete="new-password"
               value={confirmPassword}
@@ -359,16 +380,11 @@ export default function RegisterPage() {
                   setConfirmPasswordError("");
                 }
               }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  void handleRegister();
-                }
-              }}
               placeholder="Enter your password again"
               className={`w-full rounded-xl border bg-white px-3.5 py-3 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 ${
                 confirmPasswordError
                   ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
-                  : "border-slate-200 focus:border-slate-400 focus:ring-slate-100"
+                  : "border-slate-200 focus:border-teal-600 focus:ring-teal-50"
               }`}
             />
 
@@ -379,7 +395,7 @@ export default function RegisterPage() {
               }
               disabled={isSubmitting}
               onClick={() => setShowConfirmPassword((current) => !current)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
             >
               {showConfirmPassword ? (
                 <EyeOff className="h-4 w-4" />
@@ -390,7 +406,11 @@ export default function RegisterPage() {
           </div>
 
           {confirmPasswordError && (
-            <p className="mt-2 text-xs font-medium text-rose-600">
+            <p
+              id="confirmPassword-error"
+              role="alert"
+              className="mt-2 text-xs font-medium text-rose-600"
+            >
               {confirmPasswordError}
             </p>
           )}
@@ -401,6 +421,8 @@ export default function RegisterPage() {
           <label className="flex cursor-pointer items-start gap-3">
             <input
               type="checkbox"
+              aria-invalid={Boolean(termsError)}
+              aria-describedby={termsError ? "terms-error" : undefined}
               checked={acceptTerms}
               disabled={isSubmitting}
               onChange={(event) => {
@@ -421,7 +443,11 @@ export default function RegisterPage() {
           </label>
 
           {termsError && (
-            <p className="mt-2 text-xs font-medium text-rose-600">
+            <p
+              id="terms-error"
+              role="alert"
+              className="mt-2 text-xs font-medium text-rose-600"
+            >
               {termsError}
             </p>
           )}
@@ -429,7 +455,10 @@ export default function RegisterPage() {
 
         {/* Registration error */}
         {registerError && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+          <div
+            role="alert"
+            className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3"
+          >
             <p className="text-sm leading-6 text-rose-700">{registerError}</p>
           </div>
         )}
@@ -438,7 +467,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn group w-full disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? (
             <>

@@ -29,6 +29,10 @@ export default function UpcomingInterviews() {
             (e: Event) =>
               e.type === "interview" && new Date(e.date + "T00:00:00") >= now,
           )
+          .sort(
+            (a: Event, b: Event) =>
+              a.date.localeCompare(b.date) || a.time.localeCompare(b.time),
+          )
           .slice(0, 5),
       );
     } catch (e) {
@@ -43,7 +47,7 @@ export default function UpcomingInterviews() {
   }, []);
   return (
     <section className="panel mt-6">
-      <div className="flex justify-between">
+      <div className="flex flex-wrap justify-between gap-3">
         <h2 className="font-semibold">Upcoming interviews</h2>
         <Link className="text-sm text-teal-700" href="/calendar">
           Open calendar →

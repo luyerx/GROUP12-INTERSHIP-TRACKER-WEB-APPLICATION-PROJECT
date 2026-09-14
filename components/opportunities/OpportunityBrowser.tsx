@@ -1,5 +1,9 @@
 "use client";
 import Link from "next/link";
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui/Feedback";
+import CompanyMark from "@/components/ui/CompanyMark";
+import StatusBadge from "@/components/ui/StatusBadge";
+import Deadline from "@/components/ui/Deadline";
 import { useEffect, useState } from "react";
 import type { Opportunity } from "@/lib/opportunity";
 export default function OpportunityBrowser({
@@ -60,6 +64,13 @@ export default function OpportunityBrowser({
         : b.updatedAt.localeCompare(a.updatedAt),
   );
   if (compact) filtered = filtered.slice(0, 3);
+  const clearFilters = () => {
+    setQuery("");
+    setWorkMode("All");
+    setType("All");
+    setStatus("All");
+    setSort("newest");
+  };
   return (
     <div>
       {!compact && (
@@ -169,39 +180,46 @@ export default function OpportunityBrowser({
         </section>
       )}
       {loading ? (
-        <p role="status" className="panel">
-          Loading opportunities…
-        </p>
+        <LoadingState label="Loading opportunities…" />
       ) : error ? (
-        <div role="alert" className="panel border-rose-200">
-          <p>{error}</p>
-          <button className="btn-secondary mt-3" onClick={() => void load()}>
-            Try again
-          </button>
-        </div>
+        <ErrorState
+          title="Unable to load opportunities"
+          message={error}
+          retry={() => void load()}
+        />
       ) : filtered.length === 0 ? (
-        <section className="panel py-12 text-center">
-          <h2 className="text-xl font-semibold">
-            {rows.length
+        <EmptyState
+          title={
+            rows.length
               ? "No matching opportunities"
-              : "New opportunities start here"}
-          </h2>
-          <p className="mt-3 text-sm text-slate-600">
-            {rows.length
-              ? "Try a different search or clear your filters."
               : mode === "student"
-                ? "No open roles have been published yet. You can still track roles found on LinkedIn, Seek or company websites."
-                : "Create your first listing and publish it when you are ready for students to discover it."}
-          </p>
-          <Link
-            className="btn mt-5"
-            href={mode === "student" ? "/applications/new" : base + "/new"}
-          >
-            {mode === "student"
-              ? "Add External Application"
-              : "Create Opportunity"}
-          </Link>
-        </section>
+                ? "Your next opportunity is on its way"
+                : "Publish your first opportunity"
+          }
+          description={
+            rows.length
+              ? "Try a broader search or reset your filters to see all listings."
+              : mode === "student"
+                ? "No open roles are available yet. You can still track roles you find on company websites, LinkedIn or Seek."
+                : "Start with a draft, add the role details, then publish when you are ready."
+          }
+          action={
+            rows.length ? (
+              <button className="btn-secondary" onClick={clearFilters}>
+                Clear filters
+              </button>
+            ) : (
+              <Link
+                className="btn"
+                href={mode === "student" ? "/applications/new" : base + "/new"}
+              >
+                {mode === "student"
+                  ? "Add External Application"
+                  : "Create Opportunity"}
+              </Link>
+            )
+          }
+        />
       ) : (
         <>
           <p role="status" className="mb-3 text-sm text-slate-500">
@@ -209,14 +227,10 @@ export default function OpportunityBrowser({
           </p>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filtered.map((row) => (
-              <article key={row.id} className="panel flex flex-col">
+              <article key={row.id} className="panel job-card flex flex-col">
                 <div className="mb-5 flex items-center justify-between gap-2">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-lg font-bold text-teal-800">
-                    {row.organisation.charAt(0)}
-                  </span>
-                  <span className="badge" data-status={row.status}>
-                    {row.status}
-                  </span>
+                  <CompanyMark name={row.organisation} />
+                  <StatusBadge value={row.status} />
                 </div>
                 <p className="text-sm text-slate-500">{row.organisation}</p>
                 <h2 className="mt-1 text-lg font-semibold">
@@ -234,7 +248,8 @@ export default function OpportunityBrowser({
                   <span className="badge">
                     {row.employmentType || "Internship"}
                   </span>
-                  {row.applicationId && <span className="badge">Tracked</span>}
+                  <span className="badge">{row.workMode || "On-site"}</span>
+                  {row.applicationId && <StatusBadge value="Tracked" />}
                 </div>
                 <p className="line-clamp-3 text-sm leading-6 text-slate-600">
                   {row.description ||
@@ -246,14 +261,16 @@ export default function OpportunityBrowser({
                   </p>
                 )}
                 <div className="mt-auto pt-5">
-                  <p className="mb-3 text-xs text-slate-500">
-                    Closes {row.closingDate}
-                  </p>
+                  <div className="mb-4 border-t border-slate-100 pt-4">
+                    <Deadline value={row.closingDate} />
+                  </div>
                   <Link
                     className="btn-secondary w-full"
                     href={base + "/" + row.id}
                   >
-                    View opportunity →
+                    {mode === "student"
+                      ? "View role & application steps →"
+                      : "Manage opportunity →"}
                   </Link>
                 </div>
               </article>

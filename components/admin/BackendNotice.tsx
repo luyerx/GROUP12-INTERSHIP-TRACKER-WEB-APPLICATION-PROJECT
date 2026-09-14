@@ -1,2 +1,3 @@
-import { LockKeyhole } from "lucide-react";
-export default function BackendNotice() { return <div className="mt-6 flex items-start gap-3 border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"><LockKeyhole className="mt-0.5 h-4 w-4 shrink-0" /><p className="text-xs leading-5">Frontend preview only. Admin authentication, role checks, and persistent actions must be enforced by the backend before release.</p></div>; }
+export default function BackendNotice() {
+  return null;
+}

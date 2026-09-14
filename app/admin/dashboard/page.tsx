@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import PageHeader from "@/components/ui/PageHeader";
+import { LoadingState, ErrorState } from "@/components/ui/Feedback";
 import { useEffect, useState } from "react";
 type Stats = {
   students: number;
@@ -30,22 +32,19 @@ export default function Page() {
   }, []);
   return (
     <>
-      <p className="eyebrow">System management</p>
-      <h1 className="page-title">Admin Dashboard</h1>
-      <p className="mt-3 text-slate-600">
-        Oversee accounts, shared opportunities and career resources.
-      </p>
+      <PageHeader
+        eyebrow="System management"
+        title="Admin Dashboard"
+        description="Oversee accounts, shared opportunities and career resources."
+      />
       {error ? (
-        <div className="panel mt-6" role="alert">
-          {error}
-          <button className="btn-secondary ml-3" onClick={() => void load()}>
-            Retry
-          </button>
+        <div className="mt-6">
+          <ErrorState message={error} retry={() => void load()} />
         </div>
       ) : !stats ? (
-        <p className="panel mt-6" role="status">
-          Loading platform statistics…
-        </p>
+        <div className="mt-6">
+          <LoadingState label="Loading platform statistics…" />
+        </div>
       ) : (
         <section className="my-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
@@ -57,7 +56,7 @@ export default function Page() {
             ["Draft opportunities", stats.drafts],
             ["Published resources", stats.resources],
           ].map(([label, value]) => (
-            <div key={label} className="panel">
+            <div key={label} className="panel stat-card">
               <p className="text-sm text-slate-500">{label}</p>
               <p className="mt-3 text-3xl font-bold">{value}</p>
             </div>

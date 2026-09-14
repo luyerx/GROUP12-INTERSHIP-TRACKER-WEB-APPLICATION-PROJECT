@@ -1,6 +1,14 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
+import PageHeader from "@/components/ui/PageHeader";
+import CompanyMark from "@/components/ui/CompanyMark";
+import {
+  LoadingState,
+  ErrorState,
+  SuccessFeedback,
+} from "@/components/ui/Feedback";
 export default function Page() {
+  const [loadFailed, setLoadFailed] = useState(false);
   const [data, setData] = useState({
       fullName: "",
       companyName: "",
@@ -25,7 +33,10 @@ export default function Page() {
           location: j.user.location || "",
         });
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => {
+        setError(e.message);
+        setLoadFailed(true);
+      })
       .finally(() => setLoading(false));
   }, []);
   async function save(e: FormEvent) {
@@ -50,63 +61,105 @@ export default function Page() {
   }
   return (
     <>
-      <p className="eyebrow">Your recruitment identity</p>
-      <h1 className="page-title">Company Profile</h1>
-      <p className="my-4 text-slate-600">
-        Keep your contact name and organisation information up to date.
-      </p>
+      <PageHeader
+        eyebrow="Your recruitment identity"
+        title="Company Profile"
+        description="Introduce your organisation and keep your recruiter contact details current."
+      />
       {loading ? (
-        <p role="status">Loading profile…</p>
+        <LoadingState label="Loading company profile…" />
+      ) : loadFailed ? (
+        <ErrorState
+          title="Unable to load company profile"
+          message={error}
+          retry={() => window.location.reload()}
+        />
       ) : (
-        <form className="panel max-w-3xl" onSubmit={save}>
-          <fieldset disabled={busy} className="grid gap-5">
-            {(
-              [
-                ["fullName", "Contact name", 120],
-                ["companyName", "Company name", 160],
-                ["companyWebsite", "Company website", 2000],
-                ["location", "Location", 120],
-              ] as const
-            ).map(([key, label, max]) => (
-              <label className="form-label" key={key}>
-                {label}
-                <input
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <form
+            className="panel"
+            onSubmit={save}
+            onChange={() => setSuccess(false)}
+          >
+            <div className="form-section-header">
+              <h2>Organisation details</h2>
+              <p>Fields marked * are required.</p>
+            </div>
+            <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-2">
+              {(
+                [
+                  ["fullName", "Contact name", 120],
+                  ["companyName", "Company name", 160],
+                  ["companyWebsite", "Company website", 2000],
+                  ["location", "Location", 120],
+                ] as const
+              ).map(([key, label, max]) => (
+                <label className="form-label" key={key}>
+                  {label}
+                  {key === "fullName" || key === "companyName" ? " *" : ""}
+                  <input
+                    className="field"
+                    required={key === "fullName" || key === "companyName"}
+                    maxLength={max}
+                    type={key === "companyWebsite" ? "url" : "text"}
+                    value={data[key]}
+                    onChange={(e) =>
+                      setData({ ...data, [key]: e.target.value })
+                    }
+                  />
+                </label>
+              ))}
+              <label className="form-label sm:col-span-2">
+                About your company
+                <textarea
                   className="field"
-                  required={key === "fullName" || key === "companyName"}
-                  maxLength={max}
-                  type={key === "companyWebsite" ? "url" : "text"}
-                  value={data[key]}
-                  onChange={(e) => setData({ ...data, [key]: e.target.value })}
+                  rows={5}
+                  maxLength={4000}
+                  value={data.companyDescription}
+                  onChange={(e) =>
+                    setData({ ...data, companyDescription: e.target.value })
+                  }
                 />
               </label>
-            ))}
-            <label className="form-label">
-              About your company
-              <textarea
-                className="field"
-                rows={5}
-                maxLength={4000}
-                value={data.companyDescription}
-                onChange={(e) =>
-                  setData({ ...data, companyDescription: e.target.value })
-                }
-              />
-            </label>
-          </fieldset>
-          {error && (
-            <p role="alert" className="mt-4 text-rose-700">
-              {error}
+            </fieldset>
+            {error && (
+              <div className="mt-4">
+                <ErrorState message={error} />
+              </div>
+            )}
+            {success && (
+              <div className="mt-4">
+                <SuccessFeedback>Company profile saved.</SuccessFeedback>
+              </div>
+            )}
+            <button disabled={busy} className="btn mt-5">
+              {busy ? "Saving…" : "Save Profile"}
+            </button>
+          </form>
+          <aside className="panel h-fit">
+            <p className="eyebrow mb-5">Profile preview</p>
+            <CompanyMark name={data.companyName || "Company"} large />
+            <h2 className="mt-4 text-xl font-semibold">
+              {data.companyName || "Your company"}
+            </h2>
+            <p className="mt-2 text-sm text-slate-500">
+              {data.location || "Add your location"}
             </p>
-          )}
-          {success && (
-            <p role="status" className="mt-4 text-teal-700">
-              Company profile saved.
+            <p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-slate-600">
+              {data.companyDescription ||
+                "Tell students about the work your company does and the opportunities you offer."}
             </p>
-          )}
-          <button disabled={busy} className="btn mt-5">
-            {busy ? "Saving…" : "Save Profile"}
-          </button>
-        </form>
+            <div className="mt-5 border-t border-slate-100 pt-4">
+              <p className="eyebrow">Recruiter contact</p>
+              <p className="mt-2 text-sm">
+                {data.fullName || "Add a contact name"}
+              </p>
+            </div>
+            <p className="mt-5 text-xs text-slate-500">
+              Preview reflects your current form. Save to update your profile.
+            </p>
+          </aside>
+        </div>
       )}
     </>
   );

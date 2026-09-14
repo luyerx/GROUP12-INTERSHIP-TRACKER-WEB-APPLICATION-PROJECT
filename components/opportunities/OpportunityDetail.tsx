@@ -1,5 +1,9 @@
 "use client";
 import Link from "next/link";
+import CompanyMark from "@/components/ui/CompanyMark";
+import Deadline from "@/components/ui/Deadline";
+import StatusBadge from "@/components/ui/StatusBadge";
+import { LoadingState } from "@/components/ui/Feedback";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Opportunity } from "@/lib/opportunity";
@@ -60,9 +64,9 @@ export default function OpportunityDetail({
         ← Back to opportunities
       </Link>
       {loading ? (
-        <p role="status" className="panel mt-6">
-          Loading opportunity…
-        </p>
+        <div className="mt-6">
+          <LoadingState label="Loading opportunity…" />
+        </div>
       ) : (
         <>
           {error && (
@@ -79,20 +83,26 @@ export default function OpportunityDetail({
           {row && (
             <>
               <header className="hero my-6">
-                <p className="eyebrow">{row.organisation}</p>
+                <div className="mb-5 flex items-center gap-4">
+                  <CompanyMark name={row.organisation} large />
+                  <div>
+                    <p className="eyebrow">Opportunity at</p>
+                    <p className="mt-1 font-semibold text-slate-800">
+                      {row.organisation}
+                    </p>
+                  </div>
+                </div>
                 <h1 className="page-title">{row.role}</h1>
                 <p className="mt-4">
                   {row.location} · {row.workMode || "On-site"} ·{" "}
                   {row.employmentType || "Internship"}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <span className="badge" data-status={row.status}>
-                    {row.status}
-                  </span>
-                  <span className="text-sm">Closes {row.closingDate}</span>
+                  <StatusBadge value={row.status} />
+                  <Deadline value={row.closingDate} />
                 </div>
               </header>
-              <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
                 <section className="panel">
                   <h2 className="text-xl font-semibold">
                     About this opportunity
@@ -102,7 +112,7 @@ export default function OpportunityDetail({
                       "The publisher has not added a description. Check the original listing or contact the organisation for requirements before applying."}
                   </p>
                 </section>
-                <aside className="panel h-fit">
+                <aside className="panel h-fit lg:sticky lg:top-6">
                   <h2 className="font-semibold">
                     {mode === "student"
                       ? "Make your next move"
@@ -127,7 +137,7 @@ export default function OpportunityDetail({
                         className="btn w-full"
                         onClick={() => void track()}
                       >
-                        {busy ? "Saving…" : "Track / Add to My Applications"}
+                        {busy ? "Saving…" : "Add to My Tracker"}
                       </button>
                     )
                   ) : (
@@ -146,9 +156,16 @@ export default function OpportunityDetail({
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        Employer application page ↗
+                        Apply on Employer Site ↗
                       </a>
                     )}
+                  {mode === "student" && (
+                    <p className="mt-4 border-t border-slate-100 pt-4 text-xs leading-5 text-slate-500">
+                      {row.applicationUrl
+                        ? "The employer site opens in a new tab. Submit your application there, then update your progress in your tracker."
+                        : "No employer link has been provided. Follow the instructions in the description or contact the organisation to apply."}
+                    </p>
+                  )}
                 </aside>
               </div>
             </>

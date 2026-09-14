@@ -28,15 +28,9 @@ const applicationStatuses = [
 ] as const;
 
 const applicationSchema = z.object({
-  organisation: z
-    .string()
-    .trim()
-    .min(1, "Organisation is required"),
+  organisation: z.string().trim().min(1, "Organisation is required"),
 
-  roleTitle: z
-    .string()
-    .trim()
-    .min(1, "Role title is required"),
+  roleTitle: z.string().trim().min(1, "Role title is required"),
 
   location: z.string().optional(),
 
@@ -55,14 +49,11 @@ const applicationSchema = z.object({
           return true;
         }
 
-        return /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(
-          value
-        );
+        return /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value);
       },
       {
-        message:
-          "Please use DD/MM/YYYY format",
-      }
+        message: "Please use DD/MM/YYYY format",
+      },
     ),
 
   status: z.enum(applicationStatuses),
@@ -76,8 +67,7 @@ const applicationSchema = z.object({
   notes: z.string().optional(),
 });
 
-export type ApplicationFormValues =
-  z.infer<typeof applicationSchema>;
+export type ApplicationFormValues = z.infer<typeof applicationSchema>;
 
 type ApplicationFormProps = {
   mode?: "create" | "edit";
@@ -99,10 +89,9 @@ type ApplicationApiResponse = {
 };
 
 const inputClassName =
-  "mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400";
+  "mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-50 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400";
 
-const labelClassName =
-  "text-sm font-medium text-slate-700";
+const labelClassName = "text-sm font-medium text-slate-700";
 
 export default function ApplicationForm({
   mode = "create",
@@ -111,96 +100,61 @@ export default function ApplicationForm({
 }: ApplicationFormProps) {
   const router = useRouter();
 
-  const [submitError, setSubmitError] =
-    useState("");
+  const [submitError, setSubmitError] = useState("");
 
   const {
     register,
     handleSubmit,
-    formState: {
-      errors,
-      isSubmitting,
+    formState: { errors, isSubmitting },
+  } = useForm<ApplicationFormValues>({
+    resolver: zodResolver(applicationSchema),
+
+    defaultValues: {
+      organisation: initialValues?.organisation ?? "",
+
+      roleTitle: initialValues?.roleTitle ?? "",
+
+      location: initialValues?.location ?? "",
+
+      sourceLink: initialValues?.sourceLink ?? "",
+
+      deadline: initialValues?.deadline ?? "",
+
+      status: initialValues?.status ?? "Interested",
+
+      jobDescription: initialValues?.jobDescription ?? "",
+
+      contactPerson: initialValues?.contactPerson ?? "",
+
+      outcome: initialValues?.outcome ?? "",
+
+      notes: initialValues?.notes ?? "",
     },
-  } =
-    useForm<ApplicationFormValues>({
-      resolver:
-        zodResolver(
-          applicationSchema
-        ),
+  });
 
-      defaultValues: {
-        organisation:
-          initialValues?.organisation ??
-          "",
-
-        roleTitle:
-          initialValues?.roleTitle ??
-          "",
-
-        location:
-          initialValues?.location ?? "",
-
-        sourceLink:
-          initialValues?.sourceLink ??
-          "",
-
-        deadline:
-          initialValues?.deadline ?? "",
-
-        status:
-          initialValues?.status ??
-          "Interested",
-
-        jobDescription:
-          initialValues?.jobDescription ??
-          "",
-
-        contactPerson:
-          initialValues?.contactPerson ??
-          "",
-
-        outcome:
-          initialValues?.outcome ?? "",
-
-        notes:
-          initialValues?.notes ?? "",
-      },
-    });
-
-  const onSubmit = async (
-    data: ApplicationFormValues
-  ) => {
+  const onSubmit = async (data: ApplicationFormValues) => {
     setSubmitError("");
 
     const payload = {
-      organisation:
-        data.organisation.trim(),
+      organisation: data.organisation.trim(),
 
-      roleTitle:
-        data.roleTitle.trim(),
+      roleTitle: data.roleTitle.trim(),
 
-      location:
-        data.location?.trim() ?? "",
+      location: data.location?.trim() ?? "",
 
-      sourceLink:
-        data.sourceLink?.trim() ?? "",
+      sourceLink: data.sourceLink?.trim() ?? "",
 
-      deadline:
-        data.deadline?.trim() ?? "",
+      deadline: data.deadline?.trim() ?? "",
 
       status: data.status,
 
-      jobDescription:
-        data.jobDescription?.trim() ?? "",
+      jobDescription: data.jobDescription?.trim() ?? "",
 
-      contactPerson:
-        data.contactPerson?.trim() ?? "",
+      contactPerson: data.contactPerson?.trim() ?? "",
 
-      outcome:
-        data.outcome?.trim() ?? "",
+      outcome: data.outcome?.trim() ?? "",
 
-      notes:
-        data.notes?.trim() ?? "",
+      notes: data.notes?.trim() ?? "",
     };
 
     try {
@@ -209,46 +163,28 @@ export default function ApplicationForm({
        */
       if (mode === "edit") {
         if (!applicationId) {
-          setSubmitError(
-            "Application ID is missing."
-          );
+          setSubmitError("Application ID is missing.");
 
           return;
         }
 
-        const response =
-          await fetch(
-            `/api/applications/${applicationId}`,
-            {
-              method: "PUT",
+        const response = await fetch(`/api/applications/${applicationId}`, {
+          method: "PUT",
 
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
+          headers: {
+            "Content-Type": "application/json",
+          },
 
-              body: JSON.stringify(
-                payload
-              ),
-            }
-          );
+          body: JSON.stringify(payload),
+        });
 
-        const result: ApplicationApiResponse =
-          await response.json();
+        const result: ApplicationApiResponse = await response.json();
 
-        if (
-          !response.ok ||
-          !result.success
-        ) {
-          throw new Error(
-            result.message ||
-              "Failed to update application."
-          );
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || "Failed to update application.");
         }
 
-        router.push(
-          `/applications/${applicationId}`
-        );
+        router.push(`/applications/${applicationId}`);
 
         router.refresh();
 
@@ -258,33 +194,20 @@ export default function ApplicationForm({
       /*
        * CREATE
        */
-      const response = await fetch(
-        "/api/applications",
-        {
-          method: "POST",
+      const response = await fetch("/api/applications", {
+        method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+        headers: {
+          "Content-Type": "application/json",
+        },
 
-          body: JSON.stringify(
-            payload
-          ),
-        }
-      );
+        body: JSON.stringify(payload),
+      });
 
-      const result: ApplicationApiResponse =
-        await response.json();
+      const result: ApplicationApiResponse = await response.json();
 
-      if (
-        !response.ok ||
-        !result.success
-      ) {
-        throw new Error(
-          result.message ||
-            "Failed to create application."
-        );
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to create application.");
       }
 
       /*
@@ -293,62 +216,40 @@ export default function ApplicationForm({
        * its detail page.
        */
       if (result.data?.id) {
-        router.push(
-          `/applications/${result.data.id}`
-        );
+        router.push(`/applications/${result.data.id}`);
       } else {
-        router.push(
-          "/applications"
-        );
+        router.push("/applications");
       }
 
       router.refresh();
     } catch (error) {
-      console.error(
-        "Application save error:",
-        error
-      );
+      console.error("Application save error:", error);
 
       setSubmitError(
         error instanceof Error
           ? error.message
-          : "Something went wrong. Please try again."
+          : "Something went wrong. Please try again.",
       );
     }
   };
 
   const handleCancel = () => {
-    if (
-      mode === "edit" &&
-      applicationId
-    ) {
-      router.push(
-        `/applications/${applicationId}`
-      );
+    if (mode === "edit" && applicationId) {
+      router.push(`/applications/${applicationId}`);
 
       return;
     }
 
-    router.push(
-      "/applications"
-    );
+    router.push("/applications");
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(
-        onSubmit
-      )}
-      className="space-y-6"
-    >
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Basic information */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="card p-6">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-            <BriefcaseBusiness
-              className="h-5 w-5"
-              strokeWidth={1.8}
-            />
+            <BriefcaseBusiness className="h-5 w-5" strokeWidth={1.8} />
           </div>
 
           <div>
@@ -357,9 +258,7 @@ export default function ApplicationForm({
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Add the main details
-              about the internship
-              opportunity.
+              Add the main details about the internship opportunity.
             </p>
           </div>
         </div>
@@ -367,20 +266,16 @@ export default function ApplicationForm({
         <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
           {/* Organisation */}
           <div>
-            <label
-              htmlFor="organisation"
-              className={
-                labelClassName
-              }
-            >
-              Organisation{" "}
-              <span className="text-rose-500">
-                *
-              </span>
+            <label htmlFor="organisation" className={labelClassName}>
+              Organisation <span className="text-rose-500">*</span>
             </label>
 
             <input
               id="organisation"
+              aria-invalid={Boolean(errors.organisation)}
+              aria-describedby={
+                errors.organisation ? "organisation-error" : undefined
+              }
               type="text"
               disabled={isSubmitting}
               placeholder="e.g. Xero"
@@ -389,37 +284,32 @@ export default function ApplicationForm({
                   ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
                   : ""
               }`}
-              {...register(
-                "organisation"
-              )}
+              {...register("organisation")}
             />
 
             {errors.organisation && (
-              <p className="mt-2 text-xs font-medium text-rose-600">
-                {
-                  errors.organisation
-                    .message
-                }
+              <p
+                id="organisation-error"
+                role="alert"
+                className="mt-2 text-xs font-medium text-rose-600"
+              >
+                {errors.organisation.message}
               </p>
             )}
           </div>
 
           {/* Role */}
           <div>
-            <label
-              htmlFor="roleTitle"
-              className={
-                labelClassName
-              }
-            >
-              Role title{" "}
-              <span className="text-rose-500">
-                *
-              </span>
+            <label htmlFor="roleTitle" className={labelClassName}>
+              Role title <span className="text-rose-500">*</span>
             </label>
 
             <input
               id="roleTitle"
+              aria-invalid={Boolean(errors.roleTitle)}
+              aria-describedby={
+                errors.roleTitle ? "roleTitle-error" : undefined
+              }
               type="text"
               disabled={isSubmitting}
               placeholder="e.g. Graduate Software Developer"
@@ -428,46 +318,40 @@ export default function ApplicationForm({
                   ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
                   : ""
               }`}
-              {...register(
-                "roleTitle"
-              )}
+              {...register("roleTitle")}
             />
 
             {errors.roleTitle && (
-              <p className="mt-2 text-xs font-medium text-rose-600">
-                {
-                  errors.roleTitle
-                    .message
-                }
+              <p
+                id="roleTitle-error"
+                role="alert"
+                className="mt-2 text-xs font-medium text-rose-600"
+              >
+                {errors.roleTitle.message}
               </p>
             )}
           </div>
 
           {/* Location */}
           <div>
-            <label
-              htmlFor="location"
-              className={
-                labelClassName
-              }
-            >
+            <label htmlFor="location" className={labelClassName}>
               Location
             </label>
 
             <div className="relative">
-              <MapPin className="pointer-events-none absolute left-3.5 top-1/2 mt-1 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <MapPin className="pointer-events-none absolute left-3.5 top-1/2 mt-1 h-4 w-4 -translate-y-1/2 text-slate-500" />
 
               <input
                 id="location"
-                type="text"
-                disabled={
-                  isSubmitting
+                aria-invalid={Boolean(errors.location)}
+                aria-describedby={
+                  errors.location ? "location-error" : undefined
                 }
+                type="text"
+                disabled={isSubmitting}
                 placeholder="e.g. Auckland"
                 className={`${inputClassName} pl-10`}
-                {...register(
-                  "location"
-                )}
+                {...register("location")}
               />
             </div>
           </div>
@@ -479,7 +363,7 @@ export default function ApplicationForm({
             </label>
 
             <div className="relative">
-              <Link2 className="pointer-events-none absolute left-3.5 top-1/2 mt-1 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Link2 className="pointer-events-none absolute left-3.5 top-1/2 mt-1 h-4 w-4 -translate-y-1/2 text-slate-500" />
 
               <input
                 id="sourceLink"
@@ -488,12 +372,17 @@ export default function ApplicationForm({
                 placeholder="https://example.com/job"
                 className={`${inputClassName} pl-10`}
                 aria-invalid={Boolean(errors.sourceLink)}
-                aria-describedby={errors.sourceLink ? "sourceLink-error" : undefined}
+                aria-describedby={
+                  errors.sourceLink ? "sourceLink-error" : undefined
+                }
                 {...register("sourceLink")}
               />
             </div>
             {errors.sourceLink && (
-              <p id="sourceLink-error" className="mt-2 text-xs font-medium text-rose-600">
+              <p
+                id="sourceLink-error"
+                className="mt-2 text-xs font-medium text-rose-600"
+              >
                 {errors.sourceLink.message}
               </p>
             )}
@@ -502,13 +391,10 @@ export default function ApplicationForm({
       </section>
 
       {/* Application details */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="card p-6">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-            <CalendarDays
-              className="h-5 w-5"
-              strokeWidth={1.8}
-            />
+            <CalendarDays className="h-5 w-5" strokeWidth={1.8} />
           </div>
 
           <div>
@@ -517,8 +403,7 @@ export default function ApplicationForm({
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Track the deadline and
-              current application stage.
+              Track the deadline and current application stage.
             </p>
           </div>
         </div>
@@ -526,17 +411,14 @@ export default function ApplicationForm({
         <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
           {/* Deadline */}
           <div>
-            <label
-              htmlFor="deadline"
-              className={
-                labelClassName
-              }
-            >
+            <label htmlFor="deadline" className={labelClassName}>
               Deadline
             </label>
 
             <input
               id="deadline"
+              aria-invalid={Boolean(errors.deadline)}
+              aria-describedby={errors.deadline ? "deadline-error" : undefined}
               type="text"
               inputMode="numeric"
               disabled={isSubmitting}
@@ -546,52 +428,37 @@ export default function ApplicationForm({
                   ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
                   : ""
               }`}
-              {...register(
-                "deadline"
-              )}
+              {...register("deadline")}
             />
 
             {errors.deadline && (
-              <p className="mt-2 text-xs font-medium text-rose-600">
-                {
-                  errors.deadline
-                    .message
-                }
+              <p
+                id="deadline-error"
+                role="alert"
+                className="mt-2 text-xs font-medium text-rose-600"
+              >
+                {errors.deadline.message}
               </p>
             )}
           </div>
 
           {/* Status */}
           <div>
-            <label
-              htmlFor="status"
-              className={
-                labelClassName
-              }
-            >
+            <label htmlFor="status" className={labelClassName}>
               Application status
             </label>
 
             <select
               id="status"
               disabled={isSubmitting}
-              className={
-                inputClassName
-              }
-              {...register(
-                "status"
-              )}
+              className={inputClassName}
+              {...register("status")}
             >
-              {applicationStatuses.map(
-                (status) => (
-                  <option
-                    key={status}
-                    value={status}
-                  >
-                    {status}
-                  </option>
-                )
-              )}
+              {applicationStatuses.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -603,7 +470,7 @@ export default function ApplicationForm({
           </label>
 
           <div className="relative">
-            <FileText className="pointer-events-none absolute left-3.5 top-4 h-4 w-4 text-slate-400" />
+            <FileText className="pointer-events-none absolute left-3.5 top-4 h-4 w-4 text-slate-500" />
 
             <textarea
               id="jobDescription"
@@ -618,13 +485,10 @@ export default function ApplicationForm({
       </section>
 
       {/* Additional information */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="card p-6">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-            <UserRound
-              className="h-5 w-5"
-              strokeWidth={1.8}
-            />
+            <UserRound className="h-5 w-5" strokeWidth={1.8} />
           </div>
 
           <div>
@@ -633,20 +497,14 @@ export default function ApplicationForm({
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Add optional contact,
-              outcome, and personal notes.
+              Add optional contact, outcome, and personal notes.
             </p>
           </div>
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
           <div>
-            <label
-              htmlFor="contactPerson"
-              className={
-                labelClassName
-              }
-            >
+            <label htmlFor="contactPerson" className={labelClassName}>
               Contact person
             </label>
 
@@ -661,12 +519,7 @@ export default function ApplicationForm({
           </div>
 
           <div>
-            <label
-              htmlFor="outcome"
-              className={
-                labelClassName
-              }
-            >
+            <label htmlFor="outcome" className={labelClassName}>
               Outcome
             </label>
 
@@ -687,12 +540,7 @@ export default function ApplicationForm({
         </div>
 
         <div className="mt-5">
-          <label
-            htmlFor="notes"
-            className={
-              labelClassName
-            }
-          >
+          <label htmlFor="notes" className={labelClassName}>
             Notes
           </label>
 
@@ -718,8 +566,7 @@ export default function ApplicationForm({
 
             <div>
               <p className="text-sm font-semibold text-rose-800">
-                Unable to save
-                application
+                Unable to save application
               </p>
 
               <p className="mt-1 text-sm leading-6 text-rose-700">
@@ -744,15 +591,13 @@ export default function ApplicationForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex min-w-40 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn min-w-40 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? (
             <>
               <LoaderCircle className="h-4 w-4 animate-spin" />
 
-              {mode === "edit"
-                ? "Saving changes..."
-                : "Saving..."}
+              {mode === "edit" ? "Saving changes..." : "Saving..."}
             </>
           ) : mode === "edit" ? (
             "Save changes"

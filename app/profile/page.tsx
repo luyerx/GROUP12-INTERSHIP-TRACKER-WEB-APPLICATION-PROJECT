@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import {
   Bell,
@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 
+import { SuccessFeedback } from "@/components/ui/Feedback";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
 type ProfileData = {
@@ -88,37 +89,26 @@ function toProfileData(user: CurrentUser): ProfileData {
 }
 
 export default function ProfilePage() {
-  const [profile, setProfile] =
-    useState<ProfileData>(emptyProfile);
+  const [profile, setProfile] = useState<ProfileData>(emptyProfile);
 
-  const [draft, setDraft] =
-    useState<ProfileData>(emptyProfile);
+  const [draft, setDraft] = useState<ProfileData>(emptyProfile);
 
-  const [isLoading, setIsLoading] =
-    useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [profileError, setProfileError] =
-    useState("");
+  const [profileError, setProfileError] = useState("");
 
-  const [isEditing, setIsEditing] =
-    useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
-  const [isSaving, setIsSaving] =
-    useState(false);
+  const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [newSkill, setNewSkill] =
-    useState("");
+  const [newSkill, setNewSkill] = useState("");
 
-  const [fullNameError, setFullNameError] =
-    useState("");
+  const [fullNameError, setFullNameError] = useState("");
 
-  const [emailError, setEmailError] =
-    useState("");
+  const [emailError, setEmailError] = useState("");
 
-  const [
-    graduationYearError,
-    setGraduationYearError,
-  ] = useState("");
+  const [graduationYearError, setGraduationYearError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -126,7 +116,11 @@ export default function ProfilePage() {
     const loadProfile = async () => {
       try {
         const response = await fetch("/api/auth/me", { cache: "no-store" });
-        const result: { success: boolean; user?: CurrentUser; message?: string } = await response.json();
+        const result: {
+          success: boolean;
+          user?: CurrentUser;
+          message?: string;
+        } = await response.json();
 
         if (!response.ok || !result.success || !result.user) {
           throw new Error(result.message || "Unable to load profile.");
@@ -139,7 +133,9 @@ export default function ProfilePage() {
         }
       } catch (error) {
         if (!cancelled) {
-          setProfileError(error instanceof Error ? error.message : "Unable to load profile.");
+          setProfileError(
+            error instanceof Error ? error.message : "Unable to load profile.",
+          );
         }
       } finally {
         if (!cancelled) {
@@ -165,38 +161,29 @@ export default function ProfilePage() {
       .toUpperCase();
   }, [profile.fullName]);
 
-  const profileCompletion =
-    useMemo(() => {
-      const fields = [
-        profile.fullName,
-        profile.email,
-        profile.university,
-        profile.degree,
-        profile.major,
-        profile.graduationYear,
-        profile.location,
-        profile.preferredRoles,
-        profile.preferredLocations,
-      ];
+  const profileCompletion = useMemo(() => {
+    const fields = [
+      profile.fullName,
+      profile.email,
+      profile.university,
+      profile.degree,
+      profile.major,
+      profile.graduationYear,
+      profile.location,
+      profile.preferredRoles,
+      profile.preferredLocations,
+    ];
 
-      const completedFields =
-        fields.filter(
-          (field) => field.trim().length > 0
-        ).length;
+    const completedFields = fields.filter(
+      (field) => field.trim().length > 0,
+    ).length;
 
-      const skillsComplete =
-        profile.skills.length > 0 ? 1 : 0;
+    const skillsComplete = profile.skills.length > 0 ? 1 : 0;
 
-      const totalItems =
-        fields.length + 1;
+    const totalItems = fields.length + 1;
 
-      return Math.round(
-        ((completedFields +
-          skillsComplete) /
-          totalItems) *
-          100
-      );
-    }, [profile]);
+    return Math.round(((completedFields + skillsComplete) / totalItems) * 100);
+  }, [profile]);
 
   const startEditing = () => {
     setDraft(profile);
@@ -224,37 +211,20 @@ export default function ProfilePage() {
     setGraduationYearError("");
 
     if (!draft.fullName.trim()) {
-      setFullNameError(
-        "Full name is required."
-      );
+      setFullNameError("Full name is required.");
       isValid = false;
     }
 
     if (!draft.email.trim()) {
-      setEmailError(
-        "Email is required."
-      );
+      setEmailError("Email is required.");
       isValid = false;
-    } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        draft.email
-      )
-    ) {
-      setEmailError(
-        "Please enter a valid email address."
-      );
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email)) {
+      setEmailError("Please enter a valid email address.");
       isValid = false;
     }
 
-    if (
-      draft.graduationYear &&
-      !/^\d{4}$/.test(
-        draft.graduationYear
-      )
-    ) {
-      setGraduationYearError(
-        "Please enter a valid 4-digit year."
-      );
+    if (draft.graduationYear && !/^\d{4}$/.test(draft.graduationYear)) {
+      setGraduationYearError("Please enter a valid 4-digit year.");
       isValid = false;
     }
 
@@ -266,6 +236,7 @@ export default function ProfilePage() {
       return;
     }
 
+    setSaved(false);
     setIsSaving(true);
     setProfileError("");
 
@@ -281,8 +252,14 @@ export default function ProfilePage() {
           major: draft.major,
           graduationYear: draft.graduationYear,
           location: draft.location,
-          preferredRoles: draft.preferredRoles.split(",").map((value) => value.trim()).filter(Boolean),
-          preferredLocations: draft.preferredLocations.split(",").map((value) => value.trim()).filter(Boolean),
+          preferredRoles: draft.preferredRoles
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean),
+          preferredLocations: draft.preferredLocations
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean),
           skills: draft.skills,
           openToInternships: true,
           emailNotifications: draft.emailNotifications,
@@ -290,7 +267,8 @@ export default function ProfilePage() {
           interviewReminders: draft.interviewReminders,
         }),
       });
-      const result: { success: boolean; user?: CurrentUser; message?: string } = await response.json();
+      const result: { success: boolean; user?: CurrentUser; message?: string } =
+        await response.json();
 
       if (!response.ok || !result.success || !result.user) {
         throw new Error(result.message || "Unable to save profile.");
@@ -300,9 +278,12 @@ export default function ProfilePage() {
       setProfile(savedProfile);
       setDraft(savedProfile);
       setIsEditing(false);
+      setSaved(true);
     } catch (error) {
       console.error("Save profile error:", error);
-      setProfileError(error instanceof Error ? error.message : "Unable to save profile.");
+      setProfileError(
+        error instanceof Error ? error.message : "Unable to save profile.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -316,9 +297,7 @@ export default function ProfilePage() {
     }
 
     const exists = draft.skills.some(
-      (currentSkill) =>
-        currentSkill.toLowerCase() ===
-        skill.toLowerCase()
+      (currentSkill) => currentSkill.toLowerCase() === skill.toLowerCase(),
     );
 
     if (exists) {
@@ -328,24 +307,16 @@ export default function ProfilePage() {
 
     setDraft((current) => ({
       ...current,
-      skills: [
-        ...current.skills,
-        skill,
-      ],
+      skills: [...current.skills, skill],
     }));
 
     setNewSkill("");
   };
 
-  const removeSkill = (
-    skillToRemove: string
-  ) => {
+  const removeSkill = (skillToRemove: string) => {
     setDraft((current) => ({
       ...current,
-      skills: current.skills.filter(
-        (skill) =>
-          skill !== skillToRemove
-      ),
+      skills: current.skills.filter((skill) => skill !== skillToRemove),
     }));
   };
 
@@ -353,7 +324,10 @@ export default function ProfilePage() {
     <DashboardLayout>
       <div className="mx-auto max-w-6xl">
         {profileError && (
-          <p className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <p
+            role="alert"
+            className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+          >
             {profileError}
           </p>
         )}
@@ -362,6 +336,13 @@ export default function ProfilePage() {
           <p className="mb-5 text-sm text-slate-500">Loading profile...</p>
         )}
 
+        {saved && !isEditing && (
+          <div className="mb-5">
+            <SuccessFeedback>
+              Profile saved. Your career details are up to date.
+            </SuccessFeedback>
+          </div>
+        )}
         {/* Page header */}
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -369,24 +350,23 @@ export default function ProfilePage() {
               Student account
             </p>
 
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-              Profile
-            </h1>
+            <h1 className="mt-2 page-title">Profile</h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Manage your personal
-              information, academic
-              background, career
-              preferences, skills, and
-              notification settings.
+              Manage your personal information, academic background, career
+              preferences, skills, and notification settings.
             </p>
           </div>
 
           {!isEditing ? (
             <button
               type="button"
-              onClick={startEditing}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+              disabled={isLoading || Boolean(profileError)}
+              onClick={() => {
+                setSaved(false);
+                startEditing();
+              }}
+              className="btn "
             >
               <Pencil className="h-4 w-4" />
               Edit profile
@@ -406,10 +386,8 @@ export default function ProfilePage() {
               <button
                 type="button"
                 disabled={isSaving}
-                onClick={() =>
-                  void handleSave()
-                }
-                className="inline-flex min-w-32 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => void handleSave()}
+                className="btn min-w-32 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSaving ? (
                   <>
@@ -428,7 +406,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Profile summary */}
-        <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className="mt-8 overflow-hidden card">
           <div className="p-6 sm:p-7">
             <div className="flex flex-col gap-7 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -441,16 +419,12 @@ export default function ProfilePage() {
                     {profile.fullName}
                   </h2>
 
-                  <p className="mt-1 text-sm text-slate-500">
-                    {profile.email}
-                  </p>
+                  <p className="mt-1 text-sm text-slate-500">{profile.email}</p>
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     {profile.major && (
                       <ProfileBadge
-                        icon={
-                          <GraduationCap className="h-3.5 w-3.5" />
-                        }
+                        icon={<GraduationCap className="h-3.5 w-3.5" />}
                       >
                         {profile.major}
                       </ProfileBadge>
@@ -458,22 +432,13 @@ export default function ProfilePage() {
 
                     {profile.graduationYear && (
                       <ProfileBadge>
-                        Graduating{" "}
-                        {
-                          profile.graduationYear
-                        }
+                        Graduating {profile.graduationYear}
                       </ProfileBadge>
                     )}
 
                     {profile.location && (
-                      <ProfileBadge
-                        icon={
-                          <MapPin className="h-3.5 w-3.5" />
-                        }
-                      >
-                        {
-                          profile.location
-                        }
+                      <ProfileBadge icon={<MapPin className="h-3.5 w-3.5" />}>
+                        {profile.location}
                       </ProfileBadge>
                     )}
 
@@ -489,7 +454,7 @@ export default function ProfilePage() {
               <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 xl:w-72">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                       Profile completion
                     </p>
 
@@ -503,7 +468,14 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  role="progressbar"
+                  aria-label="Profile completion"
+                  aria-valuenow={profileCompletion}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200"
+                >
                   <div
                     className="h-full rounded-full bg-slate-950 transition-all duration-300"
                     style={{
@@ -513,9 +485,8 @@ export default function ProfilePage() {
                 </div>
 
                 <p className="mt-3 text-xs leading-5 text-slate-500">
-                  Keep your profile complete
-                  to maintain an organised
-                  career workspace.
+                  Keep your profile complete to maintain an organised career
+                  workspace.
                 </p>
               </div>
             </div>
@@ -528,9 +499,7 @@ export default function ProfilePage() {
           <div className="space-y-6">
             {/* Personal */}
             <ProfileSection
-              icon={
-                <UserRound className="h-5 w-5" />
-              }
+              icon={<UserRound className="h-5 w-5" />}
               title="Personal information"
               description="Basic information linked to your student account."
             >
@@ -538,25 +507,17 @@ export default function ProfilePage() {
                 <ProfileField
                   label="Full name"
                   value={draft.fullName}
-                  displayValue={
-                    profile.fullName
-                  }
+                  displayValue={profile.fullName}
                   editing={isEditing}
                   error={fullNameError}
                   onChange={(value) => {
-                    setDraft(
-                      (current) => ({
-                        ...current,
-                        fullName: value,
-                      })
-                    );
+                    setDraft((current) => ({
+                      ...current,
+                      fullName: value,
+                    }));
 
-                    if (
-                      fullNameError
-                    ) {
-                      setFullNameError(
-                        ""
-                      );
+                    if (fullNameError) {
+                      setFullNameError("");
                     }
                   }}
                 />
@@ -564,19 +525,15 @@ export default function ProfilePage() {
                 <ProfileField
                   label="Email address"
                   value={draft.email}
-                  displayValue={
-                    profile.email
-                  }
+                  displayValue={profile.email}
                   editing={isEditing}
                   error={emailError}
                   type="email"
                   onChange={(value) => {
-                    setDraft(
-                      (current) => ({
-                        ...current,
-                        email: value,
-                      })
-                    );
+                    setDraft((current) => ({
+                      ...current,
+                      email: value,
+                    }));
 
                     if (emailError) {
                       setEmailError("");
@@ -587,18 +544,14 @@ export default function ProfilePage() {
                 <ProfileField
                   label="Location"
                   value={draft.location}
-                  displayValue={
-                    profile.location
-                  }
+                  displayValue={profile.location}
                   editing={isEditing}
                   placeholder="e.g. Auckland, New Zealand"
                   onChange={(value) =>
-                    setDraft(
-                      (current) => ({
-                        ...current,
-                        location: value,
-                      })
-                    )
+                    setDraft((current) => ({
+                      ...current,
+                      location: value,
+                    }))
                   }
                 />
               </div>
@@ -606,98 +559,68 @@ export default function ProfilePage() {
 
             {/* Academic */}
             <ProfileSection
-              icon={
-                <GraduationCap className="h-5 w-5" />
-              }
+              icon={<GraduationCap className="h-5 w-5" />}
               title="Academic information"
               description="Your current study background and expected graduation."
             >
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <ProfileField
                   label="University"
-                  value={
-                    draft.university
-                  }
-                  displayValue={
-                    profile.university
-                  }
+                  value={draft.university}
+                  displayValue={profile.university}
                   editing={isEditing}
                   placeholder="University name"
                   onChange={(value) =>
-                    setDraft(
-                      (current) => ({
-                        ...current,
-                        university:
-                          value,
-                      })
-                    )
+                    setDraft((current) => ({
+                      ...current,
+                      university: value,
+                    }))
                   }
                 />
 
                 <ProfileField
                   label="Degree"
                   value={draft.degree}
-                  displayValue={
-                    profile.degree
-                  }
+                  displayValue={profile.degree}
                   editing={isEditing}
                   placeholder="e.g. Bachelor's Degree"
                   onChange={(value) =>
-                    setDraft(
-                      (current) => ({
-                        ...current,
-                        degree: value,
-                      })
-                    )
+                    setDraft((current) => ({
+                      ...current,
+                      degree: value,
+                    }))
                   }
                 />
 
                 <ProfileField
                   label="Major"
                   value={draft.major}
-                  displayValue={
-                    profile.major
-                  }
+                  displayValue={profile.major}
                   editing={isEditing}
                   placeholder="e.g. Software Engineering"
                   onChange={(value) =>
-                    setDraft(
-                      (current) => ({
-                        ...current,
-                        major: value,
-                      })
-                    )
+                    setDraft((current) => ({
+                      ...current,
+                      major: value,
+                    }))
                   }
                 />
 
                 <ProfileField
                   label="Graduation year"
-                  value={
-                    draft.graduationYear
-                  }
-                  displayValue={
-                    profile.graduationYear
-                  }
+                  value={draft.graduationYear}
+                  displayValue={profile.graduationYear}
                   editing={isEditing}
-                  error={
-                    graduationYearError
-                  }
+                  error={graduationYearError}
                   placeholder="e.g. 2026"
                   onChange={(value) => {
-                    setDraft(
-                      (current) => ({
-                        ...current,
-                        graduationYear:
-                          value,
-                      })
-                    );
+                    setDraft((current) => ({
+                      ...current,
+                      graduationYear: value,
+                    }));
 
-                    if (
-                      graduationYearError
-                    ) {
-                      setGraduationYearError(
-                        ""
-                      );
+                    if (graduationYearError) {
+                      setGraduationYearError("");
                     }
                   }}
                 />
@@ -706,52 +629,36 @@ export default function ProfilePage() {
 
             {/* Career */}
             <ProfileSection
-              icon={
-                <BriefcaseBusiness className="h-5 w-5" />
-              }
+              icon={<BriefcaseBusiness className="h-5 w-5" />}
               title="Career preferences"
               description="Set the roles and locations you are most interested in."
             >
               <div className="space-y-5">
                 <ProfileField
                   label="Preferred roles"
-                  value={
-                    draft.preferredRoles
-                  }
-                  displayValue={
-                    profile.preferredRoles
-                  }
+                  value={draft.preferredRoles}
+                  displayValue={profile.preferredRoles}
                   editing={isEditing}
                   placeholder="e.g. Software Engineer, Frontend Developer"
                   onChange={(value) =>
-                    setDraft(
-                      (current) => ({
-                        ...current,
-                        preferredRoles:
-                          value,
-                      })
-                    )
+                    setDraft((current) => ({
+                      ...current,
+                      preferredRoles: value,
+                    }))
                   }
                 />
 
                 <ProfileField
                   label="Preferred locations"
-                  value={
-                    draft.preferredLocations
-                  }
-                  displayValue={
-                    profile.preferredLocations
-                  }
+                  value={draft.preferredLocations}
+                  displayValue={profile.preferredLocations}
                   editing={isEditing}
                   placeholder="e.g. Auckland, Wellington, Remote"
                   onChange={(value) =>
-                    setDraft(
-                      (current) => ({
-                        ...current,
-                        preferredLocations:
-                          value,
-                      })
-                    )
+                    setDraft((current) => ({
+                      ...current,
+                      preferredLocations: value,
+                    }))
                   }
                 />
               </div>
@@ -761,7 +668,7 @@ export default function ProfilePage() {
           {/* Right column */}
           <div className="space-y-6">
             {/* Skills */}
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="card p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-base font-semibold text-slate-950">
@@ -769,28 +676,18 @@ export default function ProfilePage() {
                   </h2>
 
                   <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Technical and
-                    professional strengths
-                    relevant to your career.
+                    Technical and professional strengths relevant to your
+                    career.
                   </p>
                 </div>
 
                 <div className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
-                  {
-                    (isEditing
-                      ? draft.skills
-                      : profile.skills
-                    ).length
-                  }{" "}
-                  skills
+                  {(isEditing ? draft.skills : profile.skills).length} skills
                 </div>
               </div>
 
               <div className="mt-5 flex min-h-20 flex-wrap content-start gap-2">
-                {(isEditing
-                  ? draft.skills
-                  : profile.skills
-                ).map((skill) => (
+                {(isEditing ? draft.skills : profile.skills).map((skill) => (
                   <span
                     key={skill}
                     className="inline-flex h-fit items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700"
@@ -801,12 +698,8 @@ export default function ProfilePage() {
                       <button
                         type="button"
                         aria-label={`Remove ${skill}`}
-                        onClick={() =>
-                          removeSkill(
-                            skill
-                          )
-                        }
-                        className="rounded text-slate-400 transition hover:text-rose-600"
+                        onClick={() => removeSkill(skill)}
+                        className="rounded text-slate-500 transition hover:text-rose-600"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -814,14 +707,8 @@ export default function ProfilePage() {
                   </span>
                 ))}
 
-                {!(
-                  isEditing
-                    ? draft.skills
-                    : profile.skills
-                ).length && (
-                  <p className="text-sm text-slate-400">
-                    No skills added yet.
-                  </p>
+                {!(isEditing ? draft.skills : profile.skills).length && (
+                  <p className="text-sm text-slate-500">No skills added yet.</p>
                 )}
               </div>
 
@@ -839,34 +726,22 @@ export default function ProfilePage() {
                       id="newSkill"
                       type="text"
                       value={newSkill}
-                      onChange={(
-                        event
-                      ) =>
-                        setNewSkill(
-                          event.target
-                            .value
-                        )
-                      }
-                      onKeyDown={(
-                        event
-                      ) => {
-                        if (
-                          event.key ===
-                          "Enter"
-                        ) {
+                      onChange={(event) => setNewSkill(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
                           event.preventDefault();
                           addSkill();
                         }
                       }}
                       placeholder="e.g. Python"
-                      className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                      className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-teal-600 focus:ring-4 focus:ring-teal-50"
                     />
 
                     <button
                       type="button"
                       onClick={addSkill}
                       aria-label="Add skill"
-                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800"
+                      className="btn h-10 w-10 shrink-0"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
@@ -876,7 +751,7 @@ export default function ProfilePage() {
             </section>
 
             {/* Notifications */}
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="card p-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
                   <Bell className="h-5 w-5" />
@@ -888,8 +763,7 @@ export default function ProfilePage() {
                   </h2>
 
                   <p className="mt-1 text-sm text-slate-500">
-                    Manage important
-                    reminders.
+                    Manage important reminders.
                   </p>
                 </div>
               </div>
@@ -897,9 +771,8 @@ export default function ProfilePage() {
               {!isEditing && (
                 <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
                   <p className="text-xs leading-5 text-slate-500">
-                    Notification settings
-                    can be changed while
-                    editing your profile.
+                    Notification settings can be changed while editing your
+                    profile.
                   </p>
                 </div>
               )}
@@ -915,13 +788,10 @@ export default function ProfilePage() {
                   }
                   disabled={!isEditing}
                   onChange={(value) =>
-                    setDraft(
-                      (current) => ({
-                        ...current,
-                        emailNotifications:
-                          value,
-                      })
-                    )
+                    setDraft((current) => ({
+                      ...current,
+                      emailNotifications: value,
+                    }))
                   }
                 />
 
@@ -935,13 +805,10 @@ export default function ProfilePage() {
                   }
                   disabled={!isEditing}
                   onChange={(value) =>
-                    setDraft(
-                      (current) => ({
-                        ...current,
-                        deadlineReminders:
-                          value,
-                      })
-                    )
+                    setDraft((current) => ({
+                      ...current,
+                      deadlineReminders: value,
+                    }))
                   }
                 />
 
@@ -955,13 +822,10 @@ export default function ProfilePage() {
                   }
                   disabled={!isEditing}
                   onChange={(value) =>
-                    setDraft(
-                      (current) => ({
-                        ...current,
-                        interviewReminders:
-                          value,
-                      })
-                    )
+                    setDraft((current) => ({
+                      ...current,
+                      interviewReminders: value,
+                    }))
                   }
                 />
               </div>
@@ -984,11 +848,8 @@ export default function ProfilePage() {
                   </h2>
 
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Your workspace is ready
-                    to manage internship
-                    applications, deadlines,
-                    interviews, and career
-                    planning information.
+                    Your workspace is ready to manage internship applications,
+                    deadlines, interviews, and career planning information.
                   </p>
                 </div>
               </div>
@@ -1014,26 +875,20 @@ function ProfileSection({
   children,
 }: ProfileSectionProps) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="card p-6">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
           {icon}
         </div>
 
         <div>
-          <h2 className="text-base font-semibold text-slate-950">
-            {title}
-          </h2>
+          <h2 className="text-base font-semibold text-slate-950">{title}</h2>
 
-          <p className="mt-1 text-sm text-slate-500">
-            {description}
-          </p>
+          <p className="mt-1 text-sm text-slate-500">{description}</p>
         </div>
       </div>
 
-      <div className="mt-6">
-        {children}
-      </div>
+      <div className="mt-6">{children}</div>
     </section>
   );
 }
@@ -1043,10 +898,7 @@ type ProfileBadgeProps = {
   icon?: React.ReactNode;
 };
 
-function ProfileBadge({
-  children,
-  icon,
-}: ProfileBadgeProps) {
+function ProfileBadge({ children, icon }: ProfileBadgeProps) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
       {icon}
@@ -1076,22 +928,25 @@ function ProfileField({
   type = "text",
   placeholder,
 }: ProfileFieldProps) {
+  const fieldId = useId();
   return (
     <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+      <label
+        htmlFor={editing ? fieldId : undefined}
+        className="text-xs font-medium uppercase tracking-wide text-slate-500"
+      >
         {label}
-      </p>
+      </label>
 
       {editing ? (
         <>
           <input
+            id={fieldId}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? fieldId + "-error" : undefined}
             type={type}
             value={value}
-            onChange={(event) =>
-              onChange(
-                event.target.value
-              )
-            }
+            onChange={(event) => onChange(event.target.value)}
             placeholder={placeholder}
             className={`mt-2 w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 ${
               error
@@ -1101,15 +956,18 @@ function ProfileField({
           />
 
           {error && (
-            <p className="mt-2 text-xs font-medium text-rose-600">
+            <p
+              id={fieldId + "-error"}
+              role="alert"
+              className="mt-2 text-xs font-medium text-rose-600"
+            >
               {error}
             </p>
           )}
         </>
       ) : (
         <p className="mt-2 text-sm font-medium leading-6 text-slate-800">
-          {displayValue ||
-            "Not provided"}
+          {displayValue || "Not provided"}
         </p>
       )}
     </div>
@@ -1138,13 +996,9 @@ function NotificationSetting({
       }`}
     >
       <div>
-        <p className="text-sm font-medium text-slate-800">
-          {title}
-        </p>
+        <p className="text-sm font-medium text-slate-800">{title}</p>
 
-        <p className="mt-1 text-xs leading-5 text-slate-500">
-          {description}
-        </p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
       </div>
 
       <button
@@ -1153,24 +1007,16 @@ function NotificationSetting({
         aria-checked={checked}
         aria-label={title}
         disabled={disabled}
-        onClick={() =>
-          onChange(!checked)
-        }
+        onClick={() => onChange(!checked)}
         className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
-          checked
-            ? "bg-slate-950"
-            : "bg-slate-200"
+          checked ? "bg-slate-950" : "bg-slate-200"
         } ${
-          disabled
-            ? "cursor-not-allowed"
-            : "cursor-pointer hover:opacity-90"
+          disabled ? "cursor-not-allowed" : "cursor-pointer hover:opacity-90"
         }`}
       >
         <span
           className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition ${
-            checked
-              ? "left-6"
-              : "left-1"
+            checked ? "left-6" : "left-1"
           }`}
         />
       </button>

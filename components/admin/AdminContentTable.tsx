@@ -1,6 +1,11 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ErrorState,
+  SuccessFeedback,
+  LoadingState,
+} from "@/components/ui/Feedback";
 import { Search } from "lucide-react";
 
 import AdminModal, { fieldClass, labelClass, ModalActions } from "./AdminModal";
@@ -10,6 +15,7 @@ type Kind = "resources" | "opportunities";
 type Row = AdminResource | AdminOpportunity;
 
 export default function AdminContentTable({ kind }: { kind: Kind }) {
+  const [success, setSuccess] = useState("");
   const [busy, setBusy] = useState(false);
   const [all, setAll] = useState<Row[]>([]);
   const [query, setQuery] = useState("");
@@ -86,6 +92,7 @@ export default function AdminContentTable({ kind }: { kind: Kind }) {
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editing) return;
+    setSuccess("");
     setBusy(true);
     setError("");
     try {
@@ -123,6 +130,7 @@ export default function AdminContentTable({ kind }: { kind: Kind }) {
       }
       setEditing(null);
       await load();
+      setSuccess("Changes saved.");
     } catch {
       setError("Unable to save content. Please retry.");
     } finally {
@@ -161,7 +169,21 @@ export default function AdminContentTable({ kind }: { kind: Kind }) {
         status={status}
         setStatus={setStatus}
       />
-      {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
+      {error && !editing && (
+        <div className="mt-4">
+          <ErrorState message={error} retry={() => void load()} />
+        </div>
+      )}
+      {success && (
+        <div className="mt-4">
+          <SuccessFeedback>{success}</SuccessFeedback>
+        </div>
+      )}
+      {loading && (
+        <div className="mt-4">
+          <LoadingState label="Loading shared content…" />
+        </div>
+      )}
       <p className="mt-5 text-sm font-medium text-slate-700">
         {loading ? "Loading..." : `${rows.length} ${kind}`}
       </p>
@@ -170,8 +192,13 @@ export default function AdminContentTable({ kind }: { kind: Kind }) {
           No matching content. Create a resource or adjust your filters.
         </p>
       )}
-      <section className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <div className="overflow-x-auto">
+      <section className="mt-3 overflow-hidden card">
+        <div
+          className="overflow-x-auto"
+          tabIndex={0}
+          role="region"
+          aria-label="Shared content table, scroll horizontally for more columns"
+        >
           <table className="w-full min-w-200 text-left">
             {kind === "resources" ? (
               <ResourceRows rows={rows as AdminResource[]} edit={setEditing} />
@@ -190,7 +217,9 @@ export default function AdminContentTable({ kind }: { kind: Kind }) {
           description={
             editing.id ? `Update ${editing.id}.` : "Create a new shared item."
           }
-          onClose={() => setEditing(null)}
+          onClose={() => {
+            if (!busy) setEditing(null);
+          }}
         >
           <form onSubmit={(event) => void save(event)}>
             <fieldset disabled={busy}>
@@ -232,15 +261,15 @@ function Filters({
   setStatus: (value: string) => void;
 }) {
   return (
-    <div className="mt-8 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-[1fr_180px]">
+    <div className="mt-8 grid gap-3 card p-4 md:grid-cols-[1fr_180px]">
       <label className="relative">
-        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
         <span className="sr-only">Search</span>
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={`Search ${kind}...`}
-          className="h-11 w-full rounded-md border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none focus:ring-4 focus:ring-slate-100"
+          className="h-11 w-full rounded-md border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none focus:ring-4 focus:ring-teal-50"
         />
       </label>
       <select
@@ -267,7 +296,7 @@ function ResourceRows({
 }) {
   return (
     <>
-      <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
+      <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
         <tr>
           {["Resource", "Category", "Type", "Status", "Updated", "Action"].map(
             (heading) => (
@@ -286,7 +315,7 @@ function ResourceRows({
           <tr key={row.id} className="hover:bg-slate-50">
             <td className="px-5 py-4">
               <b className="text-sm text-slate-900">{row.title}</b>
-              <p className="text-xs text-slate-400">{row.id}</p>
+              <p className="text-xs text-slate-500">{row.id}</p>
             </td>
             <td className="px-5 py-4 text-sm text-slate-600">{row.category}</td>
             <td className="px-5 py-4 text-sm text-slate-600">{row.type}</td>
@@ -309,7 +338,7 @@ function OpportunityRows({
 }) {
   return (
     <>
-      <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
+      <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
         <tr>
           {[
             "Opportunity",
@@ -333,7 +362,7 @@ function OpportunityRows({
           <tr key={row.id} className="hover:bg-slate-50">
             <td className="px-5 py-4">
               <b className="text-sm text-slate-900">{row.role}</b>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500">
                 {row.organisation} · {row.id}
               </p>
             </td>

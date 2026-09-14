@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LoadingState } from "@/components/ui/Feedback";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -232,9 +233,7 @@ export default function DashboardPage() {
 
         <div className="mt-2 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-              Welcome back, {userName}
-            </h1>
+            <h1 className="page-title">Welcome back, {userName}</h1>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
               Track applications, interviews, deadlines, and your overall
@@ -242,17 +241,17 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <Link
-            href="/opportunities"
-            className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
-          >
+          <Link href="/opportunities" className="btn ">
             Browse Opportunities
           </Link>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-rose-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div
+            role="alert"
+            className="mt-6 flex flex-col gap-4 rounded-2xl border border-rose-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+          >
             <div className="flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
                 <AlertCircle className="h-4 w-4" />
@@ -270,7 +269,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => void retryDashboard()}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+              className="btn "
             >
               <RefreshCw className="h-4 w-4" />
               Try again
@@ -293,8 +292,46 @@ export default function DashboardPage() {
               <Link className="btn" href="/opportunities">
                 Browse Opportunities
               </Link>
+              <Link className="btn-secondary" href="/profile">
+                Complete Profile
+              </Link>
               <Link className="btn-secondary" href="/applications/new">
                 Add External Application
+              </Link>
+            </div>
+          </section>
+        )}
+        {!loading && !error && applications.length > 0 && (
+          <section className="next-actions mt-6">
+            <div>
+              <p className="eyebrow">Your next steps</p>
+              <h2 className="mt-2 text-lg font-semibold">
+                Keep your search moving.
+              </h2>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Link className="action-tile" href="/calendar">
+                <span className="font-semibold">
+                  {dashboardStats.upcomingDeadlineCount} deadlines in the next
+                  14 days
+                </span>
+                <span className="text-sm text-slate-600">
+                  Review your calendar and plan ahead →
+                </span>
+              </Link>
+              <Link className="action-tile" href="/applications">
+                <span className="font-semibold">
+                  {
+                    applications.filter(
+                      (a) =>
+                        a.status === "Interested" || a.status === "Preparing",
+                    ).length
+                  }{" "}
+                  roles in preparation
+                </span>
+                <span className="text-sm text-slate-600">
+                  Review requirements and update your tracker →
+                </span>
               </Link>
             </div>
           </section>
@@ -303,43 +340,55 @@ export default function DashboardPage() {
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             title="Total applications"
-            value={loading ? "—" : dashboardStats.totalApplications}
+            value={loading || error ? "—" : dashboardStats.totalApplications}
             helper="All tracked opportunities"
             icon={BriefcaseBusiness}
           />
 
           <StatCard
             title="Interviews"
-            value={loading ? "—" : dashboardStats.interviewCount}
+            value={loading || error ? "—" : dashboardStats.interviewCount}
             helper="Applications at interview stage"
             icon={CalendarClock}
           />
 
           <StatCard
             title="Offers"
-            value={loading ? "—" : dashboardStats.offerCount}
+            value={loading || error ? "—" : dashboardStats.offerCount}
             helper="Current successful outcomes"
             icon={CircleCheckBig}
           />
 
           <StatCard
             title="Upcoming deadlines"
-            value={loading ? "—" : dashboardStats.upcomingDeadlineCount}
+            value={
+              loading || error ? "—" : dashboardStats.upcomingDeadlineCount
+            }
             helper="Due within the next 14 days"
             icon={Clock3}
           />
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <ApplicationPipeline applications={applications} />
+      {loading ? (
+        <div className="mt-6">
+          <LoadingState label="Loading your application progress…" />
+        </div>
+      ) : (
+        !error && (
+          <>
+            <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+              <ApplicationPipeline applications={applications} />
 
-        <UpcomingTasks applications={applications} />
-      </div>
+              <UpcomingTasks applications={applications} />
+            </div>
 
-      <div className="mt-6">
-        <RecentApplications applications={applications} />
-      </div>
+            <div className="mt-6">
+              <RecentApplications applications={applications} />
+            </div>
+          </>
+        )
+      )}
       <UpcomingInterviews />
       <section className="mt-8">
         <div className="mb-5 flex items-center justify-between">

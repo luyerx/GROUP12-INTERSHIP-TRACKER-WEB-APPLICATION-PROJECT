@@ -4,12 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
-import {
-  AlertCircle,
-  ArrowLeft,
-  LoaderCircle,
-  RefreshCw,
-} from "lucide-react";
+import { AlertCircle, ArrowLeft, LoaderCircle, RefreshCw } from "lucide-react";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import ApplicationForm from "@/components/applications/ApplicationForm";
@@ -53,12 +48,8 @@ const validStatuses: ApplicationStatus[] = [
   "Withdrawn",
 ];
 
-function normaliseApplication(
-  application: Partial<Application>
-): Application {
-  const status = validStatuses.includes(
-    application.status as ApplicationStatus
-  )
+function normaliseApplication(application: Partial<Application>): Application {
+  const status = validStatuses.includes(application.status as ApplicationStatus)
     ? (application.status as ApplicationStatus)
     : "Interested";
 
@@ -77,34 +68,19 @@ function normaliseApplication(
   };
 }
 
-async function fetchApplication(
-  id: string
-): Promise<Application> {
-  const response = await fetch(
-    `/api/applications/${id}`,
-    {
-      method: "GET",
-      cache: "no-store",
-    }
-  );
+async function fetchApplication(id: string): Promise<Application> {
+  const response = await fetch(`/api/applications/${id}`, {
+    method: "GET",
+    cache: "no-store",
+  });
 
-  const result: ApplicationApiResponse =
-    await response.json();
+  const result: ApplicationApiResponse = await response.json();
 
-  if (
-    !response.ok ||
-    !result.success ||
-    !result.data
-  ) {
-    throw new Error(
-      result.message ||
-        "Failed to load application."
-    );
+  if (!response.ok || !result.success || !result.data) {
+    throw new Error(result.message || "Failed to load application.");
   }
 
-  return normaliseApplication(
-    result.data
-  );
+  return normaliseApplication(result.data);
 }
 
 export default function EditApplicationPage() {
@@ -112,55 +88,38 @@ export default function EditApplicationPage() {
 
   const id = params.id as string;
 
-  const [
-    application,
-    setApplication,
-  ] =
-    useState<Application | null>(
-      null
-    );
+  const [application, setApplication] = useState<Application | null>(null);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
-    const initialiseApplication =
-      async () => {
-        try {
-          const loadedApplication =
-            await fetchApplication(
-              id
-            );
+    const initialiseApplication = async () => {
+      try {
+        const loadedApplication = await fetchApplication(id);
 
-          if (!cancelled) {
-            setApplication(
-              loadedApplication
-            );
-          }
-        } catch (error) {
-          console.error(
-            "Load application error:",
-            error
-          );
-
-          if (!cancelled) {
-            setError(
-              error instanceof Error
-                ? error.message
-                : "Something went wrong while loading the application."
-            );
-          }
-        } finally {
-          if (!cancelled) {
-            setLoading(false);
-          }
+        if (!cancelled) {
+          setApplication(loadedApplication);
         }
-      };
+      } catch (error) {
+        console.error("Load application error:", error);
+
+        if (!cancelled) {
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Something went wrong while loading the application.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
 
     if (id) {
       void initialiseApplication();
@@ -171,35 +130,26 @@ export default function EditApplicationPage() {
     };
   }, [id]);
 
-  const retryLoadApplication =
-    async () => {
-      setLoading(true);
-      setError("");
+  const retryLoadApplication = async () => {
+    setLoading(true);
+    setError("");
 
-      try {
-        const loadedApplication =
-          await fetchApplication(
-            id
-          );
+    try {
+      const loadedApplication = await fetchApplication(id);
 
-        setApplication(
-          loadedApplication
-        );
-      } catch (error) {
-        console.error(
-          "Load application error:",
-          error
-        );
+      setApplication(loadedApplication);
+    } catch (error) {
+      console.error("Load application error:", error);
 
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Something went wrong while loading the application."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while loading the application.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -218,28 +168,25 @@ export default function EditApplicationPage() {
               Application management
             </p>
 
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-              Edit application
-            </h1>
+            <h1 className="mt-2 page-title">Edit application</h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Update the core application
-              information, deadline, location,
-              and current stage.
+              Update the core application information, deadline, location, and
+              current stage.
             </p>
           </div>
         </div>
 
         {/* Loading */}
         {loading && (
-          <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <div className="flex min-h-72 flex-col items-center justify-center card p-6 text-center">
             <LoaderCircle className="h-6 w-6 animate-spin text-slate-500" />
 
             <p className="mt-4 text-sm font-medium text-slate-700">
               Loading application...
             </p>
 
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-slate-500">
               Retrieving the latest application details.
             </p>
           </div>
@@ -262,10 +209,8 @@ export default function EditApplicationPage() {
 
             <button
               type="button"
-              onClick={() =>
-                void retryLoadApplication()
-              }
-              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+              onClick={() => void retryLoadApplication()}
+              className="btn mt-5"
             >
               <RefreshCw className="h-4 w-4" />
               Try again
@@ -274,17 +219,13 @@ export default function EditApplicationPage() {
         )}
 
         {/* Form */}
-        {!loading &&
-          !error &&
-          application && (
-            <ApplicationForm
-              mode="edit"
-              applicationId={id}
-              initialValues={
-                application
-              }
-            />
-          )}
+        {!loading && !error && application && (
+          <ApplicationForm
+            mode="edit"
+            applicationId={id}
+            initialValues={application}
+          />
+        )}
       </div>
     </DashboardLayout>
   );

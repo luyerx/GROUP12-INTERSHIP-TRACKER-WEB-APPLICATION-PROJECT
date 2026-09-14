@@ -22,9 +22,7 @@ export default function NewApplicationPage() {
               Application management
             </p>
 
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-              Add External Application
-            </h1>
+            <h1 className="mt-2 page-title">Add External Application</h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
               Found a role on LinkedIn, Seek or a company website? Add it here

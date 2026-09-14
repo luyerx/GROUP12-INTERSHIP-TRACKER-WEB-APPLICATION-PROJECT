@@ -1,7 +1,8 @@
+import { LoadingState } from "@/components/ui/Feedback";
 export default function Loading() {
   return (
-    <div role="status" aria-live="polite" className="panel m-6 animate-pulse">
-      Loading your workspace…
+    <div className="p-6">
+      <LoadingState />
     </div>
   );
 }

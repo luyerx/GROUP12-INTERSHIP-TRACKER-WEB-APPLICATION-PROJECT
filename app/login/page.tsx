@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { SuccessFeedback } from "@/components/ui/Feedback";
 
 import { ArrowRight, Eye, EyeOff, LoaderCircle } from "lucide-react";
 
 import AuthLayout from "@/components/auth/AuthLayout";
 
-export default function LoginPage() {
+function LoginForm() {
+  const searchParams = useSearchParams();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -109,9 +111,7 @@ export default function LoginPage() {
       <div>
         <p className="text-sm font-medium text-slate-500">Welcome back</p>
 
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-          Sign in to your workspace
-        </h1>
+        <h1 className="mt-2 page-title">Sign in to your workspace</h1>
 
         <p className="mt-3 text-sm leading-6 text-slate-500">
           Continue managing your applications, deadlines, interviews, and
@@ -119,7 +119,24 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div className="mt-9 space-y-5">
+      {(searchParams.get("reset") === "success" ||
+        searchParams.get("registered") === "success") && (
+        <div className="mt-6">
+          <SuccessFeedback>
+            {searchParams.get("reset") === "success"
+              ? "Password updated. Sign in with your new password."
+              : "Account created. Sign in to open your workspace."}
+          </SuccessFeedback>
+        </div>
+      )}
+      <form
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!isSubmitting) void handleLogin();
+        }}
+        className="mt-9 space-y-5"
+      >
         {/* Email */}
         <div>
           <label htmlFor="email" className="text-sm font-medium text-slate-700">
@@ -128,6 +145,8 @@ export default function LoginPage() {
 
           <input
             id="email"
+            aria-invalid={Boolean(emailError)}
+            aria-describedby={emailError ? "email-error" : undefined}
             type="email"
             autoComplete="email"
             value={email}
@@ -143,21 +162,20 @@ export default function LoginPage() {
                 setLoginError("");
               }
             }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                void handleLogin();
-              }
-            }}
             placeholder="you@example.com"
             className={`mt-2 w-full rounded-xl border bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 ${
               emailError
                 ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
-                : "border-slate-200 focus:border-slate-400 focus:ring-slate-100"
+                : "border-slate-200 focus:border-teal-600 focus:ring-teal-50"
             }`}
           />
 
           {emailError && (
-            <p className="mt-2 text-xs font-medium text-rose-600">
+            <p
+              id="email-error"
+              role="alert"
+              className="mt-2 text-xs font-medium text-rose-600"
+            >
               {emailError}
             </p>
           )}
@@ -184,6 +202,8 @@ export default function LoginPage() {
           <div className="relative mt-2">
             <input
               id="password"
+              aria-invalid={Boolean(passwordError)}
+              aria-describedby={passwordError ? "password-error" : undefined}
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               value={password}
@@ -199,16 +219,11 @@ export default function LoginPage() {
                   setLoginError("");
                 }
               }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  void handleLogin();
-                }
-              }}
               placeholder="Enter your password"
               className={`w-full rounded-xl border bg-white px-3.5 py-3 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 ${
                 passwordError
                   ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
-                  : "border-slate-200 focus:border-slate-400 focus:ring-slate-100"
+                  : "border-slate-200 focus:border-teal-600 focus:ring-teal-50"
               }`}
             />
 
@@ -217,7 +232,7 @@ export default function LoginPage() {
               aria-label={showPassword ? "Hide password" : "Show password"}
               disabled={isSubmitting}
               onClick={() => setShowPassword((current) => !current)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4" />
@@ -228,7 +243,11 @@ export default function LoginPage() {
           </div>
 
           {passwordError && (
-            <p className="mt-2 text-xs font-medium text-rose-600">
+            <p
+              id="password-error"
+              role="alert"
+              className="mt-2 text-xs font-medium text-rose-600"
+            >
               {passwordError}
             </p>
           )}
@@ -249,17 +268,19 @@ export default function LoginPage() {
 
         {/* Login error */}
         {loginError && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+          <div
+            role="alert"
+            className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3"
+          >
             <p className="text-sm leading-6 text-rose-700">{loginError}</p>
           </div>
         )}
 
         {/* Submit */}
         <button
-          type="button"
+          type="submit"
           disabled={isSubmitting}
-          onClick={() => void handleLogin()}
-          className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn group w-full disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? (
             <>
@@ -273,7 +294,7 @@ export default function LoginPage() {
             </>
           )}
         </button>
-      </div>
+      </form>
 
       {/* Register */}
       <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
@@ -288,10 +309,24 @@ export default function LoginPage() {
         </Link>
       </div>
 
-      <p className="mt-7 text-center text-xs leading-5 text-slate-400">
+      <p className="mt-7 text-center text-xs leading-5 text-slate-500">
         Your account information is used only to provide access to your
         Internship Tracker workspace.
       </p>
     </AuthLayout>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthLayout mode="login">
+          <p role="status">Loading sign in…</p>
+        </AuthLayout>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

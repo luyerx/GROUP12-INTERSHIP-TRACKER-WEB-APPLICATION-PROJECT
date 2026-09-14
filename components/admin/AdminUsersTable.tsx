@@ -1,6 +1,12 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import StatusBadge from "@/components/ui/StatusBadge";
+import {
+  LoadingState,
+  SuccessFeedback,
+  EmptyState,
+} from "@/components/ui/Feedback";
 import { Search } from "lucide-react";
 
 import AdminModal, { fieldClass, labelClass, ModalActions } from "./AdminModal";
@@ -115,15 +121,35 @@ export default function AdminUsersTable() {
 
   return (
     <>
-      <div className="mt-8 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-[1fr_160px_160px]">
+      {!loading && !error && (
+        <section
+          aria-label="User roles"
+          className="mt-6 grid gap-3 sm:grid-cols-3"
+        >
+          {["Student", "Employee", "Admin"].map((value) => (
+            <button
+              className="pipeline-tab"
+              aria-pressed={role === value}
+              key={value}
+              onClick={() => setRole(role === value ? "All" : value)}
+            >
+              <StatusBadge value={value} />
+              <strong>
+                {all.filter((user) => user.role === value).length}
+              </strong>
+            </button>
+          ))}
+        </section>
+      )}
+      <div className="mt-8 grid gap-3 card p-4 md:grid-cols-[1fr_160px_160px]">
         <label className="relative">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <span className="sr-only">Search users</span>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search name, email, or programme..."
-            className="h-11 w-full rounded-md border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none focus:ring-4 focus:ring-slate-100"
+            className="h-11 w-full rounded-md border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none focus:ring-4 focus:ring-teal-50"
           />
         </label>
         <select
@@ -157,27 +183,47 @@ export default function AdminUsersTable() {
         </p>
       )}
       {success && (
-        <p role="status" className="mt-4 text-teal-700">
-          {success}
-        </p>
+        <div className="mt-4">
+          <SuccessFeedback>{success}</SuccessFeedback>
+        </div>
       )}
       {loading && (
-        <p role="status" className="panel mt-4">
-          Loading users…
-        </p>
+        <div className="mt-4">
+          <LoadingState label="Loading users…" />
+        </div>
       )}
       {!loading && !error && rows.length === 0 && (
-        <p role="status" className="panel mt-4">
-          No matching users. Try another search or filter.
-        </p>
+        <div className="mt-4">
+          <EmptyState
+            title="No matching users"
+            description="Try another name, role or account status."
+            action={
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setQuery("");
+                  setRole("All");
+                  setStatus("All");
+                }}
+              >
+                Clear filters
+              </button>
+            }
+          />
+        </div>
       )}
       <p className="mt-5 text-sm font-medium text-slate-700">
         {rows.length} users
       </p>
-      <section className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <div className="overflow-x-auto">
+      <section className="mt-3 overflow-hidden card">
+        <div
+          className="overflow-x-auto"
+          role="region"
+          aria-label="User accounts table, scroll horizontally for more columns"
+          tabIndex={0}
+        >
           <table className="w-full min-w-225 text-left">
-            <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
+            <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 {[
                   "User",
@@ -203,24 +249,23 @@ export default function AdminUsersTable() {
                     <p className="text-sm font-semibold text-slate-900">
                       {row.name}
                     </p>
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      {row.email} · {row.id}
-                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">{row.email}</p>
                   </td>
                   <td className="px-5 py-4 text-sm text-slate-600">
                     {row.programme}
                   </td>
                   <td className="px-5 py-4 text-sm text-slate-600">
-                    {row.role}
+                    <StatusBadge value={row.role} />
                   </td>
                   <td className="px-5 py-4">
-                    <Badge value={row.status} />
+                    <StatusBadge value={row.status} />
                   </td>
                   <td className="px-5 py-4 text-sm text-slate-500">
                     {row.joined}
                   </td>
                   <td className="px-5 py-4 text-right">
                     <button
+                      aria-label={"Manage " + row.name}
                       onClick={() => setEditing(row)}
                       className="text-sm font-medium text-slate-600 hover:text-slate-950"
                     >
@@ -237,7 +282,9 @@ export default function AdminUsersTable() {
         <AdminModal
           title="Manage user"
           description={`Update ${editing.name}'s account.`}
-          onClose={() => setEditing(null)}
+          onClose={() => {
+            if (!busy) setEditing(null);
+          }}
         >
           <form onSubmit={(event) => void save(event)}>
             <fieldset disabled={busy}>
@@ -288,19 +335,5 @@ export default function AdminUsersTable() {
         </AdminModal>
       )}
     </>
-  );
-}
-
-function Badge({ value }: { value: string }) {
-  return (
-    <span
-      className={
-        value === "Active"
-          ? "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200"
-          : "rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-200"
-      }
-    >
-      {value}
-    </span>
   );
 }
