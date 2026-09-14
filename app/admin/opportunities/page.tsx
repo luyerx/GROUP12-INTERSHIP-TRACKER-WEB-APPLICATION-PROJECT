@@ -1,2 +1,4 @@
-import AdminAddButton from "@/components/admin/AdminAddButton"; import AdminContentTable from "@/components/admin/AdminContentTable"; import AdminPageHeader from "@/components/admin/AdminPageHeader"; import BackendNotice from "@/components/admin/BackendNotice";
-export default function Page(){return <div><AdminPageHeader eyebrow="Shared listings" title="Opportunities" description="Publish and maintain internship and graduate opportunities available to all students." action={<AdminAddButton kind="opportunity"/>}/><BackendNotice/><AdminContentTable kind="opportunities"/></div>}
+import OpportunityBrowser from "@/components/opportunities/OpportunityBrowser";
+export default function Page() {
+  return <OpportunityBrowser mode="admin" />;
+}

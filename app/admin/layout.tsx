@@ -17,7 +17,7 @@ export default async function Layout({
 
   // Only administrators can access admin pages.
   if (user.role !== "admin") {
-    redirect("/dashboard");
+    redirect(user.role === "employee" ? "/employee/dashboard" : "/dashboard");
   }
 
   return <AdminLayout>{children}</AdminLayout>;

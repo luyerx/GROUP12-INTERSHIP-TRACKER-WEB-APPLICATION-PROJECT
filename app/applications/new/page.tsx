@@ -23,12 +23,13 @@ export default function NewApplicationPage() {
             </p>
 
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-              Add a new application
+              Add External Application
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Record an internship opportunity, track its progress, and keep all
-              important information organised in one place.
+              Found a role on LinkedIn, Seek or a company website? Add it here
+              to track your progress. For roles published in this system, browse
+              Opportunities first.
             </p>
           </div>
         </div>

@@ -4,78 +4,41 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import {
-  ArrowLeft,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  LoaderCircle,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, LoaderCircle } from "lucide-react";
 
 import AuthLayout from "@/components/auth/AuthLayout";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const [role, setRole] = useState("student");
 
-  const [fullName, setFullName] =
-    useState("");
+  const [fullName, setFullName] = useState("");
 
-  const [email, setEmail] =
-    useState("");
+  const [email, setEmail] = useState("");
 
-  const [password, setPassword] =
-    useState("");
+  const [password, setPassword] = useState("");
 
-  const [
-    confirmPassword,
-    setConfirmPassword,
-  ] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [
-    showPassword,
-    setShowPassword,
-  ] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [
-    showConfirmPassword,
-    setShowConfirmPassword,
-  ] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [acceptTerms, setAcceptTerms] =
-    useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
-  const [
-    fullNameError,
-    setFullNameError,
-  ] = useState("");
+  const [fullNameError, setFullNameError] = useState("");
 
-  const [
-    emailError,
-    setEmailError,
-  ] = useState("");
+  const [emailError, setEmailError] = useState("");
 
-  const [
-    passwordError,
-    setPasswordError,
-  ] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
-  const [
-    confirmPasswordError,
-    setConfirmPasswordError,
-  ] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
-  const [termsError, setTermsError] =
-    useState("");
+  const [termsError, setTermsError] = useState("");
 
-  const [
-    registerError,
-    setRegisterError,
-  ] = useState("");
+  const [registerError, setRegisterError] = useState("");
 
-  const [
-    isSubmitting,
-    setIsSubmitting,
-  ] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validateForm = () => {
     let isValid = true;
@@ -88,75 +51,47 @@ export default function RegisterPage() {
     setRegisterError("");
 
     if (!fullName.trim()) {
-      setFullNameError(
-        "Full name is required."
-      );
+      setFullNameError("Full name is required.");
 
       isValid = false;
-    } else if (
-      fullName.trim().length < 2
-    ) {
-      setFullNameError(
-        "Please enter your full name."
-      );
+    } else if (fullName.trim().length < 2) {
+      setFullNameError("Please enter your full name.");
 
       isValid = false;
     }
 
     if (!email.trim()) {
-      setEmailError(
-        "Email is required."
-      );
+      setEmailError("Email is required.");
 
       isValid = false;
-    } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        email
-      )
-    ) {
-      setEmailError(
-        "Please enter a valid email address."
-      );
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailError("Please enter a valid email address.");
 
       isValid = false;
     }
 
     if (!password) {
-      setPasswordError(
-        "Password is required."
-      );
+      setPasswordError("Password is required.");
 
       isValid = false;
-    } else if (
-      password.length < 8
-    ) {
-      setPasswordError(
-        "Password must contain at least 8 characters."
-      );
+    } else if (password.length < 8) {
+      setPasswordError("Password must contain at least 8 characters.");
 
       isValid = false;
     }
 
     if (!confirmPassword) {
-      setConfirmPasswordError(
-        "Please confirm your password."
-      );
+      setConfirmPasswordError("Please confirm your password.");
 
       isValid = false;
-    } else if (
-      password !== confirmPassword
-    ) {
-      setConfirmPasswordError(
-        "Passwords do not match."
-      );
+    } else if (password !== confirmPassword) {
+      setConfirmPasswordError("Passwords do not match.");
 
       isValid = false;
     }
 
     if (!acceptTerms) {
-      setTermsError(
-        "You must agree before creating an account."
-      );
+      setTermsError("You must agree before creating an account.");
 
       isValid = false;
     }
@@ -164,52 +99,45 @@ export default function RegisterPage() {
     return isValid;
   };
 
-  const handleRegister =
-    async () => {
-      if (!validateForm()) {
+  const handleRegister = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setRegisterError("");
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          role,
+          fullName,
+          email,
+          password,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setRegisterError(result.message || "Unable to create your account.");
         return;
       }
 
-      setIsSubmitting(true);
-      setRegisterError("");
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Registration error:", error);
 
-      try {
-        const response = await fetch("/api/auth/register", {
-           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            fullName,
-            email,
-            password,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-           setRegisterError(
-            result.message || "Unable to create your account."
-          );
-         return;
-         }
-
-        router.push("/login");
-        router.refresh();
-      } catch (error) {
-        console.error(
-          "Registration error:",
-          error
-        );
-
-        setRegisterError(
-          "Unable to create your account. Please try again."
-        );
-      } finally {
-        setIsSubmitting(false);
-      }
-    };
+      setRegisterError("Unable to create your account. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <AuthLayout mode="register">
@@ -222,22 +150,64 @@ export default function RegisterPage() {
       </Link>
 
       <div className="mt-7">
-        <p className="text-sm font-medium text-slate-500">
-          Create account
-        </p>
+        <p className="text-sm font-medium text-slate-500">Create account</p>
 
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-          Create your student workspace
+          Create your workspace
         </h1>
 
         <p className="mt-3 text-sm leading-6 text-slate-500">
-          Set up your account to start
-          tracking internship applications
-          and important career dates.
+          Set up your account to start tracking internship applications and
+          important career dates.
         </p>
       </div>
 
-      <div className="mt-8 space-y-4">
+      <form
+        className="mt-8 space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!isSubmitting) void handleRegister();
+        }}
+      >
+        <fieldset
+          disabled={isSubmitting}
+          className="rounded-xl border border-slate-200 p-4"
+        >
+          <legend className="px-2 text-sm font-semibold">
+            I am joining as
+          </legend>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              ["student", "Student", "Discover and track internships"],
+              ["employee", "Employee", "Publish company opportunities"],
+            ].map(([value, label, hint]) => (
+              <label
+                key={value}
+                className={
+                  role === value
+                    ? "rounded-lg border border-teal-600 bg-teal-50 p-3"
+                    : "rounded-lg border border-slate-200 p-3"
+                }
+              >
+                <input
+                  type="radio"
+                  name="role"
+                  value={value}
+                  checked={role === value}
+                  onChange={() => setRole(value)}
+                />{" "}
+                <strong className="text-sm">{label}</strong>
+                <span className="mt-1 block text-xs text-slate-600">
+                  {hint}
+                </span>
+              </label>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-slate-600">
+            Admin access is granted by an existing administrator, never through
+            public registration.
+          </p>
+        </fieldset>
         {/* Full name */}
         <div>
           <label
@@ -254,13 +224,9 @@ export default function RegisterPage() {
             value={fullName}
             disabled={isSubmitting}
             onChange={(event) => {
-              setFullName(
-                event.target.value
-              );
+              setFullName(event.target.value);
 
-              if (
-                fullNameError
-              ) {
+              if (fullNameError) {
                 setFullNameError("");
               }
             }}
@@ -281,10 +247,7 @@ export default function RegisterPage() {
 
         {/* Email */}
         <div>
-          <label
-            htmlFor="email"
-            className="text-sm font-medium text-slate-700"
-          >
+          <label htmlFor="email" className="text-sm font-medium text-slate-700">
             Email address
           </label>
 
@@ -295,9 +258,7 @@ export default function RegisterPage() {
             value={email}
             disabled={isSubmitting}
             onChange={(event) => {
-              setEmail(
-                event.target.value
-              );
+              setEmail(event.target.value);
 
               if (emailError) {
                 setEmailError("");
@@ -330,28 +291,18 @@ export default function RegisterPage() {
           <div className="relative mt-2">
             <input
               id="password"
-              type={
-                showPassword
-                  ? "text"
-                  : "password"
-              }
+              type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               value={password}
               disabled={isSubmitting}
               onChange={(event) => {
-                setPassword(
-                  event.target.value
-                );
+                setPassword(event.target.value);
 
-                if (
-                  passwordError
-                ) {
+                if (passwordError) {
                   setPasswordError("");
                 }
 
-                if (
-                  confirmPasswordError
-                ) {
+                if (confirmPasswordError) {
                   setConfirmPasswordError("");
                 }
               }}
@@ -365,18 +316,9 @@ export default function RegisterPage() {
 
             <button
               type="button"
-              aria-label={
-                showPassword
-                  ? "Hide password"
-                  : "Show password"
-              }
+              aria-label={showPassword ? "Hide password" : "Show password"}
               disabled={isSubmitting}
-              onClick={() =>
-                setShowPassword(
-                  (current) =>
-                    !current
-                )
-              }
+              onClick={() => setShowPassword((current) => !current)}
               className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
             >
               {showPassword ? (
@@ -406,29 +348,19 @@ export default function RegisterPage() {
           <div className="relative mt-2">
             <input
               id="confirmPassword"
-              type={
-                showConfirmPassword
-                  ? "text"
-                  : "password"
-              }
+              type={showConfirmPassword ? "text" : "password"}
               autoComplete="new-password"
               value={confirmPassword}
               disabled={isSubmitting}
               onChange={(event) => {
-                setConfirmPassword(
-                  event.target.value
-                );
+                setConfirmPassword(event.target.value);
 
-                if (
-                  confirmPasswordError
-                ) {
+                if (confirmPasswordError) {
                   setConfirmPasswordError("");
                 }
               }}
               onKeyDown={(event) => {
-                if (
-                  event.key === "Enter"
-                ) {
+                if (event.key === "Enter") {
                   void handleRegister();
                 }
               }}
@@ -443,17 +375,10 @@ export default function RegisterPage() {
             <button
               type="button"
               aria-label={
-                showConfirmPassword
-                  ? "Hide password"
-                  : "Show password"
+                showConfirmPassword ? "Hide password" : "Show password"
               }
               disabled={isSubmitting}
-              onClick={() =>
-                setShowConfirmPassword(
-                  (current) =>
-                    !current
-                )
-              }
+              onClick={() => setShowConfirmPassword((current) => !current)}
               className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
             >
               {showConfirmPassword ? (
@@ -479,9 +404,7 @@ export default function RegisterPage() {
               checked={acceptTerms}
               disabled={isSubmitting}
               onChange={(event) => {
-                setAcceptTerms(
-                  event.target.checked
-                );
+                setAcceptTerms(event.target.checked);
 
                 if (termsError) {
                   setTermsError("");
@@ -491,11 +414,8 @@ export default function RegisterPage() {
             />
 
             <span className="text-xs leading-5 text-slate-500">
-              I agree to use Internship
-              Tracker responsibly and
-              understand that my account
-              information will be used to
-              provide access to my
+              I agree to use Internship Tracker responsibly and understand that
+              my account information will be used to provide access to my
               workspace.
             </span>
           </label>
@@ -510,19 +430,14 @@ export default function RegisterPage() {
         {/* Registration error */}
         {registerError && (
           <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
-            <p className="text-sm leading-6 text-rose-700">
-              {registerError}
-            </p>
+            <p className="text-sm leading-6 text-rose-700">{registerError}</p>
           </div>
         )}
 
         {/* Submit */}
         <button
-          type="button"
+          type="submit"
           disabled={isSubmitting}
-          onClick={() =>
-            void handleRegister()
-          }
           className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? (
@@ -533,24 +448,20 @@ export default function RegisterPage() {
           ) : (
             <>
               Create account
-
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </>
           )}
         </button>
-      </div>
+      </form>
 
       <div className="mt-7 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
-        <p className="text-sm text-slate-500">
-          Already have an account?
-        </p>
+        <p className="text-sm text-slate-500">Already have an account?</p>
 
         <Link
           href="/login"
           className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-950 transition hover:text-slate-600"
         >
           Sign in to your workspace
-
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>

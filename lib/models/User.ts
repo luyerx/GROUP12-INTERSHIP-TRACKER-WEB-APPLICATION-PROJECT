@@ -2,7 +2,7 @@ import "server-only";
 
 import { model, models, Schema } from "mongoose";
 
-export const userRoles = ["student", "admin"] as const;
+export const userRoles = ["student", "admin", "employee"] as const;
 export const userStatuses = ["Active", "Suspended"] as const;
 
 const userSchema = new Schema(
@@ -40,6 +40,9 @@ const userSchema = new Schema(
       default: "Active",
     },
 
+    companyName: { type: String, default: "", trim: true, maxlength: 160 },
+    companyWebsite: { type: String, default: "", trim: true, maxlength: 2000 },
+    companyDescription: { type: String, default: "", maxlength: 4000 },
     university: {
       type: String,
       default: "",
@@ -111,8 +114,7 @@ const userSchema = new Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-export const UserModel =
-  models.User || model("User", userSchema);
+export const UserModel = models.User || model("User", userSchema);

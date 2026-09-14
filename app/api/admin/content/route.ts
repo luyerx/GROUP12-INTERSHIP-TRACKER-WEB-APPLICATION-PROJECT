@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { opportunityInputSchema } from "@/lib/opportunity";
 
 import { authorizeRole } from "@/lib/authorization";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -17,13 +18,7 @@ const resourceSchema = z.object({
   status: z.enum(["Published", "Draft"]),
 });
 
-const opportunitySchema = z.object({
-  organisation: z.string().trim().min(1).max(160),
-  role: z.string().trim().min(1).max(200),
-  location: z.string().trim().min(1).max(160),
-  closingDate: z.iso.date(),
-  status: z.enum(["Published", "Draft", "Closed"]),
-});
+const opportunitySchema = opportunityInputSchema;
 
 function getKind(request: Request) {
   const kind = new URL(request.url).searchParams.get("kind");
@@ -34,34 +29,52 @@ export async function GET(request: Request) {
   const authorization = await authorizeRole("admin");
   if (!authorization.authorized) return authorization.response;
   const kind = getKind(request);
-  if (!kind) return Response.json({ success: false, message: "A valid content kind is required." }, { status: 400 });
+  if (!kind)
+    return Response.json(
+      { success: false, message: "A valid content kind is required." },
+      { status: 400 },
+    );
   await connectToDatabase();
 
   if (kind === "resources") {
     const rows = await ResourceModel.find().sort({ updatedAt: -1 }).lean();
-    return Response.json({ success: true, data: rows.map((row) => ({
-      ...row,
-      id: String(row._id),
-      updated: new Date(row.updatedAt).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" }),
-    })) });
+    return Response.json({
+      success: true,
+      data: rows.map((row) => ({
+        ...row,
+        id: String(row._id),
+        updated: new Date(row.updatedAt).toLocaleDateString("en-NZ", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }),
+      })),
+    });
   }
 
   const [rows, applicationCounts] = await Promise.all([
     OpportunityModel.find().sort({ updatedAt: -1 }).lean(),
     ApplicationModel.aggregate([
-      { $group: { _id: { organisation: "$organisation", role: "$roleTitle" }, applications: { $sum: 1 } } },
+      { $group: { _id: "$opportunityId", applications: { $sum: 1 } } },
     ]),
   ]);
   const countByOpportunity = new Map(
-    applicationCounts.map((item) => [`${item._id.organisation}\u0000${item._id.role}`, item.applications])
+    applicationCounts.map((item) => [String(item._id), item.applications]),
   );
 
-  return Response.json({ success: true, data: rows.map((row) => ({
-    ...row,
-    id: String(row._id),
-    applications: countByOpportunity.get(`${row.organisation}\u0000${row.role}`) || 0,
-    updated: new Date(row.updatedAt).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" }),
-  })) });
+  return Response.json({
+    success: true,
+    data: rows.map((row) => ({
+      ...row,
+      id: String(row._id),
+      applications: countByOpportunity.get(String(row._id)) || 0,
+      updated: new Date(row.updatedAt).toLocaleDateString("en-NZ", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }),
+    })),
+  });
 }
 
 export async function POST(request: Request) {
@@ -69,16 +82,32 @@ export async function POST(request: Request) {
   if (!authorization.authorized) return authorization.response;
 
   const kind = getKind(request);
-  if (!kind) return Response.json({ success: false, message: "A valid content kind is required." }, { status: 400 });
-  const input = kind === "resources"
-    ? resourceSchema.safeParse(await request.json())
-    : opportunitySchema.safeParse(await request.json());
+  if (!kind)
+    return Response.json(
+      { success: false, message: "A valid content kind is required." },
+      { status: 400 },
+    );
+  const input =
+    kind === "resources"
+      ? resourceSchema.safeParse(await request.json())
+      : opportunitySchema.safeParse(await request.json());
 
-  if (!input.success) return Response.json({ success: false, message: input.error.issues[0].message }, { status: 400 });
+  if (!input.success)
+    return Response.json(
+      { success: false, message: input.error.issues[0].message },
+      { status: 400 },
+    );
   await connectToDatabase();
-  const row = kind === "resources"
-    ? await ResourceModel.create(input.data)
-    : await OpportunityModel.create(input.data);
+  const row =
+    kind === "resources"
+      ? await ResourceModel.create(input.data)
+      : await OpportunityModel.create({
+          ...input.data,
+          createdBy: authorization.user.id,
+        });
 
-  return Response.json({ success: true, data: { ...row.toObject(), id: String(row._id) } }, { status: 201 });
+  return Response.json(
+    { success: true, data: { ...row.toObject(), id: String(row._id) } },
+    { status: 201 },
+  );
 }

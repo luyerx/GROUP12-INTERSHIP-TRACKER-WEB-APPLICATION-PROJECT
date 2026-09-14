@@ -16,7 +16,9 @@ export default async function StudentRouteGuard({
 
   // Administrators should use the admin workspace.
   if (user.role !== "student") {
-    redirect("/admin/dashboard");
+    redirect(
+      user.role === "employee" ? "/employee/dashboard" : "/admin/dashboard",
+    );
   }
 
   return <>{children}</>;

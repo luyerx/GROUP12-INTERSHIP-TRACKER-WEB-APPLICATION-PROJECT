@@ -2,12 +2,9 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 
-import {
-  getAuthenticatedUser,
-  type AuthenticatedUser,
-} from "@/lib/auth";
+import { getAuthenticatedUser, type AuthenticatedUser } from "@/lib/auth";
 
-export type UserRole = "student" | "admin";
+export type UserRole = "student" | "admin" | "employee";
 
 type AuthorizedResult = {
   authorized: true;
@@ -20,7 +17,7 @@ type UnauthorizedResult = {
 };
 
 export async function authorizeRole(
-  requiredRole: UserRole
+  requiredRole: UserRole,
 ): Promise<AuthorizedResult | UnauthorizedResult> {
   try {
     const user = await getAuthenticatedUser();
@@ -33,7 +30,7 @@ export async function authorizeRole(
             success: false,
             message: "Authentication required.",
           },
-          { status: 401 }
+          { status: 401 },
         ),
       };
     }
@@ -46,7 +43,7 @@ export async function authorizeRole(
             success: false,
             message: "You do not have permission to perform this action.",
           },
-          { status: 403 }
+          { status: 403 },
         ),
       };
     }
@@ -65,7 +62,7 @@ export async function authorizeRole(
           success: false,
           message: "Unable to verify user permissions.",
         },
-        { status: 500 }
+        { status: 500 },
       ),
     };
   }

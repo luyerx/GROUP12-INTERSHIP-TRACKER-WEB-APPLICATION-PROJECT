@@ -14,7 +14,9 @@ export const applicationInputSchema = z.object({
   organisation: z.string().trim().min(1, "Organisation is required").max(120),
   roleTitle: z.string().trim().min(1, "Role title is required").max(160),
   location: z.string().trim().max(120).default(""),
-  sourceLink: z.union([z.url("Please enter a valid URL"), z.literal("")]).default(""),
+  sourceLink: z
+    .union([z.url("Please enter a valid URL"), z.literal("")])
+    .default(""),
   deadline: z.union([z.iso.date(), z.literal("")]).default(""),
   status: z.enum(applicationStatuses).default("Interested"),
   jobDescription: z.string().trim().max(20000).default(""),
@@ -27,6 +29,7 @@ export type ApplicationInput = z.infer<typeof applicationInputSchema>;
 export type ApplicationStatus = (typeof applicationStatuses)[number];
 
 export type Application = ApplicationInput & {
+  opportunityId?: string;
   id: string;
   userId: string;
   createdAt: string;

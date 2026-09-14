@@ -10,7 +10,10 @@ export type AuthenticatedUser = {
   id: string;
   fullName: string;
   email: string;
-  role: "student" | "admin";
+  role: "student" | "admin" | "employee";
+  companyName: string;
+  companyWebsite: string;
+  companyDescription: string;
   university: string;
   degree: string;
   major: string;
@@ -27,12 +30,10 @@ export type AuthenticatedUser = {
   };
 };
 
-export async function getAuthenticatedUser():
-  Promise<AuthenticatedUser | null> {
+export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> {
   const cookieStore = await cookies();
 
-  const token =
-    cookieStore.get("session_token")?.value;
+  const token = cookieStore.get("session_token")?.value;
 
   if (!token) {
     return null;
@@ -51,9 +52,7 @@ export async function getAuthenticatedUser():
     return null;
   }
 
-  const user = await UserModel.findById(
-    session.userId
-  );
+  const user = await UserModel.findById(session.userId);
 
   if (!user || user.status === "Suspended") {
     return null;
@@ -66,20 +65,25 @@ export async function getAuthenticatedUser():
     role:
       user.role === "admin"
         ? "admin"
-        : "student",
-      university: user.university || "",
-      degree: user.degree || "",
-      major: user.major || "",
-      graduationYear: user.graduationYear || "",
-      location: user.location || "",
-      preferredRoles: user.preferredRoles || [],
-      preferredLocations: user.preferredLocations || [],
-      skills: user.skills || [],
-      openToInternships: user.openToInternships ?? true,
-      notifications: {
-        email: user.emailNotifications ?? true,
-        deadlineReminders: user.deadlineReminders ?? true,
-        interviewReminders: user.interviewReminders ?? true,
-      },
+        : user.role === "employee"
+          ? "employee"
+          : "student",
+    companyName: user.companyName || "",
+    companyWebsite: user.companyWebsite || "",
+    companyDescription: user.companyDescription || "",
+    university: user.university || "",
+    degree: user.degree || "",
+    major: user.major || "",
+    graduationYear: user.graduationYear || "",
+    location: user.location || "",
+    preferredRoles: user.preferredRoles || [],
+    preferredLocations: user.preferredLocations || [],
+    skills: user.skills || [],
+    openToInternships: user.openToInternships ?? true,
+    notifications: {
+      email: user.emailNotifications ?? true,
+      deadlineReminders: user.deadlineReminders ?? true,
+      interviewReminders: user.interviewReminders ?? true,
+    },
   };
 }

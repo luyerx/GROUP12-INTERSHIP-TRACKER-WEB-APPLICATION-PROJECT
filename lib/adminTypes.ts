@@ -3,12 +3,16 @@ export type AdminUser = {
   name: string;
   email: string;
   programme: string;
-  role: "Student" | "Admin";
+  role: "Student" | "Admin" | "Employee";
   status: "Active" | "Suspended";
   joined: string;
 };
 
 export type AdminResource = {
+  description?: string;
+  url?: string;
+  featured?: boolean;
+  source?: string;
   id: string;
   title: string;
   category: string;

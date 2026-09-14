@@ -1,11 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   AlertCircle,
@@ -47,30 +43,20 @@ type ApplicationsApiResponse = {
   message?: string;
 };
 
-const statusStyles: Record<
-  ApplicationStatus,
-  string
-> = {
-  Interested:
-    "bg-slate-100 text-slate-700 ring-slate-500/20",
+const statusStyles: Record<ApplicationStatus, string> = {
+  Interested: "bg-slate-100 text-slate-700 ring-slate-500/20",
 
-  Preparing:
-    "bg-violet-50 text-violet-700 ring-violet-600/20",
+  Preparing: "bg-violet-50 text-violet-700 ring-violet-600/20",
 
-  Applied:
-    "bg-blue-50 text-blue-700 ring-blue-600/20",
+  Applied: "bg-blue-50 text-blue-700 ring-blue-600/20",
 
-  Interview:
-    "bg-amber-50 text-amber-700 ring-amber-600/20",
+  Interview: "bg-amber-50 text-amber-700 ring-amber-600/20",
 
-  Offer:
-    "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  Offer: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
 
-  Rejected:
-    "bg-rose-50 text-rose-700 ring-rose-600/20",
+  Rejected: "bg-rose-50 text-rose-700 ring-rose-600/20",
 
-  Withdrawn:
-    "bg-slate-100 text-slate-500 ring-slate-500/20",
+  Withdrawn: "bg-slate-100 text-slate-500 ring-slate-500/20",
 };
 
 const validStatuses: ApplicationStatus[] = [
@@ -83,32 +69,21 @@ const validStatuses: ApplicationStatus[] = [
   "Withdrawn",
 ];
 
-function normaliseApplication(
-  application: Partial<Application>
-): Application {
-  const status =
-    validStatuses.includes(
-      application.status as ApplicationStatus
-    )
-      ? (application.status as ApplicationStatus)
-      : "Interested";
+function normaliseApplication(application: Partial<Application>): Application {
+  const status = validStatuses.includes(application.status as ApplicationStatus)
+    ? (application.status as ApplicationStatus)
+    : "Interested";
 
   return {
-    id: String(
-      application.id ?? ""
-    ),
+    id: String(application.id ?? ""),
 
-    organisation:
-      application.organisation ?? "",
+    organisation: application.organisation ?? "",
 
-    roleTitle:
-      application.roleTitle ?? "",
+    roleTitle: application.roleTitle ?? "",
 
-    location:
-      application.location ?? "",
+    location: application.location ?? "",
 
-    deadline:
-      application.deadline ?? "",
+    deadline: application.deadline ?? "",
 
     status,
   };
@@ -119,11 +94,8 @@ function normaliseApplication(
  * Keep the previous browser-readable
  * fallback behaviour for compatibility.
  */
-function parseApplicationsDeadline(
-  deadline: string
-): Date | null {
-  const parsedDate =
-    parseAppDate(deadline);
+function parseApplicationsDeadline(deadline: string): Date | null {
+  const parsedDate = parseAppDate(deadline);
 
   if (parsedDate) {
     return parsedDate;
@@ -133,145 +105,87 @@ function parseApplicationsDeadline(
     return null;
   }
 
-  const fallbackDate =
-    new Date(deadline);
+  const fallbackDate = new Date(deadline);
 
-  if (
-    Number.isNaN(
-      fallbackDate.getTime()
-    )
-  ) {
+  if (Number.isNaN(fallbackDate.getTime())) {
     return null;
   }
 
   return fallbackDate;
 }
 
-function formatApplicationsDeadline(
-  deadline: string
-): string {
-  const date =
-    parseApplicationsDeadline(
-      deadline
-    );
+function formatApplicationsDeadline(deadline: string): string {
+  const date = parseApplicationsDeadline(deadline);
 
   if (!date) {
     return "Not set";
   }
 
-  return date.toLocaleDateString(
-    "en-NZ",
-    {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }
-  );
+  return date.toLocaleDateString("en-NZ", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export default function ApplicationsPage() {
-  const [
-    applications,
-    setApplications,
-  ] = useState<Application[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
 
-  const [search, setSearch] =
-    useState("");
+  const [search, setSearch] = useState("");
 
-  const [
-    statusFilter,
-    setStatusFilter,
-  ] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
 
-  const [
-    locationFilter,
-    setLocationFilter,
-  ] = useState("All");
+  const [locationFilter, setLocationFilter] = useState("All");
 
-  const [
-    sortDirection,
-    setSortDirection,
-  ] = useState<"asc" | "desc">(
-    "asc"
-  );
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  const [
-    isLoading,
-    setIsLoading,
-  ] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
-  const fetchApplications =
-    async (): Promise<
-      Application[]
-    > => {
-      const response =
-        await fetch(
-          "/api/applications",
-          {
-            method: "GET",
-            cache: "no-store",
-          }
-        );
+  const fetchApplications = async (): Promise<Application[]> => {
+    const response = await fetch("/api/applications", {
+      method: "GET",
+      cache: "no-store",
+    });
 
-      const result:
-        ApplicationsApiResponse =
-        await response.json();
+    const result: ApplicationsApiResponse = await response.json();
 
-      if (
-        !response.ok ||
-        !result.success
-      ) {
-        throw new Error(
-          result.message ||
-            "Failed to load applications."
-        );
-      }
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Failed to load applications.");
+    }
 
-      return Array.isArray(
-        result.data
-      )
-        ? result.data.map(
-            normaliseApplication
-          )
-        : [];
-    };
+    return Array.isArray(result.data)
+      ? result.data.map(normaliseApplication)
+      : [];
+  };
 
   useEffect(() => {
     let cancelled = false;
 
-    const initialiseApplications =
-      async () => {
-        try {
-          const loadedApplications =
-            await fetchApplications();
+    const initialiseApplications = async () => {
+      try {
+        const loadedApplications = await fetchApplications();
 
-          if (!cancelled) {
-            setApplications(
-              loadedApplications
-            );
-          }
-        } catch (error) {
-          console.error(
-            "Load applications error:",
-            error
-          );
-
-          if (!cancelled) {
-            setError(
-              error instanceof Error
-                ? error.message
-                : "Unable to load applications."
-            );
-          }
-        } finally {
-          if (!cancelled) {
-            setIsLoading(false);
-          }
+        if (!cancelled) {
+          setApplications(loadedApplications);
         }
-      };
+      } catch (error) {
+        console.error("Load applications error:", error);
+
+        if (!cancelled) {
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load applications.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
 
     void initialiseApplications();
 
@@ -280,33 +194,24 @@ export default function ApplicationsPage() {
     };
   }, []);
 
-  const retryLoadApplications =
-    async () => {
-      setIsLoading(true);
-      setError("");
+  const retryLoadApplications = async () => {
+    setIsLoading(true);
+    setError("");
 
-      try {
-        const loadedApplications =
-          await fetchApplications();
+    try {
+      const loadedApplications = await fetchApplications();
 
-        setApplications(
-          loadedApplications
-        );
-      } catch (error) {
-        console.error(
-          "Load applications error:",
-          error
-        );
+      setApplications(loadedApplications);
+    } catch (error) {
+      console.error("Load applications error:", error);
 
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Unable to load applications."
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      setError(
+        error instanceof Error ? error.message : "Unable to load applications.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   /*
    * Locations are generated from real
@@ -317,110 +222,59 @@ export default function ApplicationsPage() {
     return Array.from(
       new Set(
         applications
-          .map((application) =>
-            application.location.trim()
-          )
-          .filter(Boolean)
-      )
-    ).sort((a, b) =>
-      a.localeCompare(b)
-    );
+          .map((application) => application.location.trim())
+          .filter(Boolean),
+      ),
+    ).sort((a, b) => a.localeCompare(b));
   }, [applications]);
 
-  const filteredApplications =
-    useMemo(() => {
-      const searchText =
-        search
-          .trim()
-          .toLowerCase();
+  const filteredApplications = useMemo(() => {
+    const searchText = search.trim().toLowerCase();
 
-      const filtered =
-        applications.filter(
-          (application) => {
-            const matchesSearch =
-              !searchText ||
-              application.organisation
-                .toLowerCase()
-                .includes(
-                  searchText
-                ) ||
-              application.roleTitle
-                .toLowerCase()
-                .includes(
-                  searchText
-                );
+    const filtered = applications.filter((application) => {
+      const matchesSearch =
+        !searchText ||
+        application.organisation.toLowerCase().includes(searchText) ||
+        application.roleTitle.toLowerCase().includes(searchText);
 
-            const matchesStatus =
-              statusFilter ===
-                "All" ||
-              application.status ===
-                statusFilter;
+      const matchesStatus =
+        statusFilter === "All" || application.status === statusFilter;
 
-            const matchesLocation =
-              locationFilter ===
-                "All" ||
-              application.location ===
-                locationFilter;
+      const matchesLocation =
+        locationFilter === "All" || application.location === locationFilter;
 
-            return (
-              matchesSearch &&
-              matchesStatus &&
-              matchesLocation
-            );
-          }
-        );
+      return matchesSearch && matchesStatus && matchesLocation;
+    });
 
-      return [...filtered].sort(
-        (a, b) => {
-          const firstDate =
-            parseApplicationsDeadline(
-              a.deadline
-            );
+    return [...filtered].sort((a, b) => {
+      const firstDate = parseApplicationsDeadline(a.deadline);
 
-          const secondDate =
-            parseApplicationsDeadline(
-              b.deadline
-            );
+      const secondDate = parseApplicationsDeadline(b.deadline);
 
-          /*
-           * Applications without a
-           * deadline stay at the bottom.
-           */
-          if (
-            !firstDate &&
-            !secondDate
-          ) {
-            return 0;
-          }
+      /*
+       * Applications without a
+       * deadline stay at the bottom.
+       */
+      if (!firstDate && !secondDate) {
+        return 0;
+      }
 
-          if (!firstDate) {
-            return 1;
-          }
+      if (!firstDate) {
+        return 1;
+      }
 
-          if (!secondDate) {
-            return -1;
-          }
+      if (!secondDate) {
+        return -1;
+      }
 
-          return sortDirection ===
-            "asc"
-            ? firstDate.getTime() -
-                secondDate.getTime()
-            : secondDate.getTime() -
-                firstDate.getTime();
-        }
-      );
-    }, [
-      applications,
-      search,
-      statusFilter,
-      locationFilter,
-      sortDirection,
-    ]);
+      return sortDirection === "asc"
+        ? firstDate.getTime() - secondDate.getTime()
+        : secondDate.getTime() - firstDate.getTime();
+    });
+  }, [applications, search, statusFilter, locationFilter, sortDirection]);
 
   const filtersActive =
-    search.trim() !== "" ||
-    statusFilter !== "All" ||
-    locationFilter !== "All";
+    search.trim() !== "" || statusFilter !== "All" || locationFilter !== "All";
 
   const clearFilters = () => {
     setSearch("");
@@ -443,10 +297,8 @@ export default function ApplicationsPage() {
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Organise every internship
-              opportunity, monitor progress,
-              and keep important deadlines
-              in one place.
+              Organise every internship opportunity, monitor progress, and keep
+              important deadlines in one place.
             </p>
           </div>
 
@@ -455,7 +307,7 @@ export default function ApplicationsPage() {
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
           >
             <Plus className="h-4 w-4" />
-            Add application
+            Add External Application
           </Link>
         </div>
 
@@ -470,11 +322,7 @@ export default function ApplicationsPage() {
                 type="search"
                 value={search}
                 disabled={isLoading}
-                onChange={(event) =>
-                  setSearch(
-                    event.target.value
-                  )
-                }
+                onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search organisation or role..."
                 aria-label="Search applications"
                 className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
@@ -486,28 +334,17 @@ export default function ApplicationsPage() {
               <select
                 value={statusFilter}
                 disabled={isLoading}
-                onChange={(event) =>
-                  setStatusFilter(
-                    event.target.value
-                  )
-                }
+                onChange={(event) => setStatusFilter(event.target.value)}
                 aria-label="Filter applications by status"
                 className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-3.5 pr-9 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <option value="All">
-                  All statuses
-                </option>
+                <option value="All">All statuses</option>
 
-                {validStatuses.map(
-                  (status) => (
-                    <option
-                      key={status}
-                      value={status}
-                    >
-                      {status}
-                    </option>
-                  )
-                )}
+                {validStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
               </select>
 
               <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -518,28 +355,17 @@ export default function ApplicationsPage() {
               <select
                 value={locationFilter}
                 disabled={isLoading}
-                onChange={(event) =>
-                  setLocationFilter(
-                    event.target.value
-                  )
-                }
+                onChange={(event) => setLocationFilter(event.target.value)}
                 aria-label="Filter applications by location"
                 className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-3.5 pr-9 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <option value="All">
-                  All locations
-                </option>
+                <option value="All">All locations</option>
 
-                {locations.map(
-                  (location) => (
-                    <option
-                      key={location}
-                      value={location}
-                    >
-                      {location}
-                    </option>
-                  )
-                )}
+                {locations.map((location) => (
+                  <option key={location} value={location}>
+                    {location}
+                  </option>
+                ))}
               </select>
 
               <MapPin className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -550,21 +376,14 @@ export default function ApplicationsPage() {
               type="button"
               disabled={isLoading}
               onClick={() =>
-                setSortDirection(
-                  (current) =>
-                    current === "asc"
-                      ? "desc"
-                      : "asc"
+                setSortDirection((current) =>
+                  current === "asc" ? "desc" : "asc",
                 )
               }
               className="flex h-11 items-center justify-between rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <span>
-                Deadline{" "}
-                {sortDirection ===
-                "asc"
-                  ? "earliest"
-                  : "latest"}
+                Deadline {sortDirection === "asc" ? "earliest" : "latest"}
               </span>
 
               <ArrowUpDown className="h-4 w-4 text-slate-400" />
@@ -582,8 +401,7 @@ export default function ApplicationsPage() {
             </p>
 
             <p className="mt-1 text-xs text-slate-400">
-              Retrieving your application
-              records.
+              Retrieving your application records.
             </p>
           </section>
         )}
@@ -605,9 +423,7 @@ export default function ApplicationsPage() {
 
             <button
               type="button"
-              onClick={() =>
-                void retryLoadApplications()
-              }
+              onClick={() => void retryLoadApplications()}
               className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
             >
               <RefreshCw className="h-4 w-4" />
@@ -622,11 +438,8 @@ export default function ApplicationsPage() {
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-slate-950">
-                  {
-                    filteredApplications.length
-                  }{" "}
-                  {filteredApplications.length ===
-                  1
+                  {filteredApplications.length}{" "}
+                  {filteredApplications.length === 1
                     ? "application"
                     : "applications"}
                 </p>
@@ -651,152 +464,115 @@ export default function ApplicationsPage() {
 
             {/* Table / Empty State */}
             <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              {filteredApplications.length >
-              0 ? (
+              {filteredApplications.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-225 text-left">
                     <thead>
                       <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-medium uppercase tracking-wide text-slate-400">
-                        <th className="px-6 py-4">
-                          Organisation
-                        </th>
+                        <th className="px-6 py-4">Organisation</th>
 
-                        <th className="px-6 py-4">
-                          Role
-                        </th>
+                        <th className="px-6 py-4">Role</th>
 
-                        <th className="px-6 py-4">
-                          Location
-                        </th>
+                        <th className="px-6 py-4">Location</th>
 
-                        <th className="px-6 py-4">
-                          Deadline
-                        </th>
+                        <th className="px-6 py-4">Deadline</th>
 
-                        <th className="px-6 py-4">
-                          Status
-                        </th>
+                        <th className="px-6 py-4">Status</th>
 
                         <th className="w-20 px-6 py-4" />
                       </tr>
                     </thead>
 
                     <tbody className="divide-y divide-slate-100">
-                      {filteredApplications.map(
-                        (
-                          application
-                        ) => (
-                          <tr
-                            key={
-                              application.id
-                            }
-                            className="group transition-colors hover:bg-slate-50/80"
-                          >
-                            {/* Organisation */}
-                            <td className="px-6 py-4">
-                              <Link
-                                href={`/applications/${application.id}`}
-                                className="flex items-center gap-3"
-                              >
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700">
-                                  {application.organisation
-                                    .charAt(
-                                      0
-                                    )
-                                    .toUpperCase() ||
-                                    "?"}
-                                </div>
+                      {filteredApplications.map((application) => (
+                        <tr
+                          key={application.id}
+                          className="group transition-colors hover:bg-slate-50/80"
+                        >
+                          {/* Organisation */}
+                          <td className="px-6 py-4">
+                            <Link
+                              href={`/applications/${application.id}`}
+                              className="flex items-center gap-3"
+                            >
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700">
+                                {application.organisation
+                                  .charAt(0)
+                                  .toUpperCase() || "?"}
+                              </div>
 
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-900 transition group-hover:text-slate-950">
-                                    {
-                                      application.organisation
-                                    }
-                                  </p>
+                              <div>
+                                <p className="text-sm font-semibold text-slate-900 transition group-hover:text-slate-950">
+                                  {application.organisation}
+                                </p>
 
-                                  <p className="mt-0.5 text-xs text-slate-400">
-                                    Application #
-                                    {
-                                      application.id
-                                    }
-                                  </p>
-                                </div>
-                              </Link>
-                            </td>
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                  Application #{application.id}
+                                </p>
+                              </div>
+                            </Link>
+                          </td>
 
-                            {/* Role */}
-                            <td className="px-6 py-4">
-                              <Link
-                                href={`/applications/${application.id}`}
-                                className="text-sm font-medium text-slate-700 transition hover:text-slate-950"
-                              >
-                                {
-                                  application.roleTitle
-                                }
-                              </Link>
-                            </td>
+                          {/* Role */}
+                          <td className="px-6 py-4">
+                            <Link
+                              href={`/applications/${application.id}`}
+                              className="text-sm font-medium text-slate-700 transition hover:text-slate-950"
+                            >
+                              {application.roleTitle}
+                            </Link>
+                          </td>
 
-                            {/* Location */}
-                            <td className="px-6 py-4">
-                              {application.location ? (
-                                <div className="flex items-center gap-2 text-sm text-slate-500">
-                                  <MapPin className="h-4 w-4 text-slate-400" />
+                          {/* Location */}
+                          <td className="px-6 py-4">
+                            {application.location ? (
+                              <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <MapPin className="h-4 w-4 text-slate-400" />
 
-                                  {
-                                    application.location
-                                  }
-                                </div>
-                              ) : (
-                                <span className="text-sm text-slate-400">
-                                  Not set
-                                </span>
-                              )}
-                            </td>
-
-                            {/* Deadline */}
-                            <td className="px-6 py-4">
-                              <span className="text-sm text-slate-600">
-                                {formatApplicationsDeadline(
-                                  application.deadline
-                                )}
+                                {application.location}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-slate-400">
+                                Not set
                               </span>
-                            </td>
+                            )}
+                          </td>
 
-                            {/* Status */}
-                            <td className="px-6 py-4">
-                              <span
-                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
-                                  statusStyles[
-                                    application
-                                      .status
-                                  ]
-                                }`}
-                              >
-                                {
-                                  application.status
-                                }
-                              </span>
-                            </td>
+                          {/* Deadline */}
+                          <td className="px-6 py-4">
+                            <span className="text-sm text-slate-600">
+                              {formatApplicationsDeadline(application.deadline)}
+                            </span>
+                          </td>
 
-                            {/* Edit */}
-                            <td className="px-6 py-4">
-                              <Link
-                                href={`/applications/${application.id}/edit`}
-                                aria-label={`Edit ${application.organisation} application`}
-                                title="Edit application"
-                                className="inline-flex rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Link>
-                            </td>
-                          </tr>
-                        )
-                      )}
+                          {/* Status */}
+                          <td className="px-6 py-4">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                                statusStyles[application.status]
+                              }`}
+                            >
+                              {application.status}
+                            </span>
+                          </td>
+
+                          {/* Edit */}
+                          <td className="px-6 py-4">
+                            <Link
+                              href={`/applications/${application.id}/edit`}
+                              aria-label={`Edit ${application.organisation} application`}
+                              title="Edit application"
+                              className="inline-flex rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
-              ) : applications.length ===
-                0 ? (
+              ) : applications.length === 0 ? (
                 /* No applications at all */
                 <div className="flex min-h-90 flex-col items-center justify-center px-6 text-center">
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
@@ -808,18 +584,20 @@ export default function ApplicationsPage() {
                   </h2>
 
                   <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
-                    Add your first
-                    internship opportunity
-                    to start tracking your
-                    application journey.
+                    Browse published opportunities and track a role to start
+                    your pipeline. Use Add External Application for roles found
+                    elsewhere.
                   </p>
 
+                  <Link className="btn mt-5" href="/opportunities">
+                    Browse Opportunities
+                  </Link>
                   <Link
                     href="/applications/new"
                     className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
                   >
                     <Plus className="h-4 w-4" />
-                    Add application
+                    Add External Application
                   </Link>
                 </div>
               ) : (
@@ -834,16 +612,12 @@ export default function ApplicationsPage() {
                   </h2>
 
                   <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
-                    No applications match
-                    your current search or
-                    filters.
+                    No applications match your current search or filters.
                   </p>
 
                   <button
                     type="button"
-                    onClick={
-                      clearFilters
-                    }
+                    onClick={clearFilters}
                     className="mt-5 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
                   >
                     Clear filters
@@ -853,22 +627,17 @@ export default function ApplicationsPage() {
             </section>
 
             {/* Pagination placeholder */}
-            {filteredApplications.length >
-              0 && (
+            {filteredApplications.length > 0 && (
               <div className="mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-slate-500">
                   Showing{" "}
                   <span className="font-medium text-slate-700">
                     1–
-                    {
-                      filteredApplications.length
-                    }
+                    {filteredApplications.length}
                   </span>{" "}
                   of{" "}
                   <span className="font-medium text-slate-700">
-                    {
-                      filteredApplications.length
-                    }
+                    {filteredApplications.length}
                   </span>
                 </p>
 

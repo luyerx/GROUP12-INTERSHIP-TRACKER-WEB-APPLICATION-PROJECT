@@ -5,7 +5,13 @@ import { applicationStatuses } from "@/lib/application";
 
 const applicationSchema = new Schema(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    opportunityId: { type: Schema.Types.ObjectId, ref: "Opportunity" },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
     organisation: { type: String, required: true, trim: true, maxlength: 120 },
     roleTitle: { type: String, required: true, trim: true, maxlength: 160 },
     location: { type: String, default: "", trim: true, maxlength: 120 },
@@ -17,7 +23,16 @@ const applicationSchema = new Schema(
     outcome: { type: String, default: "", trim: true, maxlength: 120 },
     notes: { type: String, default: "", maxlength: 10000 },
   },
-  { timestamps: true }
+  { timestamps: true },
+);
+
+// External applications have no opportunityId; existing records remain valid.
+applicationSchema.index(
+  { userId: 1, opportunityId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { opportunityId: { $type: "objectId" } },
+  },
 );
 
 export const ApplicationModel =

@@ -7,11 +7,40 @@ import { checkRateLimit, getClientIdentifier } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
   try {
-    const rate = checkRateLimit(`register:${getClientIdentifier(request)}`, 5, 60 * 60 * 1000);
-    if (!rate.allowed) return NextResponse.json({ success: false, message: "Too many registration attempts. Please try again later." }, { status: 429, headers: { "Retry-After": String(rate.retryAfter) } });
+    const rate = checkRateLimit(
+      `register:${getClientIdentifier(request)}`,
+      5,
+      60 * 60 * 1000,
+    );
+    if (!rate.allowed)
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Too many registration attempts. Please try again later.",
+        },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
+      );
     const body = await request.json();
 
-    const fullName = body.fullName?.trim();
+    if (
+      typeof body.fullName !== "string" ||
+      typeof body.email !== "string" ||
+      typeof body.password !== "string"
+    )
+      return NextResponse.json(
+        { success: false, message: "Please provide valid account details." },
+        { status: 400 },
+      );
+    const role = body.role ?? "student";
+    if (!["student", "employee"].includes(role))
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Admin access is granted by an existing administrator.",
+        },
+        { status: 403 },
+      );
+    const fullName = body.fullName.trim();
     const email = body.email?.trim().toLowerCase();
     const password = body.password;
 
@@ -21,9 +50,24 @@ export async function POST(request: Request) {
           success: false,
           message: "Full name, email and password are required.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
+
+    if (
+      fullName.length > 120 ||
+      email.length > 160 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+      password.length > 72
+    )
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Use a valid name, email, and password of at most 72 characters.",
+        },
+        { status: 400 },
+      );
 
     if (password.length < 8) {
       return NextResponse.json(
@@ -31,7 +75,7 @@ export async function POST(request: Request) {
           success: false,
           message: "Password must contain at least 8 characters.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -47,7 +91,7 @@ export async function POST(request: Request) {
           success: false,
           message: "An account with this email already exists.",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -57,7 +101,7 @@ export async function POST(request: Request) {
       fullName,
       email,
       passwordHash,
-      role: "student",
+      role,
     });
 
     return NextResponse.json(
@@ -71,7 +115,7 @@ export async function POST(request: Request) {
           role: user.role,
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Register error:", error);
@@ -81,7 +125,7 @@ export async function POST(request: Request) {
         success: false,
         message: "Unable to create account.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

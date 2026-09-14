@@ -5,7 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 
 const navigationItems = [
   { label: "Dashboard", href: "/dashboard" },
-  { label: "Applications", href: "/applications" },
+  { label: "Opportunities", href: "/opportunities" },
+  { label: "My Applications", href: "/applications" },
   { label: "Calendar", href: "/calendar" },
   { label: "AI assistant", href: "/ai-assistant" },
   { label: "Resources", href: "/resources" },
@@ -25,9 +26,7 @@ export default function Sidebar() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Unable to log out."
-        );
+        throw new Error(data.message || "Unable to log out.");
       }
 
       router.push("/login");
@@ -38,7 +37,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="flex border-b border-slate-200 bg-white lg:min-h-screen lg:w-52 lg:flex-col lg:border-b-0 lg:border-r">
+    <aside className="flex flex-col border-b border-slate-200 bg-white lg:min-h-screen lg:w-52 lg:flex-col lg:border-b-0 lg:border-r">
       <div className="px-5 py-5">
         <Link
           href="/dashboard"
@@ -51,11 +50,11 @@ export default function Sidebar() {
       <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:block lg:space-y-1 lg:pb-0">
         {navigationItems.map((item) => {
           const isActive =
-            pathname === item.href ||
-            pathname.startsWith(`${item.href}/`);
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           return (
             <Link
+              aria-current={isActive ? "page" : undefined}
               key={item.href}
               href={item.href}
               className={
@@ -70,7 +69,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto hidden border-t border-slate-200 p-3 lg:block">
+      <div className="mt-auto border-t border-slate-200 p-3">
         <button
           type="button"
           onClick={() => void handleLogout()}
