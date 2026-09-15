@@ -46,22 +46,12 @@ export default function Page() {
           <LoadingState label="Loading platform statistics…" />
         </div>
       ) : (
-        <section className="my-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="my-7 grid gap-6 lg:grid-cols-2">
           {[
-            ["Students", stats.students],
-            ["Employees", stats.employees],
-            ["Admins", stats.admins],
-            ["Tracked applications", stats.applications],
-            ["Open opportunities", stats.published],
-            ["Draft opportunities", stats.drafts],
-            ["Published resources", stats.resources],
-          ].map(([label, value]) => (
-            <div key={label} className="panel stat-card">
-              <p className="text-sm text-slate-500">{label}</p>
-              <p className="mt-3 text-3xl font-bold">{value}</p>
-            </div>
-          ))}
-        </section>
+            { title: "People", copy: "Accounts across your platform", items: [["Students", stats.students], ["Employees", stats.employees], ["Admins", stats.admins]] },
+            { title: "Content & activity", copy: "Listings, resources and student tracking", items: [["Tracked applications", stats.applications], ["Open opportunities", stats.published], ["Draft opportunities", stats.drafts], ["Published resources", stats.resources]] },
+          ].map(group => <section className="panel" key={group.title}><p className="eyebrow">{group.title}</p><h2 className="mt-2 text-base font-semibold">{group.copy}</h2><dl className="mt-5 grid grid-cols-2 gap-5">{group.items.map(([label,value]) => <div className="border-t border-slate-200 pt-3" key={label}><dt className="text-sm text-slate-600">{label}</dt><dd className="mt-2 text-3xl font-semibold tabular-nums">{value}</dd></div>)}</dl></section>)}
+        </div>
       )}
       <section className="grid gap-4 md:grid-cols-3">
         {[

@@ -4,8 +4,14 @@ export default function AuthLayout({
   mode,
 }: {
   children: React.ReactNode;
-  mode: "login" | "register" | "recovery";
+  mode: "login" | "register" | "recovery" | "reset";
 }) {
+  const copy = {
+    login: ["Welcome back", "Your next career step", "starts here.", "Return to your opportunities, application progress and important dates."],
+    register: ["Discover · Apply · Progress", "Your internship journey,", "from discovery to offer.", "Join a shared platform for students discovering opportunities and employers opening doors."],
+    recovery: ["Account recovery", "Let’s get you", "back on track.", "Request a password reset link to regain access to your workspace."],
+    reset: ["A fresh start", "Secure your account,", "continue your journey.", "Choose a new password, then sign in to return to your workspace."],
+  }[mode];
   return (
     <main className="min-h-screen bg-slate-50 p-4 sm:p-8">
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm lg:grid-cols-2">
@@ -16,17 +22,15 @@ export default function AuthLayout({
               <span className="font-semibold">Internship Tracker</span>
             </div>
             <p className="mt-6 text-xs lg:mt-12 font-bold uppercase tracking-[.2em] text-teal-300">
-              Discover · Apply · Progress
+              {copy[0]}
             </p>
             <h2 className="mt-5 max-w-lg text-2xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-              Your internship journey,
+              {copy[1]}
               <br />
-              <span className="text-teal-300">from discovery to offer.</span>
+              <span className="text-teal-300">{copy[2]}</span>
             </h2>
             <p className="mt-4 max-w-lg text-sm leading-7 text-slate-300 lg:text-base">
-              A shared internship platform where companies publish opportunities
-              and students organise applications, deadlines and interviews in
-              one place.
+              {copy[3]}
             </p>
             <div className="my-9 hidden gap-5 lg:grid">
               {[
@@ -77,7 +81,7 @@ export default function AuthLayout({
           aria-label={
             mode === "login"
               ? "Sign in"
-              : mode === "recovery"
+              : (mode === "recovery" || mode === "reset")
                 ? "Password recovery"
                 : "Create account"
           }

@@ -59,7 +59,11 @@ export async function DELETE(
       { status: 400 },
     );
   await connectToDatabase();
-  const user = await UserModel.findByIdAndDelete(id);
+  const target = await UserModel.findById(id).select("role").lean();
+  if (target?.role === "admin") {
+    return Response.json({ success: false, message: "Admin accounts cannot be deleted." }, { status: 403 });
+  }
+  const user = await UserModel.findOneAndDelete({ _id: id, role: { $ne: "admin" } });
   if (!user)
     return Response.json(
       { success: false, message: "User not found." },

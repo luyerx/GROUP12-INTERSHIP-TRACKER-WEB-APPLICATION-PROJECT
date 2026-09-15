@@ -1,7 +1,7 @@
 // Integration test uses an isolated database and never drops or changes the configured application database.
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 const require = createRequire(import.meta.url);
 import { spawn } from "node:child_process";
 import { MongoClient, ObjectId } from "mongodb";
@@ -353,6 +353,45 @@ async function main() {
       .employees === 2,
     "admin role counts use real records",
   );
+
+  const trackedApp = (await request("/api/applications/" + appId, "GET", undefined, student)).data.data;
+  check((await request("/api/applications/" + appId, "PUT", { ...trackedApp, notes: "Personal note" }, student)).status === 200, "tracked application unchanged deadline and personal notes save");
+  for (const field of ["organisation", "roleTitle", "location", "jobDescription", "deadline", "sourceLink"]) {
+    const value = field === "deadline" ? "2099-10-01" : field === "sourceLink" ? "https://example.com/changed" : "Changed";
+    check((await request("/api/applications/" + appId, "PUT", { ...trackedApp, [field]: value }, student)).status === 403, "tracked official field protected: " + field);
+  }
+  const external = await request("/api/applications", "POST", { organisation: "External", roleTitle: "Intern", deadline: "2026-09-20" }, student);
+  check(external.status === 201, "external application valid date saves");
+  check((await request("/api/applications/" + external.data.data.id, "PUT", { ...external.data.data, organisation: "Changed external", deadline: "2026-09-21" }, student)).status === 200, "external official details remain editable");
+  const eventInput = { applicationId: appId, organisation: trackedApp.organisation, type: "interview", title: "Test interview", date: "2026-09-20" };
+  check((await request("/api/events", "POST", { ...eventInput, date: "2026-02-30" }, student)).status === 400, "calendar invalid date rejected");
+  const event = await request("/api/events", "POST", eventInput, student);
+  check(event.status === 201, "calendar create after invalid date succeeds");
+  const eventId = event.data.data.id;
+  check((await request("/api/events/" + eventId, "PUT", { ...eventInput, date: "2026-09-21", type: "reminder" }, student)).status === 200, "calendar edit succeeds");
+  check((await request("/api/events/" + eventId, "DELETE", undefined, other)).status === 404, "calendar delete ownership enforced");
+  check((await request("/api/events/" + eventId, "DELETE", undefined, student)).status === 200, "calendar delete succeeds");
+  check(!(await request("/api/events", "GET", undefined, student)).data.data.some(row => row.id === eventId), "deleted calendar event absent");
+  const profile = { fullName: "Updated Student", email: "student@example.test", university: "Test University", degree: "", major: "", graduationYear: "", location: "", preferredRoles: [], preferredLocations: [], skills: [], openToInternships: true, emailNotifications: true, deadlineReminders: true, interviewReminders: true };
+  check((await request("/api/profile", "PATCH", { ...profile, email: "changed@example.test" }, student)).status === 403, "profile email change rejected");
+  check((await request("/api/profile", "PATCH", profile, student)).status === 200, "other profile fields save");
+  const adminRow = await db.collection("users").findOne({ email: "admin@example.test" });
+  check((await request("/api/admin/users/" + adminRow._id, "DELETE", undefined, admin)).status === 400, "admin self delete denied");
+  const secondAdmin = await db.collection("users").insertOne({ fullName: "Second Admin", email: "second-admin@example.test", role: "admin", status: "Active", passwordHash: await bcrypt.hash(password, 10) });
+  check((await request("/api/admin/users/" + secondAdmin.insertedId, "DELETE", undefined, admin)).status === 403, "other admin delete denied");
+  check(await db.collection("users").findOne({ _id: secondAdmin.insertedId }), "protected admin retained");
+  const studentRow = await db.collection("users").findOne({ email: "student@example.test" });
+  const token = randomBytes(32).toString("hex");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  await db.collection("passwordresettokens").insertOne({ userId: studentRow._id, tokenHash, expiresAt: new Date(Date.now() + 600000) });
+  const same = await request("/api/auth/reset-password", "POST", { token, password });
+  check(same.status === 400 && same.data.message.includes("same as your current password"), "reset rejects current password");
+  check(await db.collection("passwordresettokens").findOne({ tokenHash }), "rejected reset preserves token for retry");
+  const newPassword = password + "-new";
+  check((await request("/api/auth/reset-password", "POST", { token, password: newPassword })).status === 200, "reset with different password succeeds");
+  check((await request("/api/auth/me", "GET", undefined, student)).status === 401, "successful reset revokes old session");
+  check((await request("/api/auth/login", "POST", { email: "student@example.test", password: newPassword })).status === 200, "new password login succeeds");
+  check((await request("/api/auth/reset-password", "POST", { token, password })).status === 400, "consumed reset token rejected");
   console.log("SUCCESS " + assertions + " assertions");
 }
 main()

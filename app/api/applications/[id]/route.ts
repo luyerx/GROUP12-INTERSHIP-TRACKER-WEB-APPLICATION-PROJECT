@@ -27,6 +27,14 @@ export async function PUT(request: Request, { params }: Context) {
     if (!input.success) {
       return Response.json({ success: false, message: input.error.issues[0].message }, { status: 400 });
     }
+    const existing = await getApplication(id, authorization.user.id);
+    if (!existing) return applicationNotFound();
+    if (existing.opportunityId) {
+      const officialFields = ["organisation", "roleTitle", "location", "jobDescription", "deadline", "sourceLink"] as const;
+      if (officialFields.some((field) => input.data[field] !== existing[field])) {
+        return Response.json({ success: false, message: "Opportunity information is managed by the employer or admin." }, { status: 403 });
+      }
+    }
     const data = await updateApplication(id, authorization.user.id, input.data);
     if (!data) return applicationNotFound();
     return Response.json({ success: true, message: "Application updated successfully.", data });

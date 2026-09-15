@@ -35,17 +35,13 @@ export async function PATCH(request: Request) {
     }
 
     await connectToDatabase();
-    const duplicate = await UserModel.findOne({
-      email: input.data.email,
-      _id: { $ne: currentUser.id },
-    });
-    if (duplicate) {
-      return NextResponse.json({ success: false, message: "That email address is already in use." }, { status: 409 });
+    if (input.data.email !== currentUser.email) {
+      return NextResponse.json({ success: false, message: "Account email cannot be changed from Profile." }, { status: 403 });
     }
 
     const user = await UserModel.findByIdAndUpdate(
       currentUser.id,
-      input.data,
+      { ...input.data, email: currentUser.email },
       { new: true, runValidators: true }
     );
 

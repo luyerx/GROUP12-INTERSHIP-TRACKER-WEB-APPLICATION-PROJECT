@@ -19,6 +19,12 @@ export async function POST(request: Request) {
   const resetToken = await PasswordResetTokenModel.findOne({ tokenHash, expiresAt: { $gt: new Date() } });
   if (!resetToken) return NextResponse.json({ success: false, message: "This reset link is invalid or expired." }, { status: 400 });
 
+  const user = await UserModel.findById(resetToken.userId);
+  if (!user) return NextResponse.json({ success: false, message: "This reset link is invalid or expired." }, { status: 400 });
+  if (await bcrypt.compare(input.data.password, user.passwordHash)) {
+    return NextResponse.json({ success: false, message: "New password cannot be the same as your current password." }, { status: 400 });
+  }
+
   await UserModel.findByIdAndUpdate(resetToken.userId, { passwordHash: await bcrypt.hash(input.data.password, 10) });
   await SessionModel.deleteMany({ userId: resetToken.userId });
   await PasswordResetTokenModel.deleteOne({ _id: resetToken._id });

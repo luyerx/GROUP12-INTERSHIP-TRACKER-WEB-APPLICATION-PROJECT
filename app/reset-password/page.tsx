@@ -11,7 +11,7 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <AuthLayout mode="recovery">
+        <AuthLayout mode="reset">
           <p className="text-sm text-slate-500">Loading...</p>
         </AuthLayout>
       }
@@ -63,7 +63,7 @@ function ResetPasswordForm() {
   };
 
   return (
-    <AuthLayout mode="recovery">
+    <AuthLayout mode="reset">
       <div className="mx-auto w-full max-w-md">
         <Link
           href="/login"

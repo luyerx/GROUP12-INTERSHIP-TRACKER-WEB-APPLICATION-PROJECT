@@ -219,6 +219,14 @@ export default function DashboardPage() {
     };
   }, [applications]);
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const nextDeadline = applications
+    .filter((a) => a.status === "Interested" || a.status === "Preparing")
+    .map((application) => ({ application, date: parseDashboardDeadline(application.deadline) }))
+    .filter((item) => item.date && item.date >= today)
+    .sort((a, b) => a.date!.getTime() - b.date!.getTime())[0];
+
   const currentDateLabel = new Date().toLocaleDateString("en-NZ", {
     weekday: "long",
     day: "numeric",
@@ -306,9 +314,15 @@ export default function DashboardPage() {
             <div>
               <p className="eyebrow">Your next steps</p>
               <h2 className="mt-2 text-lg font-semibold">
-                Keep your search moving.
+                {nextDeadline ? "Prepare for your next deadline" : "Keep your search moving."}
               </h2>
             </div>
+            {nextDeadline && <div className="primary-action">
+              <div><p className="text-sm text-teal-800">Due {nextDeadline.date!.toLocaleDateString("en-NZ", { day: "numeric", month: "long" })}</p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-950">{nextDeadline.application.roleTitle}</h3>
+              <p className="mt-1 text-sm text-slate-600">{nextDeadline.application.organisation}</p></div>
+              <Link className="btn" href={"/applications/" + nextDeadline.application.id}>Review application →</Link>
+            </div>}
             <div className="grid gap-3 sm:grid-cols-2">
               <Link className="action-tile" href="/calendar">
                 <span className="font-semibold">

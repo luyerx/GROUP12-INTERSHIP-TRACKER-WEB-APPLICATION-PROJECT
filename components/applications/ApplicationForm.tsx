@@ -1,5 +1,6 @@
 "use client";
 
+import { isDateInputValue, toDateInputValue } from "@/lib/date";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -49,10 +50,10 @@ const applicationSchema = z.object({
           return true;
         }
 
-        return /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value);
+        return isDateInputValue(value);
       },
       {
-        message: "Please use DD/MM/YYYY format",
+        message: "Please select a valid date",
       },
     ),
 
@@ -72,6 +73,7 @@ export type ApplicationFormValues = z.infer<typeof applicationSchema>;
 type ApplicationFormProps = {
   mode?: "create" | "edit";
   applicationId?: string;
+  isSystemTracked?: boolean;
   initialValues?: Partial<ApplicationFormValues>;
 };
 
@@ -97,6 +99,7 @@ export default function ApplicationForm({
   mode = "create",
   applicationId,
   initialValues,
+  isSystemTracked = false,
 }: ApplicationFormProps) {
   const router = useRouter();
 
@@ -118,7 +121,7 @@ export default function ApplicationForm({
 
       sourceLink: initialValues?.sourceLink ?? "",
 
-      deadline: initialValues?.deadline ?? "",
+      deadline: toDateInputValue(initialValues?.deadline ?? ""),
 
       status: initialValues?.status ?? "Interested",
 
@@ -258,7 +261,7 @@ export default function ApplicationForm({
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Add the main details about the internship opportunity.
+              {isSystemTracked ? "Opportunity information is read-only and managed by the employer or admin. You can edit your personal tracking details below." : "Add the main details about the external internship opportunity."}
             </p>
           </div>
         </div>
@@ -272,6 +275,7 @@ export default function ApplicationForm({
 
             <input
               id="organisation"
+              readOnly={isSystemTracked}
               aria-invalid={Boolean(errors.organisation)}
               aria-describedby={
                 errors.organisation ? "organisation-error" : undefined
@@ -306,6 +310,7 @@ export default function ApplicationForm({
 
             <input
               id="roleTitle"
+              readOnly={isSystemTracked}
               aria-invalid={Boolean(errors.roleTitle)}
               aria-describedby={
                 errors.roleTitle ? "roleTitle-error" : undefined
@@ -343,6 +348,7 @@ export default function ApplicationForm({
 
               <input
                 id="location"
+              readOnly={isSystemTracked}
                 aria-invalid={Boolean(errors.location)}
                 aria-describedby={
                   errors.location ? "location-error" : undefined
@@ -367,6 +373,7 @@ export default function ApplicationForm({
 
               <input
                 id="sourceLink"
+              readOnly={isSystemTracked}
                 type="url"
                 disabled={isSubmitting}
                 placeholder="https://example.com/job"
@@ -417,12 +424,12 @@ export default function ApplicationForm({
 
             <input
               id="deadline"
+              readOnly={isSystemTracked}
               aria-invalid={Boolean(errors.deadline)}
               aria-describedby={errors.deadline ? "deadline-error" : undefined}
-              type="text"
-              inputMode="numeric"
+              type="date"
+              lang="en-NZ"
               disabled={isSubmitting}
-              placeholder="DD/MM/YYYY"
               className={`${inputClassName} ${
                 errors.deadline
                   ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
@@ -474,6 +481,7 @@ export default function ApplicationForm({
 
             <textarea
               id="jobDescription"
+              readOnly={isSystemTracked}
               rows={6}
               disabled={isSubmitting}
               placeholder="Paste the job description or key requirements..."
@@ -484,7 +492,7 @@ export default function ApplicationForm({
         </div>
       </section>
 
-      {/* Additional information */}
+      {/* Personal tracking information */}
       <section className="card p-6">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">

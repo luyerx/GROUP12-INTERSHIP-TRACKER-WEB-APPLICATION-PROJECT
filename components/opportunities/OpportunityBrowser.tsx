@@ -230,7 +230,7 @@ export default function OpportunityBrowser({
               <article key={row.id} className="panel job-card flex flex-col">
                 <div className="mb-5 flex items-center justify-between gap-2">
                   <CompanyMark name={row.organisation} />
-                  <StatusBadge value={row.status} />
+                  {mode !== "student" ? <StatusBadge value={row.status} /> : row.applicationId ? <StatusBadge value="Tracked" /> : null}
                 </div>
                 <p className="text-sm text-slate-500">{row.organisation}</p>
                 <h2 className="mt-1 text-lg font-semibold">
@@ -242,14 +242,14 @@ export default function OpportunityBrowser({
                   </Link>
                 </h2>
                 <p className="mt-2 text-sm text-slate-600">
-                  {row.location} · {row.workMode || "On-site"}
+                  {row.location}
                 </p>
                 <div className="my-4 flex flex-wrap gap-2">
                   <span className="badge">
                     {row.employmentType || "Internship"}
                   </span>
                   <span className="badge">{row.workMode || "On-site"}</span>
-                  {row.applicationId && <StatusBadge value="Tracked" />}
+
                 </div>
                 <p className="line-clamp-3 text-sm leading-6 text-slate-600">
                   {row.description ||
@@ -269,7 +269,7 @@ export default function OpportunityBrowser({
                     href={base + "/" + row.id}
                   >
                     {mode === "student"
-                      ? "View role & application steps →"
+                      ? "View opportunity →"
                       : "Manage opportunity →"}
                   </Link>
                 </div>

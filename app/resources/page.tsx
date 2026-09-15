@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
-  ArrowUpRight,
   BookOpen,
   BriefcaseBusiness,
   FileText,
@@ -20,6 +19,8 @@ import {
   LoadingState,
   EmptyState as SharedEmptyState,
 } from "@/components/ui/Feedback";
+import ResourceLink from "@/components/resources/ResourceLink";
+import PageHeader from "@/components/ui/PageHeader";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
 type ResourceCategory =
@@ -51,11 +52,13 @@ const categories: ResourceCategory[] = [
 ];
 
 export default function ResourcesPage() {
+  const [origin, setOrigin] = useState("");
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState("");
   const loadResources = useCallback(async () => {
+    setOrigin(window.location.origin);
     setLoading(true);
     setError("");
     try {
@@ -124,16 +127,7 @@ export default function ResourcesPage() {
     <DashboardLayout>
       <div className="mx-auto max-w-7xl">
         {/* Header */}
-        <div>
-          <p className="text-sm font-medium text-slate-500">Career support</p>
-
-          <h1 className="mt-2 page-title">Resources</h1>
-
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Explore practical guides, templates, articles, and preparation
-            materials to support your internship journey.
-          </p>
-        </div>
+        <PageHeader eyebrow="Career support" title="Resources" description="Practical guides, templates and preparation materials for your next career step. Available links open in a new tab." />
 
         {/* Featured */}
         {!loading && !error && featuredResources.length > 0 && (
@@ -148,7 +142,7 @@ export default function ResourcesPage() {
 
             <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
               {featuredResources.map((resource) => (
-                <FeaturedResourceCard key={resource.id} resource={resource} />
+                <FeaturedResourceCard key={resource.id} resource={resource} origin={origin} />
               ))}
             </div>
           </section>
@@ -228,7 +222,7 @@ export default function ResourcesPage() {
               Career resources
             </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p role="status" className="mt-1 text-sm text-slate-500">
               {filteredResources.length}{" "}
               {filteredResources.length === 1 ? "resource" : "resources"}{" "}
               available
@@ -265,7 +259,7 @@ export default function ResourcesPage() {
         ) : filteredResources.length > 0 ? (
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredResources.map((resource) => (
-              <ResourceCard key={resource.id} resource={resource} />
+              <ResourceCard key={resource.id} resource={resource} origin={origin} />
             ))}
           </div>
         ) : (
@@ -298,11 +292,12 @@ export default function ResourcesPage() {
 
 type ResourceCardProps = {
   resource: Resource;
+  origin: string;
 };
 
-function ResourceCard({ resource }: ResourceCardProps) {
+function ResourceCard({ resource, origin }: ResourceCardProps) {
   return (
-    <article className="group flex min-h-64 flex-col card p-5 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+    <article className="group flex min-h-64 flex-col border-b border-slate-200 p-5 transition hover:bg-white">
       <div className="flex items-start justify-between gap-4">
         <ResourceIcon type={resource.type} />
 
@@ -325,27 +320,16 @@ function ResourceCard({ resource }: ResourceCardProps) {
         </p>
       </div>
 
-      <div className="mt-auto flex items-center justify-between gap-4 border-t border-slate-100 pt-4">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-4">
         <p className="truncate text-xs text-slate-500">{resource.source}</p>
 
-        <a
-          href={resource.url}
-          onClick={(event) => {
-            if (resource.url === "#") {
-              event.preventDefault();
-            }
-          }}
-          className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-slate-700 transition group-hover:text-slate-950"
-        >
-          Open
-          <ArrowUpRight className="h-3.5 w-3.5" />
-        </a>
+        <ResourceLink url={resource.url} title={resource.title} origin={origin} />
       </div>
     </article>
   );
 }
 
-function FeaturedResourceCard({ resource }: ResourceCardProps) {
+function FeaturedResourceCard({ resource, origin }: ResourceCardProps) {
   return (
     <article className="group relative overflow-hidden rounded-2xl border border-teal-100 bg-teal-50 p-6 text-slate-900 shadow-sm">
       <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full border border-white/5" />
@@ -373,18 +357,7 @@ function FeaturedResourceCard({ resource }: ResourceCardProps) {
           {resource.description}
         </p>
 
-        <a
-          href={resource.url}
-          onClick={(event) => {
-            if (resource.url === "#") {
-              event.preventDefault();
-            }
-          }}
-          className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-teal-800"
-        >
-          View resource
-          <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-        </a>
+        <ResourceLink url={resource.url} title={resource.title} origin={origin} />
       </div>
     </article>
   );

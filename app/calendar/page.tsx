@@ -1,6 +1,8 @@
 "use client";
 
+import { formatDateKey, toDateInputValue, isDateInputValue } from "@/lib/date";
 import Link from "next/link";
+import UpcomingEvents from "@/components/calendar/UpcomingEvents";
 import ModalFrame from "@/components/ui/ModalFrame";
 import { useEffect, useMemo, useState } from "react";
 
@@ -93,41 +95,7 @@ const monthNames = [
 const weekdayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function convertDeadlineToDateKey(deadline: string) {
-  if (!deadline) {
-    return null;
-  }
-
-  /*
-   * Already YYYY-MM-DD
-   */
-  const isoMatch = deadline.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-
-  if (isoMatch) {
-    return deadline;
-  }
-
-  /*
-   * DD/MM/YYYY
-   */
-  const nzMatch = deadline.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-
-  if (nzMatch) {
-    const [, day, month, year] = nzMatch;
-
-    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  }
-
-  return null;
-}
-
-function formatDateKey(date: Date) {
-  const year = date.getFullYear();
-
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  return toDateInputValue(deadline) || null;
 }
 
 function formatDisplayDate(date: string, longMonth = false) {
@@ -167,6 +135,8 @@ export default function CalendarPage() {
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  const [eventFormError, setEventFormError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
   const [isSavingEvent, setIsSavingEvent] = useState(false);
 
   const [isDeletingEvent, setIsDeletingEvent] = useState(false);
@@ -383,6 +353,7 @@ export default function CalendarPage() {
   }, [events]);
 
   const resetEventForm = () => {
+    setEventFormError("");
     const firstApplication = applications[0];
 
     setEventType("interview");
@@ -434,7 +405,8 @@ export default function CalendarPage() {
 
     setEventTitle(selectedEvent.title);
 
-    setEventDate(selectedEvent.date);
+    setEventFormError("");
+    setEventDate(toDateInputValue(selectedEvent.date));
 
     setEventTime(selectedEvent.time ?? "");
 
@@ -464,74 +436,84 @@ export default function CalendarPage() {
       return;
     }
 
+    if (isSavingEvent) return;
+    setEventFormError("");
+    if (!isDateInputValue(eventDate)) {
+      setEventFormError("Please select a valid date.");
+      return;
+    }
     setIsSavingEvent(true);
+    try {
 
-    const eventData = {
-      applicationId,
+      const eventData = {
+        applicationId,
 
-      type: eventType,
+        type: eventType,
 
-      title:
-        eventTitle.trim() ||
-        (eventType === "interview" ? "Interview" : "Reminder"),
+        title:
+          eventTitle.trim() ||
+          (eventType === "interview" ? "Interview" : "Reminder"),
 
-      organisation: organisation.trim(),
+        organisation: organisation.trim(),
 
-      date: eventDate.trim(),
+        date: eventDate.trim(),
 
-      time: eventTime.trim() || undefined,
+        time: eventTime.trim() || undefined,
 
-      location: eventLocation.trim() || undefined,
+        location: eventLocation.trim() || undefined,
 
-      notes: eventNotes.trim() || undefined,
-    };
+        notes: eventNotes.trim() || undefined,
+      };
 
-    const response = await fetch(
-      formMode === "edit" && editingEventId !== null
-        ? `/api/events/${editingEventId}`
-        : "/api/events",
-      {
-        method: formMode === "edit" && editingEventId !== null ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(eventData),
-      },
-    );
-    const result: { success: boolean; data?: CalendarEvent; message?: string } =
-      await response.json();
-    if (!response.ok || !result.success || !result.data) {
-      throw new Error(result.message || "Unable to save calendar event.");
-    }
-
-    if (formMode === "edit" && editingEventId !== null) {
-      setManualEvents((current) =>
-        current.map((event) =>
-          event.id === editingEventId ? (result.data as CalendarEvent) : event,
-        ),
+      const response = await fetch(
+        formMode === "edit" && editingEventId !== null
+          ? `/api/events/${editingEventId}`
+          : "/api/events",
+        {
+          method: formMode === "edit" && editingEventId !== null ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(eventData),
+        },
       );
-    } else {
-      setManualEvents((current) => [...current, result.data as CalendarEvent]);
+      const result: { success: boolean; data?: CalendarEvent; message?: string } =
+        await response.json();
+      if (!response.ok || !result.success || !result.data) {
+        throw new Error(result.message || "Unable to save calendar event.");
+      }
+
+      if (formMode === "edit" && editingEventId !== null) {
+        setManualEvents((current) =>
+          current.map((event) =>
+            event.id === editingEventId ? (result.data as CalendarEvent) : event,
+          ),
+        );
+      } else {
+        setManualEvents((current) => [...current, result.data as CalendarEvent]);
+      }
+
+      const selectedDate = new Date(`${eventDate}T00:00:00`);
+
+      setCurrentDate(
+        new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1),
+      );
+
+      if (formMode === "edit" && editingEventId !== null) {
+        setSelectedEvent({
+          id: editingEventId,
+          ...eventData,
+        });
+      }
+
+      setShowEventForm(false);
+
+      setEditingEventId(null);
+
+      resetEventForm();
+    } catch (error) {
+      setEventFormError(error instanceof Error ? error.message : "Unable to save calendar event.");
+    } finally {
+      setIsSavingEvent(false);
     }
-
-    const selectedDate = new Date(`${eventDate}T00:00:00`);
-
-    setCurrentDate(
-      new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1),
-    );
-
-    if (formMode === "edit" && editingEventId !== null) {
-      setSelectedEvent({
-        id: editingEventId,
-        ...eventData,
-      });
-    }
-
-    setIsSavingEvent(false);
-
-    setShowEventForm(false);
-
-    setEditingEventId(null);
-
-    resetEventForm();
   };
 
   const handleDeleteEvent = async () => {
@@ -550,24 +532,30 @@ export default function CalendarPage() {
       return;
     }
 
+    if (isDeletingEvent) return;
+    setDeleteError("");
     setIsDeletingEvent(true);
+    try {
 
-    const response = await fetch(`/api/events/${selectedEvent.id}`, {
-      method: "DELETE",
-    });
-    if (!response.ok) {
-      throw new Error("Unable to delete calendar event.");
+      const response = await fetch(`/api/events/${selectedEvent.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Unable to delete calendar event.");
+      }
+
+      setManualEvents((current) =>
+        current.filter((event) => event.id !== selectedEvent.id),
+      );
+
+      setShowDeleteModal(false);
+
+      setSelectedEvent(null);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Unable to delete calendar event.");
+    } finally {
+      setIsDeletingEvent(false);
     }
-
-    setManualEvents((current) =>
-      current.filter((event) => event.id !== selectedEvent.id),
-    );
-
-    setIsDeletingEvent(false);
-
-    setShowDeleteModal(false);
-
-    setSelectedEvent(null);
   };
 
   const retryApplications = async () => {
@@ -753,7 +741,7 @@ export default function CalendarPage() {
 
         <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
           {/* Calendar */}
-          <section className="overflow-hidden card">
+          <section className="order-2 overflow-hidden card xl:order-1">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
@@ -791,7 +779,7 @@ export default function CalendarPage() {
 
             <p className="px-4 py-2 text-xs text-slate-500 sm:hidden">
               Scroll across to explore the month. Upcoming dates are listed
-              below.
+              above.
             </p>
             <div
               className="overflow-x-auto"
@@ -888,84 +876,8 @@ export default function CalendarPage() {
           </section>
 
           {/* Upcoming */}
-          <aside className="space-y-6">
-            <section className="card p-5">
-              <h2 className="text-base font-semibold text-slate-950">
-                Upcoming
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Your next important dates.
-              </p>
-
-              <div className="mt-5 space-y-3">
-                {upcomingEvents.length > 0 ? (
-                  upcomingEvents.map((event) => (
-                    <button
-                      key={event.id}
-                      type="button"
-                      onClick={() => setSelectedEvent(event)}
-                      className="block w-full rounded-xl border border-slate-100 p-4 text-left transition hover:border-slate-200 hover:bg-slate-50"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                            eventIconStyles[event.type]
-                          }`}
-                        >
-                          {event.type === "interview" ? (
-                            <Clock3 className="h-4 w-4" />
-                          ) : (
-                            <CalendarDays className="h-4 w-4" />
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-900">
-                            {event.organisation}
-                          </p>
-
-                          <p className="mt-1 text-xs text-slate-500">
-                            {event.title}
-                          </p>
-
-                          <p className="mt-2 text-xs font-medium text-slate-600">
-                            {formatDisplayDate(event.date)}
-                          </p>
-
-                          {event.time && (
-                            <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
-                              <Clock3 className="h-3.5 w-3.5" />
-                              {event.time}
-                            </p>
-                          )}
-
-                          {event.location && (
-                            <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
-                              <MapPin className="h-3.5 w-3.5" />
-                              {event.location}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center">
-                    <CalendarDays className="mx-auto h-5 w-5 text-slate-300" />
-
-                    <p className="mt-3 text-sm font-medium text-slate-700">
-                      No upcoming events
-                    </p>
-
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Future deadlines, interviews, and reminders will appear
-                      here.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </section>
+          <aside className="order-1 space-y-6 xl:order-2">
+            <UpcomingEvents events={upcomingEvents} onSelect={setSelectedEvent} />
 
             <section className="panel">
               <CalendarDays className="h-5 w-5 text-teal-700" />
@@ -1122,7 +1034,7 @@ export default function CalendarPage() {
               <div className="flex flex-col gap-3 border-t border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
                 <button
                   type="button"
-                  onClick={() => setShowDeleteModal(true)}
+                  onClick={() => { setDeleteError(""); setShowDeleteModal(true); }}
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -1207,6 +1119,7 @@ export default function CalendarPage() {
             </div>
 
             <div className="space-y-5 p-6">
+              {eventFormError && <p role="alert" className="text-sm text-rose-600">{eventFormError}</p>}
               {/* Event type */}
               <div>
                 <label
@@ -1332,12 +1245,11 @@ export default function CalendarPage() {
 
                   <input
                     id="eventDate"
-                    type="text"
-                    inputMode="numeric"
+                    type="date"
+                    lang="en-NZ"
                     value={eventDate}
                     disabled={isSavingEvent}
                     onChange={(event) => setEventDate(event.target.value)}
-                    placeholder="YYYY-MM-DD"
                     className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-teal-600 focus:ring-4 focus:ring-teal-50 disabled:opacity-60"
                   />
                 </div>
@@ -1470,6 +1382,7 @@ export default function CalendarPage() {
               <Trash2 className="h-5 w-5" />
             </div>
 
+            {deleteError && <p role="alert" className="mt-4 text-sm text-rose-600">{deleteError}</p>}
             <h2 className="mt-5 text-lg font-semibold text-slate-950">
               Delete event?
             </h2>

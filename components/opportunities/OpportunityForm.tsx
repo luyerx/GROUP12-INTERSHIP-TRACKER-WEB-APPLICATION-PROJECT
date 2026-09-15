@@ -1,4 +1,5 @@
 "use client";
+import { formatAppDate } from "@/lib/date";
 import Link from "next/link";
 import PageHeader from "@/components/ui/PageHeader";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -183,10 +184,12 @@ export default function OpportunityForm({
               <div className="grid gap-5 sm:grid-cols-2">
                 <label className="form-label">
                   Closing date (New Zealand) *
+                  {data.closingDate && <span className="block text-xs text-slate-500">{formatAppDate(data.closingDate)}</span>}
                   <input
                     className="field"
                     required
                     type="date"
+                    lang="en-NZ"
                     value={data.closingDate}
                     onChange={(e) => update("closingDate", e.target.value)}
                   />
@@ -277,6 +280,15 @@ export default function OpportunityForm({
               />
             </div>
           )}
+          <section className="next-actions mt-5" aria-label="Listing review">
+            <div><p className="eyebrow">Before you save</p><h2 className="mt-2 font-semibold">Publishing review</h2><p className="mt-1 text-sm text-slate-600">A guide based on your current fields; review the content before publishing.</p></div>
+            <ul className="grid gap-3 sm:grid-cols-2">{[
+              ["Organisation and role", Boolean(data.organisation.trim() && data.role.trim())],
+              ["Location and closing date", Boolean(data.location.trim() && data.closingDate)],
+              ["Description (30+ characters)", data.description.trim().length >= 30],
+              ["Employer link (optional)", /^https?:\/\//i.test(data.applicationUrl || "")],
+            ].map(([label, complete]) => <li key={String(label)} className="text-sm"><span className={complete ? "text-teal-800" : "text-slate-600"}>{complete ? "✓ Added" : "○ Review"}</span> · {label}</li>)}</ul>
+          </section>
           <div className="card mt-5 flex flex-wrap items-center justify-between gap-4 p-5">
             <p className="text-xs text-slate-500">
               Review your details before saving.

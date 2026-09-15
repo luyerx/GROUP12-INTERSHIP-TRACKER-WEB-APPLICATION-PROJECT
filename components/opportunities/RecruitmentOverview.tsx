@@ -43,6 +43,11 @@ export default function RecruitmentOverview({
           </Link>
         }
       />
+      <section className="next-actions mb-6" aria-label="Recruitment quick actions">
+        <div><p className="eyebrow">Recruitment desk</p><h2 className="mt-2 text-xl font-semibold">Keep your next hire moving.</h2></div>
+        <div className="flex flex-wrap gap-3"><Link className="btn-secondary" href="/employee/opportunities">Review listings →</Link><Link className="btn-secondary" href="/employee/profile">Update company profile →</Link></div>
+        {soon.length > 0 && <div><h3 className="text-sm font-semibold">Closing within 7 days</h3><ul className="mt-2 divide-y divide-teal-200">{[...soon].sort((a,b) => a.closingDate.localeCompare(b.closingDate)).map(row => <li key={row.id}><Link className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm font-medium" href={"/employee/opportunities/" + row.id}><span>{row.role} →</span><Deadline value={row.closingDate} /></Link></li>)}</ul></div>}
+      </section>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="All listings"
@@ -124,7 +129,7 @@ export default function RecruitmentOverview({
           )}
         </section>
         <aside className="space-y-5">
-          <section className="panel">
+          <section className="support-section">
             <p className="eyebrow">Publishing checklist</p>
             <h2 className="mt-2 text-lg font-semibold">
               Make each listing useful.

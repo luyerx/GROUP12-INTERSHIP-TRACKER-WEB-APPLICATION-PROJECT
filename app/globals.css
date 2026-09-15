@@ -645,3 +645,22 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Content hierarchy: emphasis for decisions, quiet surfaces for supporting facts. */
+@layer components {
+  .primary-action { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1.25rem; border-bottom:1px solid #c5ded9; padding:0.5rem 0 1.5rem; }
+  .support-section { padding:1.25rem 0; border-top:1px solid var(--border); }
+  .reading-copy { max-width:65ch; font-size:0.95rem; line-height:1.9; color:#475569; }
+  .metadata-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; }
+  .metadata-grid dt { font-size:0.7rem; text-transform:uppercase; letter-spacing:.05em; color:#586878; }
+  .metadata-grid dd { margin-top:.35rem; font-size:.9rem; font-weight:600; color:#173042; }
+  .stat-card { background:transparent; border:0; border-top:2px solid #d4e2e0; border-radius:0; box-shadow:none; }
+  .action-tile { background:transparent; border:0; border-left:2px solid #b9d3ce; border-radius:0; }
+  .job-card { border-top:3px solid #b6d3ce; }
+}
+@media (max-width:767px) {
+  .tracker-table td:nth-child(2) { grid-column:1/-1; }
+  .tracker-table tr { border-bottom:1px solid var(--border); }
+  .page-actions { width:100%; }
+  .page-actions > * { flex:1; }
+}

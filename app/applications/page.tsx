@@ -278,6 +278,11 @@ export default function ApplicationsPage() {
           </Link>
         </div>
 
+        {!isLoading && !error && applications.length > 0 && <section className="mt-6 border-l-4 border-teal-700 pl-4">
+          <h2 className="text-lg font-semibold">Your application pipeline</h2>
+          <p className="mt-1 text-sm text-slate-600">{applications.filter(a => a.status === "Interested" || a.status === "Preparing").length} in preparation · {applications.filter(a => a.status === "Applied" || a.status === "Interview").length} awaiting progress · {applications.filter(a => a.status === "Offer").length} offers</p>
+          <p className="mt-2 text-xs text-slate-500">Choose a stage below to filter your tracker. Tracking a role does not submit an application.</p>
+        </section>}
         {/* Filters */}
         <section className="mt-8 card p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_150px_150px_180px]">
@@ -555,7 +560,7 @@ export default function ApplicationsPage() {
                               href={`/applications/${application.id}/edit`}
                               aria-label={`Edit ${application.organisation} application`}
                               title="Edit application"
-                              className="inline-flex rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                              className="icon-button"
                             >
                               <Pencil className="h-4 w-4" />
                             </Link>

@@ -20,6 +20,7 @@ type ApplicationStatus =
 
 type Application = {
   id: string;
+  opportunityId?: string;
   organisation: string;
   roleTitle: string;
   location: string;
@@ -55,6 +56,7 @@ function normaliseApplication(application: Partial<Application>): Application {
 
   return {
     id: String(application.id ?? ""),
+    opportunityId: application.opportunityId,
     organisation: application.organisation ?? "",
     roleTitle: application.roleTitle ?? "",
     location: application.location ?? "",
@@ -223,6 +225,7 @@ export default function EditApplicationPage() {
           <ApplicationForm
             mode="edit"
             applicationId={id}
+            isSystemTracked={Boolean(application.opportunityId)}
             initialValues={application}
           />
         )}

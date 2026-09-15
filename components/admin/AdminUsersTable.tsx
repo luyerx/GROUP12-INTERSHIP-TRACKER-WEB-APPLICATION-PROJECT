@@ -96,7 +96,7 @@ export default function AdminUsersTable() {
   }
 
   async function remove() {
-    if (!editing || !confirm(`Delete ${editing.name}'s account?`)) return;
+    if (!editing || editing.role === "Admin" || !confirm(`Delete ${editing.name}'s account?`)) return;
     setBusy(true);
     setError("");
     try {
@@ -326,9 +326,10 @@ export default function AdminUsersTable() {
                   {error}
                 </p>
               )}
+              {editing.role === "Admin" && <p className="px-5 pb-3 text-sm text-slate-500">Admin accounts cannot be deleted.</p>}
               <ModalActions
                 onCancel={() => setEditing(null)}
-                onDelete={() => void remove()}
+                onDelete={editing.role === "Admin" ? undefined : () => void remove()}
               />
             </fieldset>
           </form>

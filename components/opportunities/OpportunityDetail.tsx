@@ -93,12 +93,9 @@ export default function OpportunityDetail({
                   </div>
                 </div>
                 <h1 className="page-title">{row.role}</h1>
-                <p className="mt-4">
-                  {row.location} · {row.workMode || "On-site"} ·{" "}
-                  {row.employmentType || "Internship"}
-                </p>
+                <dl className="metadata-grid mt-5">{[["Location", row.location], ["Work arrangement", row.workMode || "On-site"], ["Role type", row.employmentType || "Internship"]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <StatusBadge value={row.status} />
+                  {mode !== "student" ? <StatusBadge value={row.status} /> : row.applicationId ? <StatusBadge value="Tracked" /> : null}
                   <Deadline value={row.closingDate} />
                 </div>
               </header>
@@ -107,10 +104,11 @@ export default function OpportunityDetail({
                   <h2 className="text-xl font-semibold">
                     About this opportunity
                   </h2>
-                  <p className="mt-5 whitespace-pre-wrap leading-7 text-slate-600">
-                    {row.description ||
-                      "The publisher has not added a description. Check the original listing or contact the organisation for requirements before applying."}
-                  </p>
+                  <div className="reading-copy mt-5 space-y-5">
+                    {(row.description || "The publisher has not added a description. Check the original listing or contact the organisation for requirements before applying.").split(/\n\s*\n/).map((paragraph, index) => (
+                      <p key={index} className="whitespace-pre-wrap">{paragraph}</p>
+                    ))}
+                  </div>
                 </section>
                 <aside className="panel h-fit lg:sticky lg:top-6">
                   <h2 className="font-semibold">
