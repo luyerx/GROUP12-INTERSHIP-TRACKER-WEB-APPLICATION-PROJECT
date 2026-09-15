@@ -3,7 +3,7 @@ export type AdminUser = {
   name: string;
   email: string;
   programme: string;
-  role: "Student" | "Admin" | "Employee";
+  role: "Student" | "Admin" | "Employee" | "Super Admin";
   status: "Active" | "Suspended";
   joined: string;
 };

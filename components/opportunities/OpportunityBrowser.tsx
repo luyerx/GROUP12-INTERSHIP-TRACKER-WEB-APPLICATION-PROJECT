@@ -1,11 +1,12 @@
 "use client";
-import Link from "next/link";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/Feedback";
 import CompanyMark from "@/components/ui/CompanyMark";
-import StatusBadge from "@/components/ui/StatusBadge";
 import Deadline from "@/components/ui/Deadline";
-import { useEffect, useState } from "react";
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui/Feedback";
+import PageHeader from "@/components/ui/PageHeader";
+import StatusBadge from "@/components/ui/StatusBadge";
 import type { Opportunity } from "@/lib/opportunity";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 export default function OpportunityBrowser({
   mode = "student",
   compact = false,
@@ -74,30 +75,12 @@ export default function OpportunityBrowser({
   return (
     <div>
       {!compact && (
-        <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="eyebrow">
-              {mode === "student"
-                ? "Career discovery"
-                : mode === "employee"
-                  ? "Recruitment"
-                  : "Content management"}
-            </p>
-            <h1 className="page-title">
-              {mode === "employee" ? "My Opportunities" : "Opportunities"}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm text-slate-600">
-              {mode === "student"
-                ? "Find your next step. Track a published role in My Applications, then follow the employer’s instructions to apply."
-                : "Create clear listings, publish when ready, and close opportunities when recruitment ends."}
-            </p>
-          </div>
-          {mode !== "student" && (
-            <Link className="btn" href={base + "/new"}>
-              Create Opportunity
-            </Link>
-          )}
-        </header>
+        <PageHeader
+          eyebrow={mode === "student" ? "Career discovery" : mode === "employee" ? "Recruitment" : "Content management"}
+          title={mode === "employee" ? "My Opportunities" : "Opportunities"}
+          description={mode === "student" ? "Find your next step. Track a published role in My Applications, then follow the employer’s instructions to apply." : "Create clear listings, publish when ready, and close opportunities when recruitment ends."}
+          action={mode !== "student" ? <Link className="btn" href={base + "/new"}>Create Opportunity</Link> : undefined}
+        />
       )}
       {!compact && (
         <section

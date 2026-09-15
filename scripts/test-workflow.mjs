@@ -337,7 +337,7 @@ async function main() {
       await request(
         "/api/admin/users/" + employeeUser.id,
         "PATCH",
-        { programme: "", role: "Employee", status: "Suspended" },
+        { programme: "", status: "Suspended" },
         admin,
       )
     ).status === 200,
@@ -380,6 +380,32 @@ async function main() {
   const secondAdmin = await db.collection("users").insertOne({ fullName: "Second Admin", email: "second-admin@example.test", role: "admin", status: "Active", passwordHash: await bcrypt.hash(password, 10) });
   check((await request("/api/admin/users/" + secondAdmin.insertedId, "DELETE", undefined, admin)).status === 403, "other admin delete denied");
   check(await db.collection("users").findOne({ _id: secondAdmin.insertedId }), "protected admin retained");
+  const superRow = await db.collection("users").insertOne({ fullName: "Workflow Super Admin", email: "superadmin@example.test", role: "superadmin", status: "Active", passwordHash: await bcrypt.hash(password, 10), createdAt: new Date() });
+  const superadmin = await login("superadmin@example.test");
+  check((await request("/api/auth/me", "GET", undefined, superadmin)).data.user.role === "superadmin", "superadmin identity preserved");
+  check((await request("/api/admin/users", "GET", undefined, superadmin)).data.data.some(u => u.role === "Super Admin"), "directory labels Super Admin");
+  check((await request("/api/admin/stats", "GET", undefined, superadmin)).status === 200, "superadmin uses admin workspace APIs");
+  const userUrl = "/api/admin/users/" + employeeUser.id;
+  check((await request(userUrl, "PATCH", { programme: "", role: "Admin", status: "Active" }, admin)).status === 403, "ordinary admin cannot promote users");
+  check((await request(userUrl, "PATCH", { programme: "", role: "Employee", status: "Active" }, admin)).status === 403, "ordinary admin cannot submit any role field");
+  check((await request("/api/admin/users/" + secondAdmin.insertedId, "PATCH", { programme: "", status: "Suspended" }, admin)).status === 403, "ordinary admin cannot suspend admin");
+  for (const actor of [admin, superadmin]) {
+    const target = "/api/admin/users/" + superRow.insertedId;
+    check((await request(target, "PATCH", { programme: "", role: "Student", status: "Suspended" }, actor)).status >= 400, "Super Admin role and status protected");
+    check((await request(target, "DELETE", undefined, actor)).status >= 400, "Super Admin deletion protected");
+  }
+  for (const role of ["Admin", "Student", "Employee"]) {
+    check((await request(userUrl, "PATCH", { programme: "", role, status: "Active" }, superadmin)).status === 200, "Super Admin assigns " + role);
+    check((await request("/api/auth/me", "GET", undefined, employee)).data.user.role === role.toLowerCase(), "existing session reflects changed role");
+  }
+  check((await request(userUrl, "PATCH", { programme: "", role: "Super Admin", status: "Active" }, superadmin)).status === 400, "UI API cannot create Super Admin");
+  check((await request("/api/admin/users/" + secondAdmin.insertedId, "DELETE", undefined, superadmin)).status === 200, "Super Admin can delete another admin");
+  const publicSuper = await fetch(base + "/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json", "x-forwarded-for": "192.0.2.42" }, body: JSON.stringify({ fullName: "Blocked", email: "blocked-super@example.test", password, role: "superadmin" }) });
+  check(publicSuper.status === 403, "public Super Admin registration denied");
+  if (process.env.RUN_UI_TESTS === "1") {
+    const { testWorkspaceUI } = await import("./test-workspace-ui.mjs");
+    await testWorkspaceUI({ base, student, employee, admin, superadmin, appId });
+  }
   const studentRow = await db.collection("users").findOne({ email: "student@example.test" });
   const token = randomBytes(32).toString("hex");
   const tokenHash = createHash("sha256").update(token).digest("hex");

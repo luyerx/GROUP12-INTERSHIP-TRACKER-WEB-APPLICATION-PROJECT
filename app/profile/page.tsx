@@ -1,41 +1,37 @@
 "use client";
+import ProfileCompletion from "@/components/profile/ProfileCompletion";
+
+import NotificationSettings from "@/components/profile/NotificationSettings";
+
+import SkillsSection from "@/components/profile/SkillsSection";
+
+import CareerPreferences from "@/components/profile/CareerPreferences";
+
+import EducationDetails from "@/components/profile/EducationDetails";
+
+import PersonalDetails from "@/components/profile/PersonalDetails";
+
+import { ProfileData } from "@/components/profile/profileTypes";
+
+import PageHeader from "@/components/ui/PageHeader";
 
 import { useEffect, useMemo, useState } from "react";
 
 import {
-  Bell,
-  BriefcaseBusiness,
   CheckCircle2,
   GraduationCap,
   LoaderCircle,
   MapPin,
   Pencil,
-  Plus,
   Save,
-  Sparkles,
-  UserRound,
-  X,
+  X
 } from "lucide-react";
 
-import { ProfileSection, ProfileBadge, ProfileField, NotificationSetting } from "@/components/profile/ProfileFields";
-import { SuccessFeedback } from "@/components/ui/Feedback";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { ProfileBadge } from "@/components/profile/ProfileFields";
+import { SuccessFeedback } from "@/components/ui/Feedback";
 
-type ProfileData = {
-  fullName: string;
-  email: string;
-  university: string;
-  degree: string;
-  major: string;
-  graduationYear: string;
-  location: string;
-  preferredRoles: string;
-  preferredLocations: string;
-  skills: string[];
-  emailNotifications: boolean;
-  deadlineReminders: boolean;
-  interviewReminders: boolean;
-};
+
 
 type CurrentUser = {
   fullName: string;
@@ -345,66 +341,51 @@ export default function ProfilePage() {
           </div>
         )}
         {/* Page header */}
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-sm font-medium text-slate-500">
-              Student account
-            </p>
-
-            <h1 className="mt-2 page-title">Profile</h1>
-
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Manage your personal information, academic background, career
-              preferences, skills, and notification settings.
-            </p>
-          </div>
-
-          {!isEditing ? (
+        <PageHeader eyebrow="Student account" title="Profile" description="Manage your personal information, academic background, career preferences, skills, and notification settings." action={!isEditing ? (
+          <button
+            type="button"
+            disabled={isLoading || Boolean(profileError)}
+            onClick={() => {
+              setSaved(false);
+              startEditing();
+            }}
+            className="btn "
+          >
+            <Pencil className="h-4 w-4" />
+            Edit profile
+          </button>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              disabled={isLoading || Boolean(profileError)}
-              onClick={() => {
-                setSaved(false);
-                startEditing();
-              }}
-              className="btn "
+              disabled={isSaving}
+              onClick={cancelEditing}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
             >
-              <Pencil className="h-4 w-4" />
-              Edit profile
+              <X className="h-4 w-4" />
+              Cancel
             </button>
-          ) : (
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                disabled={isSaving}
-                onClick={cancelEditing}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
-              >
-                <X className="h-4 w-4" />
-                Cancel
-              </button>
 
-              <button
-                type="button"
-                disabled={isSaving}
-                onClick={() => void handleSave()}
-                className="btn min-w-32 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSaving ? (
-                  <>
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Save changes
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-        </div>
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={() => void handleSave()}
+              className="btn min-w-32 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSaving ? (
+                <>
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Save changes
+                </>
+              )}
+            </button>
+          </div>
+        )} />
 
         {/* Profile summary */}
         <section className="mt-8 overflow-hidden card">
@@ -452,44 +433,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Completion */}
-              <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 xl:w-72">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                      Profile completion
-                    </p>
-
-                    <p className="mt-1 text-lg font-semibold text-slate-950">
-                      {profileCompletion}%
-                    </p>
-                  </div>
-
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200">
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                </div>
-
-                <div
-                  role="progressbar"
-                  aria-label="Profile completion"
-                  aria-valuenow={profileCompletion}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200"
-                >
-                  <div
-                    className="h-full rounded-full bg-slate-950 transition-all duration-300"
-                    style={{
-                      width: `${profileCompletion}%`,
-                    }}
-                  />
-                </div>
-
-                <p className="mt-3 text-xs leading-5 text-slate-500">
-                  Keep your profile complete to maintain an organised career
-                  workspace.
-                </p>
-              </div>
+              <ProfileCompletion profileCompletion={profileCompletion} />
             </div>
           </div>
         </section>
@@ -499,338 +443,22 @@ export default function ProfilePage() {
           {/* Left column */}
           <div className="space-y-6">
             {/* Personal */}
-            <ProfileSection
-              icon={<UserRound className="h-5 w-5" />}
-              title="Personal information"
-              description="Basic information linked to your student account."
-            >
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <ProfileField
-                  label="Full name"
-                  value={draft.fullName}
-                  displayValue={profile.fullName}
-                  editing={isEditing}
-                  error={fullNameError}
-                  onChange={(value) => {
-                    setDraft((current) => ({
-                      ...current,
-                      fullName: value,
-                    }));
-
-                    if (fullNameError) {
-                      setFullNameError("");
-                    }
-                  }}
-                />
-
-                <ProfileField
-                  label="Email address (read-only)"
-                  value={draft.email}
-                  displayValue={profile.email}
-                  editing={false}
-                  error={emailError}
-                  type="email"
-                  onChange={(value) => {
-                    setDraft((current) => ({
-                      ...current,
-                      email: value,
-                    }));
-
-                    if (emailError) {
-                      setEmailError("");
-                    }
-                  }}
-                />
-
-                <ProfileField
-                  label="Location"
-                  value={draft.location}
-                  displayValue={profile.location}
-                  editing={isEditing}
-                  placeholder="e.g. Auckland, New Zealand"
-                  onChange={(value) =>
-                    setDraft((current) => ({
-                      ...current,
-                      location: value,
-                    }))
-                  }
-                />
-              </div>
-            </ProfileSection>
+            <PersonalDetails profile={profile} draft={draft} isEditing={isEditing} setDraft={setDraft} fullNameError={fullNameError} emailError={emailError} setFullNameError={setFullNameError} setEmailError={setEmailError} />
 
             {/* Academic */}
-            <ProfileSection
-              icon={<GraduationCap className="h-5 w-5" />}
-              title="Academic information"
-              description="Your current study background and expected graduation."
-            >
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <ProfileField
-                  label="University"
-                  value={draft.university}
-                  displayValue={profile.university}
-                  editing={isEditing}
-                  placeholder="University name"
-                  onChange={(value) =>
-                    setDraft((current) => ({
-                      ...current,
-                      university: value,
-                    }))
-                  }
-                />
-
-                <ProfileField
-                  label="Degree"
-                  value={draft.degree}
-                  displayValue={profile.degree}
-                  editing={isEditing}
-                  placeholder="e.g. Bachelor's Degree"
-                  onChange={(value) =>
-                    setDraft((current) => ({
-                      ...current,
-                      degree: value,
-                    }))
-                  }
-                />
-
-                <ProfileField
-                  label="Major"
-                  value={draft.major}
-                  displayValue={profile.major}
-                  editing={isEditing}
-                  placeholder="e.g. Software Engineering"
-                  onChange={(value) =>
-                    setDraft((current) => ({
-                      ...current,
-                      major: value,
-                    }))
-                  }
-                />
-
-                <ProfileField
-                  label="Graduation year"
-                  value={draft.graduationYear}
-                  displayValue={profile.graduationYear}
-                  editing={isEditing}
-                  error={graduationYearError}
-                  placeholder="e.g. 2026"
-                  onChange={(value) => {
-                    setDraft((current) => ({
-                      ...current,
-                      graduationYear: value,
-                    }));
-
-                    if (graduationYearError) {
-                      setGraduationYearError("");
-                    }
-                  }}
-                />
-              </div>
-            </ProfileSection>
+            <EducationDetails profile={profile} draft={draft} isEditing={isEditing} setDraft={setDraft} graduationYearError={graduationYearError} setGraduationYearError={setGraduationYearError} />
 
             {/* Career */}
-            <ProfileSection
-              icon={<BriefcaseBusiness className="h-5 w-5" />}
-              title="Career preferences"
-              description="Set the roles and locations you are most interested in."
-            >
-              <div className="space-y-5">
-                <ProfileField
-                  label="Preferred roles"
-                  value={draft.preferredRoles}
-                  displayValue={profile.preferredRoles}
-                  editing={isEditing}
-                  placeholder="e.g. Software Engineer, Frontend Developer"
-                  onChange={(value) =>
-                    setDraft((current) => ({
-                      ...current,
-                      preferredRoles: value,
-                    }))
-                  }
-                />
-
-                <ProfileField
-                  label="Preferred locations"
-                  value={draft.preferredLocations}
-                  displayValue={profile.preferredLocations}
-                  editing={isEditing}
-                  placeholder="e.g. Auckland, Wellington, Remote"
-                  onChange={(value) =>
-                    setDraft((current) => ({
-                      ...current,
-                      preferredLocations: value,
-                    }))
-                  }
-                />
-              </div>
-            </ProfileSection>
+            <CareerPreferences profile={profile} draft={draft} isEditing={isEditing} setDraft={setDraft} />
           </div>
 
           {/* Right column */}
           <div className="space-y-6">
             {/* Skills */}
-            <section className="card p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-base font-semibold text-slate-950">
-                    Skills
-                  </h2>
-
-                  <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Technical and professional strengths relevant to your
-                    career.
-                  </p>
-                </div>
-
-                <div className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
-                  {(isEditing ? draft.skills : profile.skills).length} skills
-                </div>
-              </div>
-
-              <div className="mt-5 flex min-h-20 flex-wrap content-start gap-2">
-                {(isEditing ? draft.skills : profile.skills).map((skill) => (
-                  <span
-                    key={skill}
-                    className="inline-flex h-fit items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700"
-                  >
-                    {skill}
-
-                    {isEditing && (
-                      <button
-                        type="button"
-                        aria-label={`Remove ${skill}`}
-                        onClick={() => removeSkill(skill)}
-                        className="rounded text-slate-500 transition hover:text-rose-600"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                  </span>
-                ))}
-
-                {!(isEditing ? draft.skills : profile.skills).length && (
-                  <p className="text-sm text-slate-500">No skills added yet.</p>
-                )}
-              </div>
-
-              {isEditing && (
-                <div className="mt-5 border-t border-slate-100 pt-5">
-                  <label
-                    htmlFor="newSkill"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Add skill
-                  </label>
-
-                  <div className="mt-2 flex gap-2">
-                    <input
-                      id="newSkill"
-                      type="text"
-                      value={newSkill}
-                      onChange={(event) => setNewSkill(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          addSkill();
-                        }
-                      }}
-                      placeholder="e.g. Python"
-                      className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-teal-600 focus:ring-4 focus:ring-teal-50"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={addSkill}
-                      aria-label="Add skill"
-                      className="btn h-10 w-10 shrink-0"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </section>
+            <SkillsSection profile={profile} draft={draft} isEditing={isEditing} newSkill={newSkill} setNewSkill={setNewSkill} addSkill={addSkill} removeSkill={removeSkill} />
 
             {/* Notifications */}
-            <section className="card p-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                  <Bell className="h-5 w-5" />
-                </div>
-
-                <div>
-                  <h2 className="text-base font-semibold text-slate-950">
-                    Notifications
-                  </h2>
-
-                  <p className="mt-1 text-sm text-slate-500">
-                    Manage important reminders.
-                  </p>
-                </div>
-              </div>
-
-              {!isEditing && (
-                <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
-                  <p className="text-xs leading-5 text-slate-500">
-                    Notification settings can be changed while editing your
-                    profile.
-                  </p>
-                </div>
-              )}
-
-              <div className="mt-5 divide-y divide-slate-100">
-                <NotificationSetting
-                  title="Email notifications"
-                  description="Receive important account and application updates by email."
-                  checked={
-                    isEditing
-                      ? draft.emailNotifications
-                      : profile.emailNotifications
-                  }
-                  disabled={!isEditing}
-                  onChange={(value) =>
-                    setDraft((current) => ({
-                      ...current,
-                      emailNotifications: value,
-                    }))
-                  }
-                />
-
-                <NotificationSetting
-                  title="Deadline reminders"
-                  description="Get reminders before internship application deadlines."
-                  checked={
-                    isEditing
-                      ? draft.deadlineReminders
-                      : profile.deadlineReminders
-                  }
-                  disabled={!isEditing}
-                  onChange={(value) =>
-                    setDraft((current) => ({
-                      ...current,
-                      deadlineReminders: value,
-                    }))
-                  }
-                />
-
-                <NotificationSetting
-                  title="Interview reminders"
-                  description="Receive reminders before scheduled interviews."
-                  checked={
-                    isEditing
-                      ? draft.interviewReminders
-                      : profile.interviewReminders
-                  }
-                  disabled={!isEditing}
-                  onChange={(value) =>
-                    setDraft((current) => ({
-                      ...current,
-                      interviewReminders: value,
-                    }))
-                  }
-                />
-              </div>
-            </section>
+            <NotificationSettings profile={profile} draft={draft} isEditing={isEditing} setDraft={setDraft} />
 
             {/* Account status */}
             <section className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-6 shadow-sm">

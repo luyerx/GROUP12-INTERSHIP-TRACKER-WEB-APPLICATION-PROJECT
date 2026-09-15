@@ -1,73 +1,50 @@
-import { z } from "zod";
-
 import { authorizeRole } from "@/lib/authorization";
-import { connectToDatabase } from "@/lib/mongodb";
 import { UserModel } from "@/lib/models/User";
+import { connectToDatabase } from "@/lib/mongodb";
+import { isValidObjectId } from "mongoose";
+import { z } from "zod";
 
 const userUpdateSchema = z.object({
   programme: z.string().trim().max(160),
-  role: z.enum(["Student", "Admin", "Employee"]),
+  role: z.enum(["Student", "Admin", "Employee"]).optional(),
   status: z.enum(["Active", "Suspended"]),
-});
+}).strict();
+const deny = (message: string, status = 403) => Response.json({ success: false, message }, { status });
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const authorization = await authorizeRole("admin");
   if (!authorization.authorized) return authorization.response;
   const { id } = await params;
-  if (id === authorization.user.id)
-    return Response.json(
-      { message: "Ask another admin to change your own role or status." },
-      { status: 400 },
-    );
-  const input = userUpdateSchema.safeParse(await request.json());
-  if (!input.success)
-    return Response.json(
-      { success: false, message: input.error.issues[0].message },
-      { status: 400 },
-    );
+  if (!isValidObjectId(id)) return deny("Invalid user ID.", 400);
+  if (id === authorization.user.id) return deny("You cannot change your own account here.", 400);
+  const input = userUpdateSchema.safeParse(await request.json().catch(() => null));
+  if (!input.success) return deny(input.error.issues[0].message, 400);
+  const superadmin = authorization.user.role === "superadmin";
+  if (input.data.role !== undefined && !superadmin) return deny("Only Super Admin can change roles.");
   await connectToDatabase();
-  const user = await UserModel.findByIdAndUpdate(
-    id,
+  // Include allowed target roles in the mutation itself to protect against concurrent promotion.
+  const allowedRoles = superadmin ? ["student", "employee", "admin"] : ["student", "employee"];
+  const user = await UserModel.findOneAndUpdate(
+    { _id: id, role: { $in: allowedRoles } },
     {
-      major: input.data.programme,
-      role: input.data.role.toLowerCase(),
-      status: input.data.status,
+      major: input.data.programme, status: input.data.status,
+      ...(input.data.role !== undefined ? { role: input.data.role.toLowerCase() } : {})
     },
     { new: true, runValidators: true },
-  ).lean();
-  if (!user)
-    return Response.json(
-      { success: false, message: "User not found." },
-      { status: 404 },
-    );
+  );
+  if (!user) return deny("Account is protected or no longer available.");
   return Response.json({ success: true });
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const authorization = await authorizeRole("admin");
   if (!authorization.authorized) return authorization.response;
   const { id } = await params;
-  if (id === authorization.user.id)
-    return Response.json(
-      { success: false, message: "You cannot delete your own account." },
-      { status: 400 },
-    );
+  if (!isValidObjectId(id)) return deny("Invalid user ID.", 400);
+  if (id === authorization.user.id) return deny("You cannot delete your own account.", 400);
   await connectToDatabase();
-  const target = await UserModel.findById(id).select("role").lean();
-  if (target?.role === "admin") {
-    return Response.json({ success: false, message: "Admin accounts cannot be deleted." }, { status: 403 });
-  }
-  const user = await UserModel.findOneAndDelete({ _id: id, role: { $ne: "admin" } });
-  if (!user)
-    return Response.json(
-      { success: false, message: "User not found." },
-      { status: 404 },
-    );
+  const allowedRoles = authorization.user.role === "superadmin" ? ["student", "employee", "admin"] : ["student", "employee"];
+  const user = await UserModel.findOneAndDelete({ _id: id, role: { $in: allowedRoles } });
+  if (!user) return deny("Account is protected or no longer available.");
   return Response.json({ success: true });
 }

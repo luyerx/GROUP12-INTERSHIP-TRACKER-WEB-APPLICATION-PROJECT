@@ -1,16 +1,21 @@
 "use client";
+import MonthGrid from "@/components/calendar/MonthGrid";
 
-import { formatDateKey, toDateInputValue, isDateInputValue } from "@/lib/date";
-import Link from "next/link";
+import CalendarToolbar from "@/components/calendar/CalendarToolbar";
+
+import { CalendarEvent, eventStyles, EventType } from "@/components/calendar/calendarTypes";
+
+import PageHeader from "@/components/ui/PageHeader";
+
 import UpcomingEvents from "@/components/calendar/UpcomingEvents";
 import ModalFrame from "@/components/ui/ModalFrame";
+import { formatDateKey, isDateInputValue, toDateInputValue } from "@/lib/date";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import {
   AlertCircle,
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   Clock3,
   LoaderCircle,
   MapPin,
@@ -18,12 +23,12 @@ import {
   Plus,
   RefreshCw,
   Trash2,
-  X,
+  X
 } from "lucide-react";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
-type EventType = "deadline" | "interview" | "reminder";
+
 
 type ApplicationStatus =
   | "Interested"
@@ -49,25 +54,9 @@ type ApplicationsApiResponse = {
   message?: string;
 };
 
-type CalendarEvent = {
-  id: string | number;
-  applicationId: string;
-  type: EventType;
-  title: string;
-  organisation: string;
-  date: string;
-  time?: string;
-  location?: string;
-  notes?: string;
-};
 
-const eventStyles: Record<EventType, string> = {
-  deadline: "bg-rose-50 text-rose-700 ring-rose-600/20",
 
-  interview: "bg-blue-50 text-blue-700 ring-blue-600/20",
 
-  reminder: "bg-amber-50 text-amber-700 ring-amber-600/20",
-};
 
 const eventIconStyles: Record<EventType, string> = {
   deadline: "bg-rose-50 text-rose-600",
@@ -77,22 +66,9 @@ const eventIconStyles: Record<EventType, string> = {
   reminder: "bg-amber-50 text-amber-600",
 };
 
-const monthNames = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
 
-const weekdayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+
 
 function convertDeadlineToDateKey(deadline: string) {
   return toDateInputValue(deadline) || null;
@@ -306,7 +282,7 @@ export default function CalendarPage() {
       currentMonth: boolean;
     }[] = [];
 
-    for (let index = firstWeekday - 1; index >= 0; index--) {
+    for (let index = firstWeekday - 1;index >= 0;index--) {
       days.push({
         date: new Date(
           currentYear,
@@ -318,7 +294,7 @@ export default function CalendarPage() {
       });
     }
 
-    for (let day = 1; day <= daysInMonth; day++) {
+    for (let day = 1;day <= daysInMonth;day++) {
       days.push({
         date: new Date(currentYear, currentMonth, day),
 
@@ -611,58 +587,7 @@ export default function CalendarPage() {
     <DashboardLayout>
       <div>
         {/* Header */}
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-sm font-medium text-slate-500">
-              Schedule management
-            </p>
-
-            <h1 className="mt-2 page-title">Calendar</h1>
-
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Keep track of application deadlines, interviews, reminders, and
-              important recruitment dates.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={openCreateEvent}
-              disabled={applications.length === 0 || isLoadingApplications}
-              className="btn disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" />
-              Add event
-            </button>
-
-            <button
-              type="button"
-              onClick={goToToday}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-            >
-              Today
-            </button>
-
-            <button
-              type="button"
-              onClick={goToPreviousMonth}
-              aria-label="Previous month"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-950"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-
-            <button
-              type="button"
-              onClick={goToNextMonth}
-              aria-label="Next month"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-950"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+        <PageHeader eyebrow="Schedule management" title="Calendar" description="Keep track of application deadlines, interviews, reminders, and important recruitment dates." action={<CalendarToolbar openCreateEvent={openCreateEvent} applications={applications} isLoadingApplications={isLoadingApplications} goToToday={goToToday} goToPreviousMonth={goToPreviousMonth} goToNextMonth={goToNextMonth} />} />
 
         {!isLoadingApplications &&
           !applicationsError &&
@@ -741,139 +666,7 @@ export default function CalendarPage() {
 
         <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
           {/* Calendar */}
-          <section className="order-2 overflow-hidden card xl:order-1">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                  <CalendarDays className="h-5 w-5" />
-                </div>
-
-                <div>
-                  <h2 className="text-base font-semibold text-slate-950">
-                    {monthNames[currentMonth]} {currentYear}
-                  </h2>
-
-                  <p className="mt-1 text-xs text-slate-500">
-                    Monthly overview
-                  </p>
-                </div>
-              </div>
-
-              <div className="hidden items-center gap-4 text-xs font-medium text-slate-500 sm:flex">
-                <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
-                  Deadline
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-blue-400" />
-                  Interview
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                  Reminder
-                </div>
-              </div>
-            </div>
-
-            <p className="px-4 py-2 text-xs text-slate-500 sm:hidden">
-              Scroll across to explore the month. Upcoming dates are listed
-              above.
-            </p>
-            <div
-              className="overflow-x-auto"
-              role="region"
-              aria-label="Monthly calendar, scroll horizontally to see all days"
-              tabIndex={0}
-            >
-              <div className="min-w-[640px]">
-                {/* Weekdays */}
-                <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/70">
-                  {weekdayNames.map((day) => (
-                    <div
-                      key={day}
-                      className="px-2 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500"
-                    >
-                      {day}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Calendar grid */}
-                <div className="grid grid-cols-7">
-                  {calendarDays.map(
-                    ({ date, currentMonth: isCurrentMonth }) => {
-                      const dateKey = formatDateKey(date);
-
-                      const dayEvents = events.filter(
-                        (event) => event.date === dateKey,
-                      );
-
-                      const isToday = dateKey === formatDateKey(new Date());
-
-                      return (
-                        <div
-                          key={dateKey}
-                          className={`min-h-35 border-b border-r border-slate-100 p-2.5 ${
-                            isCurrentMonth ? "bg-white" : "bg-slate-50/50"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span
-                              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${
-                                isToday
-                                  ? "bg-slate-950 text-white"
-                                  : isCurrentMonth
-                                    ? "text-slate-700"
-                                    : "text-slate-300"
-                              }`}
-                            >
-                              {date.getDate()}
-                            </span>
-                          </div>
-
-                          <div className="mt-2 space-y-1.5">
-                            {dayEvents.map((event) => (
-                              <button
-                                key={event.id}
-                                type="button"
-                                onClick={() => setSelectedEvent(event)}
-                                aria-label={
-                                  event.type +
-                                  ": " +
-                                  event.organisation +
-                                  ", " +
-                                  event.title +
-                                  ", " +
-                                  event.date
-                                }
-                                className={`block w-full rounded-lg px-2 py-1.5 text-left text-[11px] font-medium ring-1 ring-inset transition hover:opacity-80 ${
-                                  eventStyles[event.type]
-                                }`}
-                              >
-                                <span className="block truncate">
-                                  {event.organisation}
-                                </span>
-
-                                <span className="mt-0.5 block truncate text-[10px] opacity-75">
-                                  {event.type === "deadline"
-                                    ? "Deadline"
-                                    : event.type === "reminder"
-                                      ? event.title
-                                      : event.time || "Interview"}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    },
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
+          <MonthGrid currentMonth={currentMonth} currentYear={currentYear} calendarDays={calendarDays} events={events} setSelectedEvent={setSelectedEvent} />
 
           {/* Upcoming */}
           <aside className="order-1 space-y-6 xl:order-2">
@@ -913,9 +706,8 @@ export default function CalendarPage() {
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
               <div className="flex items-start gap-3">
                 <div
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
-                    eventIconStyles[selectedEvent.type]
-                  }`}
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${eventIconStyles[selectedEvent.type]
+                    }`}
                 >
                   {selectedEvent.type === "interview" ? (
                     <Clock3 className="h-5 w-5" />
@@ -931,9 +723,8 @@ export default function CalendarPage() {
                     </h2>
 
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
-                        eventStyles[selectedEvent.type]
-                      }`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${eventStyles[selectedEvent.type]
+                        }`}
                     >
                       {selectedEvent.type.charAt(0).toUpperCase() +
                         selectedEvent.type.slice(1)}

@@ -1,18 +1,19 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import StatusBadge from "@/components/ui/StatusBadge";
 import {
+  EmptyState,
   LoadingState,
   SuccessFeedback,
-  EmptyState,
 } from "@/components/ui/Feedback";
+import StatusBadge from "@/components/ui/StatusBadge";
 import { Search } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
-import AdminModal, { fieldClass, labelClass, ModalActions } from "./AdminModal";
 import type { AdminUser } from "@/lib/adminTypes";
+import AdminModal, { fieldClass, labelClass, ModalActions } from "./AdminModal";
 
-export default function AdminUsersTable() {
+export default function AdminUsersTable({ currentUserId, canManageRoles }: { currentUserId: string; canManageRoles: boolean }) {
+  const canManage = (user: AdminUser) => user.id !== currentUserId && user.role !== "Super Admin" && (canManageRoles || user.role !== "Admin");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState("");
@@ -64,7 +65,7 @@ export default function AdminUsersTable() {
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!editing) return;
+    if (!editing || !canManage(editing)) return;
     setBusy(true);
     setError("");
     setSuccess("");
@@ -75,7 +76,7 @@ export default function AdminUsersTable() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           programme: String(data.get("programme")),
-          role: String(data.get("role")),
+          ...(canManageRoles ? { role: String(data.get("role")) } : {}),
           status: String(data.get("status")),
         }),
       });
@@ -96,7 +97,7 @@ export default function AdminUsersTable() {
   }
 
   async function remove() {
-    if (!editing || editing.role === "Admin" || !confirm(`Delete ${editing.name}'s account?`)) return;
+    if (!editing || !canManage(editing) || !confirm(`Delete ${editing.name}'s account?`)) return;
     setBusy(true);
     setError("");
     try {
@@ -124,9 +125,9 @@ export default function AdminUsersTable() {
       {!loading && !error && (
         <section
           aria-label="User roles"
-          className="mt-6 grid gap-3 sm:grid-cols-3"
+          className="mt-6 grid gap-3 sm:grid-cols-4"
         >
-          {["Student", "Employee", "Admin"].map((value) => (
+          {["Student", "Employee", "Admin", "Super Admin"].map((value) => (
             <button
               className="pipeline-tab"
               aria-pressed={role === value}
@@ -162,6 +163,7 @@ export default function AdminUsersTable() {
           <option>Student</option>
           <option>Employee</option>
           <option>Admin</option>
+          <option>Super Admin</option>
         </select>
         <select
           value={status}
@@ -265,11 +267,12 @@ export default function AdminUsersTable() {
                   </td>
                   <td className="px-5 py-4 text-right">
                     <button
+                      disabled={!canManage(row)}
                       aria-label={"Manage " + row.name}
                       onClick={() => setEditing(row)}
                       className="text-sm font-medium text-slate-600 hover:text-slate-950"
                     >
-                      Manage
+                      {canManage(row) ? "Manage" : "Protected"}
                     </button>
                   </td>
                 </tr>
@@ -297,7 +300,7 @@ export default function AdminUsersTable() {
                     className={fieldClass}
                   />
                 </label>
-                <label className={labelClass}>
+                {canManageRoles ? <label className={labelClass}>
                   Role
                   <select
                     name="role"
@@ -308,7 +311,7 @@ export default function AdminUsersTable() {
                     <option>Employee</option>
                     <option>Admin</option>
                   </select>
-                </label>
+                </label> : <div className={labelClass}>Role <StatusBadge value={editing.role} /></div>}
                 <label className={labelClass}>
                   Status
                   <select
@@ -326,10 +329,10 @@ export default function AdminUsersTable() {
                   {error}
                 </p>
               )}
-              {editing.role === "Admin" && <p className="px-5 pb-3 text-sm text-slate-500">Admin accounts cannot be deleted.</p>}
+
               <ModalActions
                 onCancel={() => setEditing(null)}
-                onDelete={editing.role === "Admin" ? undefined : () => void remove()}
+                onDelete={canManage(editing) ? () => void remove() : undefined}
               />
             </fieldset>
           </form>

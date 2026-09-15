@@ -1,56 +1,38 @@
 "use client";
+import ApplicationHeader from "@/components/applications/ApplicationHeader";
+import DeleteApplicationModal from "@/components/applications/DeleteApplicationModal";
+
+import ApplicationProgress from "@/components/applications/ApplicationProgress";
+
+import ApplicationContact from "@/components/applications/ApplicationContact";
+
+import ApplicationTimeline from "@/components/applications/ApplicationTimeline";
+
+import ApplicationNotes from "@/components/applications/ApplicationNotes";
+
+import ApplicationOverview from "@/components/applications/ApplicationOverview";
+
+import { Application, ApplicationStatus } from "@/components/applications/detailTypes";
+
 
 import Link from "next/link";
-import ModalFrame from "@/components/ui/ModalFrame";
-import StatusBadge from "@/components/ui/StatusBadge";
-import Deadline from "@/components/ui/Deadline";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import {
   AlertCircle,
   ArrowLeft,
-  BriefcaseBusiness,
-  CalendarDays,
-  ExternalLink,
   LoaderCircle,
-  MapPin,
-  Pencil,
   RefreshCw,
-  Sparkles,
-  Trash2,
-  UserRound,
-  X,
+  Sparkles
 } from "lucide-react";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { parseAppDate } from "@/lib/date";
 
-type ApplicationStatus =
-  | "Interested"
-  | "Preparing"
-  | "Applied"
-  | "Interview"
-  | "Offer"
-  | "Rejected"
-  | "Withdrawn";
 
-type Application = {
-  opportunityId?: string;
-  id: string;
-  organisation: string;
-  roleTitle: string;
-  location: string;
-  deadline: string;
-  status: ApplicationStatus;
-  sourceLink?: string;
-  contactPerson?: string;
-  jobDescription?: string;
-  notes?: string;
-  outcome?: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
+
+
 
 type ApplicationApiResponse = {
   success: boolean;
@@ -476,240 +458,22 @@ export default function ApplicationDetailPage() {
         </Link>
 
         {/* Header */}
-        <div className="mt-6 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center card text-lg font-semibold text-slate-700">
-              {application.organisation.charAt(0).toUpperCase() || "A"}
-            </div>
-
-            <div>
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="page-title">{application.roleTitle}</h1>
-
-                <StatusBadge value={status} />
-              </div>
-
-              <p className="mt-2 text-base font-medium text-slate-600">
-                {application.organisation}
-              </p>
-
-              <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500">
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="h-4 w-4" />
-
-                  {application.location || "No location"}
-                </span>
-
-                <span className="flex items-center gap-1.5">
-                  <CalendarDays className="h-4 w-4" />
-                  <Deadline value={application.deadline} />
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Link className="btn-secondary" href="/ai-assistant">
-              <Sparkles className="h-4 w-4" />
-              Preparation tools
-            </Link>
-
-            <Link
-              href={`/applications/${id}/edit`}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-            >
-              <Pencil className="h-4 w-4" />
-              Edit
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => setShowDeleteModal(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-sm font-medium text-rose-600 shadow-sm transition hover:bg-rose-50"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </button>
-          </div>
-        </div>
+        <ApplicationHeader application={application} status={status} id={id} setShowDeleteModal={setShowDeleteModal} />
 
         {/* Main content */}
         <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.65fr]">
           <div className="space-y-6">
-            <section className="card p-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                  <BriefcaseBusiness className="h-5 w-5" />
-                </div>
+            <ApplicationOverview application={application} />
 
-                <div>
-                  <h2 className="text-base font-semibold text-slate-950">
-                    Job description
-                  </h2>
+            <ApplicationNotes application={application} />
 
-                  <p className="mt-1 text-sm text-slate-500">
-                    Original details saved with this application.
-                  </p>
-                </div>
-              </div>
-
-              <p className="mt-6 whitespace-pre-wrap text-sm leading-7 text-slate-600">
-                {application.jobDescription || "No job description added."}
-              </p>
-
-              {application.sourceLink && (
-                <a
-                  href={application.sourceLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
-                >
-                  View original job posting
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              )}
-            </section>
-
-            <section className="card p-6">
-              <h2 className="text-base font-semibold text-slate-950">Notes</h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Personal preparation and follow-up information.
-              </p>
-
-              <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-                {application.notes || "No notes added."}
-              </div>
-            </section>
-
-            <section className="card p-6">
-              <h2 className="text-base font-semibold text-slate-950">
-                Application timeline
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                A history of important application milestones.
-              </p>
-
-              <div className="mt-6 space-y-6">
-                {timelineItems.map((item, index) => (
-                  <div
-                    key={`${item.title}-${index}`}
-                    className="relative flex gap-4"
-                  >
-                    {index < timelineItems.length - 1 && (
-                      <div className="absolute left-1.25 top-4 h-full w-px bg-slate-200" />
-                    )}
-
-                    <div
-                      className={`relative z-10 mt-1 h-3 w-3 shrink-0 rounded-full ${
-                        item.active
-                          ? "bg-slate-950"
-                          : "border-2 border-slate-300 bg-white"
-                      }`}
-                    />
-
-                    <div className="pb-1">
-                      <p
-                        className={`text-sm font-medium ${
-                          item.active ? "text-slate-900" : "text-slate-700"
-                        }`}
-                      >
-                        {item.title}
-                      </p>
-
-                      <p className="mt-1 text-xs text-slate-500">
-                        {item.subtitle}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <ApplicationTimeline timelineItems={timelineItems} />
           </div>
 
           <div className="space-y-6">
-            <section className="card p-6">
-              <h2 className="text-base font-semibold text-slate-950">
-                Application details
-              </h2>
+            <ApplicationProgress application={application} status={status} isUpdatingStatus={isUpdatingStatus} statusError={statusError} handleStatusChange={handleStatusChange} validStatuses={validStatuses} formatDeadline={formatDeadline} />
 
-              <div className="mt-5 space-y-5">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                    Status
-                  </p>
-
-                  <select
-                    value={status}
-                    disabled={isUpdatingStatus}
-                    onChange={(event) =>
-                      void handleStatusChange(
-                        event.target.value as ApplicationStatus,
-                      )
-                    }
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {validStatuses.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-
-                  {isUpdatingStatus && (
-                    <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                      Updating status...
-                    </div>
-                  )}
-
-                  {statusError && (
-                    <p className="mt-2 text-xs leading-5 text-rose-600">
-                      {statusError}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                    Deadline
-                  </p>
-
-                  <p className="mt-1.5 text-sm font-medium text-slate-800">
-                    {formatDeadline(application.deadline)}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                    Location
-                  </p>
-
-                  <p className="mt-1.5 text-sm font-medium text-slate-800">
-                    {application.location || "Not set"}
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section className="card p-6">
-              <div className="flex items-center gap-3">
-                <UserRound className="h-5 w-5 text-slate-500" />
-
-                <h2 className="text-base font-semibold text-slate-950">
-                  Contact
-                </h2>
-              </div>
-
-              <p className="mt-5 text-sm font-medium text-slate-800">
-                {application.contactPerson || "No contact added"}
-              </p>
-
-              <p className="mt-1 text-xs text-slate-500">
-                Recruiter / hiring contact
-              </p>
-            </section>
+            <ApplicationContact application={application} />
 
             <section className="panel">
               <Sparkles className="h-5 w-5 text-teal-700" />
@@ -733,94 +497,7 @@ export default function ApplicationDetailPage() {
 
       {/* Delete modal */}
       {showDeleteModal && (
-        <ModalFrame
-          label="Delete application"
-          onClose={() => {
-            if (!isDeleting) setShowDeleteModal(false);
-          }}
-          className="fixed inset-0 z-50 flex items-center justify-center px-4"
-        >
-          <button
-            type="button"
-            aria-label="Close delete confirmation"
-            onClick={() => {
-              if (!isDeleting) {
-                setShowDeleteModal(false);
-              }
-            }}
-            className="absolute inset-0 bg-slate-950/40 "
-          />
-
-          <div className="relative z-10 w-full max-w-md card p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                <Trash2 className="h-5 w-5" />
-              </div>
-
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={() => setShowDeleteModal(false)}
-                aria-label="Close delete confirmation"
-                className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <h2 className="mt-5 text-lg font-semibold text-slate-950">
-              Delete application?
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              You are about to permanently delete the application for{" "}
-              <span className="font-medium text-slate-700">
-                {application.roleTitle}
-              </span>{" "}
-              at{" "}
-              <span className="font-medium text-slate-700">
-                {application.organisation}
-              </span>
-              .
-            </p>
-
-            <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50/60 px-4 py-3">
-              <p className="text-xs leading-5 text-rose-700">
-                This action cannot be undone once the application is deleted.
-              </p>
-            </div>
-
-            <div className="mt-6 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={() => setShowDeleteModal(false)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={() => void handleDelete()}
-                className="inline-flex min-w-35 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isDeleting ? (
-                  <>
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="h-4 w-4" />
-                    Delete application
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </ModalFrame>
+        <DeleteApplicationModal application={application} isDeleting={isDeleting} setShowDeleteModal={setShowDeleteModal} handleDelete={handleDelete} />
       )}
     </DashboardLayout>
   );

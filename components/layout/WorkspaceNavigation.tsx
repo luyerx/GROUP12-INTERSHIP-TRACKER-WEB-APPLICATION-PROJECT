@@ -1,24 +1,24 @@
 "use client";
+import {
+  ArrowUpRight,
+  BookOpen,
+  BriefcaseBusiness,
+  Building2,
+  CalendarDays,
+  FolderOpen,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Plus,
+  Search,
+  Sparkles,
+  UserRound,
+  Users,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import {
-  BriefcaseBusiness,
-  LayoutDashboard,
-  Search,
-  FolderOpen,
-  CalendarDays,
-  Sparkles,
-  BookOpen,
-  UserRound,
-  Users,
-  Building2,
-  Plus,
-  Menu,
-  X,
-  LogOut,
-  ArrowUpRight,
-} from "lucide-react";
 type Role = "student" | "employee" | "admin";
 const navigation = {
   student: [
@@ -51,15 +51,16 @@ export default function WorkspaceNavigation({ role }: { role: Role }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [name, setName] = useState("");
+  const [accountRole, setAccountRole] = useState("");
   const drawer = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     let active = true;
     fetch("/api/auth/me", { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => {
-        if (active && j.success) setName(j.user?.fullName || "");
+        if (active && j.success) { setName(j.user?.fullName || ""); setAccountRole(j.user?.role || ""); }
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       active = false;
     };
@@ -208,7 +209,7 @@ export default function WorkspaceNavigation({ role }: { role: Role }) {
               <p className="truncate text-sm font-semibold">
                 {name || labels[role] + " workspace"}
               </p>
-              <p className="text-xs text-slate-500">{labels[role]} account</p>
+              <p className="text-xs text-slate-500">{accountRole === "superadmin" ? "Super Admin" : labels[role]} account</p>
             </div>
           </div>
           <button

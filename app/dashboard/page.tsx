@@ -1,7 +1,8 @@
 "use client";
+import PageHeader from "@/components/ui/PageHeader";
 
-import Link from "next/link";
 import { LoadingState } from "@/components/ui/Feedback";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -13,13 +14,13 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-import UpcomingInterviews from "@/components/dashboard/UpcomingInterviews";
-import OpportunityBrowser from "@/components/opportunities/OpportunityBrowser";
-import DashboardLayout from "@/components/layout/DashboardLayout";
-import StatCard from "@/components/dashboard/StatCard";
 import ApplicationPipeline from "@/components/dashboard/ApplicationPipeline";
-import UpcomingTasks from "@/components/dashboard/UpcomingTasks";
 import RecentApplications from "@/components/dashboard/RecentApplications";
+import StatCard from "@/components/dashboard/StatCard";
+import UpcomingInterviews from "@/components/dashboard/UpcomingInterviews";
+import UpcomingTasks from "@/components/dashboard/UpcomingTasks";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import OpportunityBrowser from "@/components/opportunities/OpportunityBrowser";
 
 import { parseAppDate } from "@/lib/date";
 
@@ -237,22 +238,11 @@ export default function DashboardPage() {
     <DashboardLayout>
       <div>
         {/* Header */}
-        <p className="text-sm font-medium text-slate-500">{currentDateLabel}</p>
 
-        <div className="mt-2 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h1 className="page-title">Welcome back, {userName}</h1>
 
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Track applications, interviews, deadlines, and your overall
-              internship progress.
-            </p>
-          </div>
-
-          <Link href="/opportunities" className="btn ">
-            Browse Opportunities
-          </Link>
-        </div>
+        <PageHeader eyebrow={currentDateLabel} title={<>Welcome back, {userName}</>} description="Track applications, interviews, deadlines, and your overall internship progress." action={<Link href="/opportunities" className="btn ">
+          Browse Opportunities
+        </Link>} />
 
         {/* Error */}
         {error && (
@@ -319,8 +309,8 @@ export default function DashboardPage() {
             </div>
             {nextDeadline && <div className="primary-action">
               <div><p className="text-sm text-teal-800">Due {nextDeadline.date!.toLocaleDateString("en-NZ", { day: "numeric", month: "long" })}</p>
-              <h3 className="mt-2 text-xl font-semibold text-slate-950">{nextDeadline.application.roleTitle}</h3>
-              <p className="mt-1 text-sm text-slate-600">{nextDeadline.application.organisation}</p></div>
+                <h3 className="mt-2 text-xl font-semibold text-slate-950">{nextDeadline.application.roleTitle}</h3>
+                <p className="mt-1 text-sm text-slate-600">{nextDeadline.application.organisation}</p></div>
               <Link className="btn" href={"/applications/" + nextDeadline.application.id}>Review application →</Link>
             </div>}
             <div className="grid gap-3 sm:grid-cols-2">

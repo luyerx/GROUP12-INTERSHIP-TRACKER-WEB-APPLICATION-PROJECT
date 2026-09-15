@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 import { getAuthenticatedUser, type AuthenticatedUser } from "@/lib/auth";
 
-export type UserRole = "student" | "admin" | "employee";
+export type UserRole = "student" | "admin" | "employee" | "superadmin";
 
 type AuthorizedResult = {
   authorized: true;
@@ -35,7 +35,7 @@ export async function authorizeRole(
       };
     }
 
-    if (user.role !== requiredRole) {
+    if (user.role !== requiredRole && !(requiredRole === "admin" && user.role === "superadmin")) {
       return {
         authorized: false,
         response: NextResponse.json(

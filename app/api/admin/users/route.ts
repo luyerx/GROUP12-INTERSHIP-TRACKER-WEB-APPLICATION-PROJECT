@@ -1,6 +1,6 @@
 import { authorizeRole } from "@/lib/authorization";
-import { connectToDatabase } from "@/lib/mongodb";
 import { UserModel } from "@/lib/models/User";
+import { connectToDatabase } from "@/lib/mongodb";
 
 export async function GET() {
   const authorization = await authorizeRole("admin");
@@ -15,7 +15,7 @@ export async function GET() {
       email: user.email,
       programme: user.major || user.degree || "Not specified",
       role:
-        user.role === "admin"
+        user.role === "superadmin" ? "Super Admin" : user.role === "admin"
           ? "Admin"
           : user.role === "employee"
             ? "Employee"

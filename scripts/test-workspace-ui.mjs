@@ -1,0 +1,136 @@
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+// Optional browser regression: RUN_UI_TESTS=1, with Playwright installed or PLAYWRIGHT_MODULE set.
+export async function testWorkspaceUI({ base, student, employee, admin, superadmin, appId }) {
+  const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
+  const browser = await chromium.launch({ channel: "chrome", headless: true });
+  const errors = [];
+  let count = 0;
+  const check = (value, label) => { assert.ok(value, label); count++; console.log("UI PASS " + label); };
+  const output = process.env.UI_SCREENSHOTS_DIR;
+  if (output) await fs.mkdir(output, { recursive: true });
+  async function session(cookie) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    await context.addCookies([{ name: "session_token", value: cookie.slice(cookie.indexOf("=") + 1), url: base }]);
+    const page = await context.newPage();
+    page.on("pageerror", e => errors.push(e.message));
+    page.setDefaultTimeout(12000);
+    return page;
+  }
+  async function shot(page, name) { if (output) await page.screenshot({ path: path.join(output, name + ".png"), fullPage: true }); }
+  async function noOverflow(page, label) { check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), label + " has no page overflow"); }
+  try {
+    const page = await session(student);
+    await page.goto(base + "/applications");
+    await page.locator(".tracker-table tbody tr").first().waitFor();
+    const listCount = await page.locator(".tracker-table tbody tr").count();
+    await page.getByRole("button", { name: "Board", exact: true }).click();
+    await page.locator(".application-board").waitFor();
+    check(await page.locator(".board-card").count() === listCount, "List and Board display the same records");
+    await page.getByLabel("Search applications").fill("Changed external");
+    check(await page.locator(".board-card").count() === 1, "Board respects search");
+    await page.getByLabel("Search applications").fill("");
+    await page.getByLabel("Filter applications by status").selectOption("Offer");
+    check((await page.locator(".board-card").allTextContents()).every(text => text.includes("Offer")), "Board respects status filter");
+    await page.getByLabel("Filter applications by status").selectOption("All");
+    await shot(page, "applications-board-desktop");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await noOverflow(page, "Mobile Board"); await shot(page, "applications-board-mobile");
+    await page.getByRole("button", { name: "List", exact: true }).click();
+    check(await page.locator(".tracker-table tbody tr").count() === listCount, "List retained after switching");
+    await noOverflow(page, "Mobile List");
+    await page.goto(base + "/profile");
+    await page.getByRole("button", { name: "Edit profile", exact: true }).click();
+    check(await page.locator('input[type="email"]').count() === 0, "Profile email remains read-only while editing");
+    await page.getByLabel("Full name", { exact: true }).fill("UI Updated Student");
+    await page.getByRole("textbox", { name: "Add skill", exact: true }).fill("TypeScript");
+    await page.getByRole("button", { name: "Add skill", exact: true }).click();
+    await page.getByRole("button", { name: "Save changes", exact: true }).click();
+    await page.getByText("Profile saved. Your career details are up to date.").waitFor();
+    check(await page.getByRole("heading", { name: "UI Updated Student", exact: true }).count() === 1, "Profile sections save through original flow");
+    await noOverflow(page, "Mobile Profile");
+    await page.goto(base + "/applications/" + appId);
+    await page.getByLabel("Application status").waitFor();
+    await page.getByLabel("Application status").selectOption("Interview");
+    await page.waitForFunction(() => !document.querySelector('[aria-label="Application status"]').disabled);
+    await page.reload();
+    check(await page.getByLabel("Application status").inputValue() === "Interview", "Application detail status persists");
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("dialog", { name: "Delete application", exact: true }).waitFor();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    check(await page.getByRole("dialog").count() === 0, "Extracted delete modal cancels safely");
+    await noOverflow(page, "Mobile Application Detail");
+    await page.goto(base + "/applications/" + appId + "/edit");
+    await page.locator('#organisation').waitFor();
+    check(await page.locator('#organisation').getAttribute('readonly') !== null, "Tracked employer fields remain read-only");
+    await page.goto(base + "/calendar");
+    await page.getByRole("button", { name: "Add event", exact: true }).click();
+    await page.locator('#eventTitle').fill("UI regression interview");
+    await page.locator('#eventDate').fill("2026-09-20");
+    await page.getByRole("button", { name: "Add event", exact: true }).last().click();
+    await page.getByRole("dialog", { name: "Calendar event", exact: true }).waitFor({ state: "hidden" });
+    await page.getByRole("button", { name: /interview:.*UI regression interview/ }).click();
+    await page.getByRole("button", { name: "Edit event", exact: true }).click();
+    await page.locator('#eventTitle').fill("UI edited interview");
+    await page.getByRole("button", { name: "Save changes", exact: true }).click();
+    await page.getByRole("dialog", { name: "Calendar event", exact: true }).waitFor({ state: "hidden" });
+    // Edit returns to the detail dialog with the saved event selected.
+    if (!await page.getByRole("button", { name: "Delete event", exact: true }).count()) await page.getByRole("button", { name: /interview:.*UI edited interview/ }).click();
+    await page.getByRole("button", { name: "Delete event", exact: true }).click();
+    await page.getByRole("dialog", { name: "Delete event", exact: true }).getByRole("button", { name: "Delete event", exact: true }).click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    check(await page.getByRole("button", { name: /interview:.*UI edited interview/ }).count() === 0, "Calendar create edit delete completes");
+    await noOverflow(page, "Mobile Calendar");
+    const adminPage = await session(admin);
+    for (const resource of [{ title: "UI featured guide", category: "Career Planning", featured: true, url: "https://example.org/guide" }, { title: "UI unavailable template", category: "Templates", featured: false, url: "" }]) {
+      const response = await adminPage.request.post(base + "/api/admin/content?kind=resources", { data: { ...resource, type: "Guide", description: "Browser regression resource", status: "Published" } });
+      check(response.ok(), "Admin creates resource: " + resource.title);
+    }
+    await page.goto(base + "/resources");
+    await page.locator('.resource-row').first().waitFor();
+    check(await page.locator('.resource-group').count() === 2, "Resources grouped by actual categories");
+    check(await page.getByText("Resource link unavailable", { exact: true }).count() === 1, "Missing resource URL is unavailable");
+    check(await page.getByRole("link", { name: /Open UI featured guide/ }).first().getAttribute('target') === '_blank', "Resource opens a new tab");
+    await noOverflow(page, "Mobile Resources"); await shot(page, "resources-mobile");
+    await page.setViewportSize({ width: 1440, height: 1000 }); await shot(page, "resources-desktop");
+    await page.getByLabel("Filter by category").selectOption("Templates");
+    check(await page.locator('.resource-row').count() === 1, "Resource category filter works");
+    await adminPage.goto(base + "/admin/users");
+    await adminPage.getByRole("button", { name: "Manage Workflow employee", exact: true }).click();
+    check(await adminPage.locator('select[name="role"]').count() === 0, "Ordinary Admin sees role badge only");
+    await adminPage.getByRole("button", { name: "Cancel", exact: true }).click();
+    check(await adminPage.getByRole("button", { name: "Manage Workflow Admin", exact: true }).isDisabled(), "Admin account controls protected");
+    await shot(adminPage, "admin-users");
+    const superPage = await session(superadmin);
+    await superPage.goto(base + "/admin/users");
+    await superPage.getByRole("button", { name: "Manage Workflow employee", exact: true }).click();
+    check(await superPage.locator('select[name="role"] option').allTextContents().then(a => a.join(',')) === "Student,Employee,Admin", "Super Admin selector excludes Super Admin creation");
+    await superPage.locator('select[name="role"]').selectOption({ label: "Student" });
+    await superPage.getByRole("button", { name: "Save changes", exact: true }).click();
+    await superPage.getByText("User account updated.", { exact: true }).waitFor();
+    await superPage.getByRole("button", { name: "Manage Workflow employee", exact: true }).click();
+    check(await superPage.locator('select[name="role"]').inputValue() === "Student", "Role selector saves to server");
+    await superPage.locator('select[name="role"]').selectOption({ label: "Employee" });
+    await superPage.getByRole("button", { name: "Save changes", exact: true }).click();
+    await superPage.getByText("User account updated.", { exact: true }).waitFor();
+    check(await superPage.getByRole("button", { name: "Manage Workflow Super Admin", exact: true }).isDisabled(), "Super Admin self role status delete controls protected");
+    await shot(superPage, "superadmin-users");
+    const employeePage = await session(employee);
+    for (const route of ["/employee/dashboard", "/employee/opportunities", "/employee/opportunities/new", "/employee/profile"]) {
+      await employeePage.goto(base + route); await employeePage.locator('h1').waitFor();
+      check(employeePage.url().endsWith(route), "Employee page accessible: " + route);
+    }
+    for (const route of ["/admin/dashboard", "/admin/opportunities", "/admin/resources"]) {
+      await superPage.goto(base + route); await superPage.locator('h1').waitFor();
+      check(superPage.url().endsWith(route), "Super Admin page accessible: " + route);
+    }
+    await page.goto(base + "/admin/users"); check(page.url().endsWith('/dashboard'), "Student admin route denied");
+    await employeePage.goto(base + "/admin/users"); check(employeePage.url().endsWith('/employee/dashboard'), "Employee admin route denied");
+    await superPage.goto(base + "/profile"); check(superPage.url().endsWith('/admin/dashboard'), "Super Admin redirected from student workspace");
+    check(errors.length === 0, "No browser runtime errors: " + errors.join('; '));
+    console.log("SUCCESS " + count + " browser assertions");
+  } finally { await browser.close(); }
+}
+

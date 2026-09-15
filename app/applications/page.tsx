@@ -1,8 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import StatusBadge from "@/components/ui/StatusBadge";
+import ApplicationBoard from "@/components/applications/ApplicationBoard";
 import Deadline from "@/components/ui/Deadline";
+import PageHeader from "@/components/ui/PageHeader";
+import StatusBadge from "@/components/ui/StatusBadge";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -101,6 +103,7 @@ function parseApplicationsDeadline(deadline: string): Date | null {
 }
 
 export default function ApplicationsPage() {
+  const [view, setView] = useState<"List" | "Board">("List");
   const [applications, setApplications] = useState<Application[]>([]);
 
   const [search, setSearch] = useState("");
@@ -258,25 +261,10 @@ export default function ApplicationsPage() {
     <DashboardLayout>
       <div>
         {/* Header */}
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-sm font-medium text-slate-500">
-              Your personal tracker
-            </p>
-
-            <h1 className="mt-2 page-title">My Applications</h1>
-
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Organise every internship opportunity, monitor progress, and keep
-              important deadlines in one place.
-            </p>
-          </div>
-
-          <Link href="/applications/new" className="btn ">
-            <Plus className="h-4 w-4" />
-            Add External Application
-          </Link>
-        </div>
+        <PageHeader eyebrow="Your personal tracker" title="My Applications" description="Organise every internship opportunity, monitor progress, and keep important deadlines in one place." action={<Link href="/applications/new" className="btn ">
+          <Plus className="h-4 w-4" />
+          Add External Application
+        </Link>} />
 
         {!isLoading && !error && applications.length > 0 && <section className="mt-6 border-l-4 border-teal-700 pl-4">
           <h2 className="text-lg font-semibold">Your application pipeline</h2>
@@ -463,163 +451,168 @@ export default function ApplicationsPage() {
               )}
             </div>
 
-            {/* Table / Empty State */}
-            <section className="mt-4 overflow-hidden card">
-              {filteredApplications.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="tracker-table w-full text-left">
-                    <caption className="sr-only">
-                      Your applications and current progress
-                    </caption>
-                    <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-medium uppercase tracking-wide text-slate-500">
-                        <th className="px-6 py-4">Organisation</th>
+            <div role="group" aria-label="Application view" className="view-switch mt-4">
+              {(["List", "Board"] as const).map(value => <button type="button" key={value} aria-pressed={view === value} onClick={() => setView(value)}>{value}</button>)}
+            </div>
+            {view === "Board" && filteredApplications.length > 0 ? <ApplicationBoard applications={filteredApplications} /> : <>
+              {/* Table / Empty State */}
+              <section className="mt-4 overflow-hidden card">
+                {filteredApplications.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="tracker-table w-full text-left">
+                      <caption className="sr-only">
+                        Your applications and current progress
+                      </caption>
+                      <thead>
+                        <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-medium uppercase tracking-wide text-slate-500">
+                          <th className="px-6 py-4">Organisation</th>
 
-                        <th className="px-6 py-4">Role</th>
+                          <th className="px-6 py-4">Role</th>
 
-                        <th className="px-6 py-4">Location</th>
+                          <th className="px-6 py-4">Location</th>
 
-                        <th className="px-6 py-4">Deadline</th>
+                          <th className="px-6 py-4">Deadline</th>
 
-                        <th className="px-6 py-4">Status</th>
+                          <th className="px-6 py-4">Status</th>
 
-                        <th className="w-20 px-6 py-4">
-                          <span className="sr-only">Actions</span>
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredApplications.map((application) => (
-                        <tr
-                          key={application.id}
-                          className="group transition-colors hover:bg-slate-50/80"
-                        >
-                          {/* Organisation */}
-                          <td data-label="Company" className="px-6 py-4">
-                            <Link
-                              href={`/applications/${application.id}`}
-                              className="flex items-center gap-3"
-                            >
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700">
-                                {application.organisation
-                                  .charAt(0)
-                                  .toUpperCase() || "?"}
-                              </div>
-
-                              <div>
-                                <p className="text-sm font-semibold text-slate-900 transition group-hover:text-slate-950">
-                                  {application.organisation}
-                                </p>
-
-                                <p className="mt-0.5 text-xs text-slate-500">
-                                  View application →
-                                </p>
-                              </div>
-                            </Link>
-                          </td>
-
-                          {/* Role */}
-                          <td data-label="Role" className="px-6 py-4">
-                            <Link
-                              href={`/applications/${application.id}`}
-                              className="text-sm font-medium text-slate-700 transition hover:text-slate-950"
-                            >
-                              {application.roleTitle}
-                            </Link>
-                          </td>
-
-                          {/* Location */}
-                          <td data-label="Location" className="px-6 py-4">
-                            {application.location ? (
-                              <div className="flex items-center gap-2 text-sm text-slate-500">
-                                <MapPin className="h-4 w-4 text-slate-500" />
-
-                                {application.location}
-                              </div>
-                            ) : (
-                              <span className="text-sm text-slate-500">
-                                Not set
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Deadline */}
-                          <td data-label="Deadline" className="px-6 py-4">
-                            <Deadline value={application.deadline} />
-                          </td>
-
-                          {/* Status */}
-                          <td data-label="Status" className="px-6 py-4">
-                            <StatusBadge value={application.status} />
-                          </td>
-
-                          {/* Edit */}
-                          <td data-label="Actions" className="px-6 py-4">
-                            <Link
-                              href={`/applications/${application.id}/edit`}
-                              aria-label={`Edit ${application.organisation} application`}
-                              title="Edit application"
-                              className="icon-button"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Link>
-                          </td>
+                          <th className="w-20 px-6 py-4">
+                            <span className="sr-only">Actions</span>
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : applications.length === 0 ? (
-                /* No applications at all */
-                <div className="flex min-h-90 flex-col items-center justify-center px-6 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                    <BriefcaseBusiness className="h-6 w-6" />
+                      </thead>
+
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredApplications.map((application) => (
+                          <tr
+                            key={application.id}
+                            className="group transition-colors hover:bg-slate-50/80"
+                          >
+                            {/* Organisation */}
+                            <td data-label="Company" className="px-6 py-4">
+                              <Link
+                                href={`/applications/${application.id}`}
+                                className="flex items-center gap-3"
+                              >
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700">
+                                  {application.organisation
+                                    .charAt(0)
+                                    .toUpperCase() || "?"}
+                                </div>
+
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900 transition group-hover:text-slate-950">
+                                    {application.organisation}
+                                  </p>
+
+                                  <p className="mt-0.5 text-xs text-slate-500">
+                                    View application →
+                                  </p>
+                                </div>
+                              </Link>
+                            </td>
+
+                            {/* Role */}
+                            <td data-label="Role" className="px-6 py-4">
+                              <Link
+                                href={`/applications/${application.id}`}
+                                className="text-sm font-medium text-slate-700 transition hover:text-slate-950"
+                              >
+                                {application.roleTitle}
+                              </Link>
+                            </td>
+
+                            {/* Location */}
+                            <td data-label="Location" className="px-6 py-4">
+                              {application.location ? (
+                                <div className="flex items-center gap-2 text-sm text-slate-500">
+                                  <MapPin className="h-4 w-4 text-slate-500" />
+
+                                  {application.location}
+                                </div>
+                              ) : (
+                                <span className="text-sm text-slate-500">
+                                  Not set
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Deadline */}
+                            <td data-label="Deadline" className="px-6 py-4">
+                              <Deadline value={application.deadline} />
+                            </td>
+
+                            {/* Status */}
+                            <td data-label="Status" className="px-6 py-4">
+                              <StatusBadge value={application.status} />
+                            </td>
+
+                            {/* Edit */}
+                            <td data-label="Actions" className="px-6 py-4">
+                              <Link
+                                href={`/applications/${application.id}/edit`}
+                                aria-label={`Edit ${application.organisation} application`}
+                                title="Edit application"
+                                className="icon-button"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
+                ) : applications.length === 0 ? (
+                  /* No applications at all */
+                  <div className="flex min-h-90 flex-col items-center justify-center px-6 text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                      <BriefcaseBusiness className="h-6 w-6" />
+                    </div>
 
-                  <h2 className="mt-5 text-base font-semibold text-slate-950">
-                    No applications yet
-                  </h2>
+                    <h2 className="mt-5 text-base font-semibold text-slate-950">
+                      No applications yet
+                    </h2>
 
-                  <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
-                    Browse published opportunities and track a role to start
-                    your pipeline. Use Add External Application for roles found
-                    elsewhere.
-                  </p>
+                    <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
+                      Browse published opportunities and track a role to start
+                      your pipeline. Use Add External Application for roles found
+                      elsewhere.
+                    </p>
 
-                  <Link className="btn mt-5" href="/opportunities">
-                    Browse Opportunities
-                  </Link>
-                  <Link href="/applications/new" className="btn mt-5">
-                    <Plus className="h-4 w-4" />
-                    Add External Application
-                  </Link>
-                </div>
-              ) : (
-                /* Filters returned nothing */
-                <div className="flex min-h-90 flex-col items-center justify-center px-6 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                    <Search className="h-6 w-6" />
+                    <Link className="btn mt-5" href="/opportunities">
+                      Browse Opportunities
+                    </Link>
+                    <Link href="/applications/new" className="btn mt-5">
+                      <Plus className="h-4 w-4" />
+                      Add External Application
+                    </Link>
                   </div>
+                ) : (
+                  /* Filters returned nothing */
+                  <div className="flex min-h-90 flex-col items-center justify-center px-6 text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                      <Search className="h-6 w-6" />
+                    </div>
 
-                  <h2 className="mt-5 text-base font-semibold text-slate-950">
-                    No matching applications
-                  </h2>
+                    <h2 className="mt-5 text-base font-semibold text-slate-950">
+                      No matching applications
+                    </h2>
 
-                  <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
-                    No applications match your current search or filters.
-                  </p>
+                    <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
+                      No applications match your current search or filters.
+                    </p>
 
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="btn mt-5"
-                  >
-                    Clear filters
-                  </button>
-                </div>
-              )}
-            </section>
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="btn mt-5"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
+              </section>
+            </>}
           </>
         )}
       </div>

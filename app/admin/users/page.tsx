@@ -1,15 +1,18 @@
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminUsersTable from "@/components/admin/AdminUsersTable";
-export default function Page() {
+import { getAuthenticatedUser } from "@/lib/auth";
+export default async function Page() {
+  const user = await getAuthenticatedUser();
+  if (!user) return null;
   return (
     <div>
       <AdminPageHeader
         eyebrow="Account administration"
         title="Users"
-        description="Manage Student, Employee and Admin accounts. Only an existing admin can grant Admin access using Manage → Role."
+        description="Manage student and employee accounts. Only Super Admin can change roles and manage administrators."
       />
 
-      <AdminUsersTable />
+      <AdminUsersTable currentUserId={user.id} canManageRoles={user.role === "superadmin"} />
     </div>
   );
 }

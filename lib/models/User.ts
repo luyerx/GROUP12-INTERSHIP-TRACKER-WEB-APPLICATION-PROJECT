@@ -2,7 +2,7 @@ import "server-only";
 
 import { model, models, Schema } from "mongoose";
 
-export const userRoles = ["student", "admin", "employee"] as const;
+export const userRoles = ["student", "admin", "employee", "superadmin"] as const;
 export const userStatuses = ["Active", "Suspended"] as const;
 
 const userSchema = new Schema(

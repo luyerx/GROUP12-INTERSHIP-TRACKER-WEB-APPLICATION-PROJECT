@@ -72,4 +72,16 @@ for (const operation of ["save", "delete"]) {
     check(!state.saving && !state.deleting && state.error && state.formOpen && state.deleteOpen, "calendar " + operation + " recovers from " + failure + " failure without rejecting");
   }
 }
+const Board = load("components/applications/ApplicationBoard.tsx").default;
+const board = renderToStaticMarkup(React.createElement(Board, { applications: [{ id: "one", organisation: "Example", roleTitle: "Intern", deadline: "2026-09-18", status: "Interview" }, { id: "two", organisation: "Closed", roleTitle: "Analyst", deadline: "", status: "Rejected" }] }));
+check(board.includes('href="/applications/one"') && board.includes('Interview applications'), "board links real records by current status");
+check(board.includes('Rejected / Withdrawn (1)') && board.includes('href="/applications/two"'), "closed board records remain accessible");
+check(!board.includes('draggable='), "board has no drag mutation controls");
+const ResourceLink = load("components/resources/ResourceLink.tsx").default;
+for (const url of ["", "javascript:alert(1)", "https://example.test/resources"]) {
+ const html = renderToStaticMarkup(React.createElement(ResourceLink, { url, origin: "https://example.test", title: "Guide" }));
+ check(html.includes('unavailable') && !html.includes('<a'), "unavailable resource does not create false navigation: " + url);
+}
+const resource = renderToStaticMarkup(React.createElement(ResourceLink, { url: "https://example.org/guide", origin: "https://example.test", title: "Guide" }));
+check(resource.includes('target="_blank"') && resource.includes('noopener noreferrer'), "external resource opens a protected new tab");
 console.log("SUCCESS " + count + " frontend assertions");

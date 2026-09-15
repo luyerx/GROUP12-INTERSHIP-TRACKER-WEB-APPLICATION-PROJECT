@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { SuccessFeedback } from "@/components/ui/Feedback";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
 import { ArrowRight, Eye, EyeOff, LoaderCircle } from "lucide-react";
 
@@ -80,13 +80,13 @@ function LoginForm() {
       if (!response.ok) {
         setLoginError(
           result.message ||
-            "Unable to sign in. Please check your details and try again.",
+          "Unable to sign in. Please check your details and try again.",
         );
         return;
       }
 
       // Redirect users to the correct workspace based on their role.
-      if (result.user?.role === "admin") {
+      if (result.user?.role === "admin" || result.user?.role === "superadmin") {
         router.push("/admin/dashboard");
       } else if (result.user?.role === "employee") {
         router.push("/employee/dashboard");
@@ -121,14 +121,14 @@ function LoginForm() {
 
       {(searchParams.get("reset") === "success" ||
         searchParams.get("registered") === "success") && (
-        <div className="mt-6">
-          <SuccessFeedback>
-            {searchParams.get("reset") === "success"
-              ? "Password updated. Sign in with your new password."
-              : "Account created. Sign in to open your workspace."}
-          </SuccessFeedback>
-        </div>
-      )}
+          <div className="mt-6">
+            <SuccessFeedback>
+              {searchParams.get("reset") === "success"
+                ? "Password updated. Sign in with your new password."
+                : "Account created. Sign in to open your workspace."}
+            </SuccessFeedback>
+          </div>
+        )}
       <form
         noValidate
         onSubmit={(event) => {
@@ -163,11 +163,10 @@ function LoginForm() {
               }
             }}
             placeholder="you@example.com"
-            className={`mt-2 w-full rounded-xl border bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 ${
-              emailError
+            className={`mt-2 w-full rounded-xl border bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 ${emailError
                 ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
                 : "border-slate-200 focus:border-teal-600 focus:ring-teal-50"
-            }`}
+              }`}
           />
 
           {emailError && (
@@ -220,11 +219,10 @@ function LoginForm() {
                 }
               }}
               placeholder="Enter your password"
-              className={`w-full rounded-xl border bg-white px-3.5 py-3 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 ${
-                passwordError
+              className={`w-full rounded-xl border bg-white px-3.5 py-3 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 ${passwordError
                   ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
                   : "border-slate-200 focus:border-teal-600 focus:ring-teal-50"
-              }`}
+                }`}
             />
 
             <button

@@ -14,21 +14,16 @@ import {
   X,
 } from "lucide-react";
 
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import ResourceLink from "@/components/resources/ResourceLink";
 import {
   ErrorState,
   LoadingState,
   EmptyState as SharedEmptyState,
 } from "@/components/ui/Feedback";
-import ResourceLink from "@/components/resources/ResourceLink";
 import PageHeader from "@/components/ui/PageHeader";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 
-type ResourceCategory =
-  | "All"
-  | "Applications"
-  | "Interviews"
-  | "CV & Cover Letter"
-  | "Career Planning";
+type ResourceCategory = string;
 
 type ResourceType = "Guide" | "Article" | "Video" | "Template";
 
@@ -43,17 +38,11 @@ type Resource = {
   url: string;
 };
 
-const categories: ResourceCategory[] = [
-  "All",
-  "Applications",
-  "Interviews",
-  "CV & Cover Letter",
-  "Career Planning",
-];
 
 export default function ResourcesPage() {
   const [origin, setOrigin] = useState("");
   const [resources, setResources] = useState<Resource[]>([]);
+  const categories = ["All", ...Array.from(new Set(resources.map(resource => resource.category))).sort()];
   const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState("");
@@ -108,7 +97,7 @@ export default function ResourcesPage() {
     });
   }, [searchQuery, selectedCategory, selectedType, visibleResources]);
 
-  const featuredResources = visibleResources.filter(
+  const featuredResources = filteredResources.filter(
     (resource) => resource.featured,
   );
 
@@ -257,9 +246,12 @@ export default function ResourcesPage() {
             />
           </div>
         ) : filteredResources.length > 0 ? (
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filteredResources.map((resource) => (
-              <ResourceCard key={resource.id} resource={resource} origin={origin} />
+          <div className="mt-6 space-y-8">
+            {Array.from(new Set(filteredResources.map(resource => resource.category))).sort().map(category => (
+              <section key={category} aria-label={category} className="resource-group">
+                <div className="resource-group-heading"><h3>{category}</h3><span>{filteredResources.filter(resource => resource.category === category).length} resources</span></div>
+                <div>{filteredResources.filter(resource => resource.category === category).map(resource => <ResourceCard key={resource.id} resource={resource} origin={origin} />)}</div>
+              </section>
             ))}
           </div>
         ) : (
@@ -296,37 +288,11 @@ type ResourceCardProps = {
 };
 
 function ResourceCard({ resource, origin }: ResourceCardProps) {
-  return (
-    <article className="group flex min-h-64 flex-col border-b border-slate-200 p-5 transition hover:bg-white">
-      <div className="flex items-start justify-between gap-4">
-        <ResourceIcon type={resource.type} />
-
-        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
-          {resource.type}
-        </span>
-      </div>
-
-      <div className="mt-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-          {resource.category}
-        </p>
-
-        <h3 className="mt-2 text-base font-semibold leading-6 text-slate-950">
-          {resource.title}
-        </h3>
-
-        <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-500">
-          {resource.description}
-        </p>
-      </div>
-
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-4">
-        <p className="truncate text-xs text-slate-500">{resource.source}</p>
-
-        <ResourceLink url={resource.url} title={resource.title} origin={origin} />
-      </div>
-    </article>
-  );
+  return <article className="resource-row">
+    <ResourceIcon type={resource.type} />
+    <div className="min-w-0 flex-1"><p className="eyebrow">{resource.type}</p><h4 className="mt-1 text-base font-semibold">{resource.title}</h4><p className="mt-2 text-sm leading-6 text-slate-600">{resource.description}</p><p className="mt-2 text-xs text-slate-500">{resource.source}</p></div>
+    <div className="resource-row-action"><ResourceLink url={resource.url} title={resource.title} origin={origin} /></div>
+  </article>;
 }
 
 function FeaturedResourceCard({ resource, origin }: ResourceCardProps) {

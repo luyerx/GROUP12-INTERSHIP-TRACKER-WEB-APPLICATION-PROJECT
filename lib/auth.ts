@@ -2,15 +2,15 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
-import { connectToDatabase } from "@/lib/mongodb";
 import { SessionModel } from "@/lib/models/Session";
 import { UserModel } from "@/lib/models/User";
+import { connectToDatabase } from "@/lib/mongodb";
 
 export type AuthenticatedUser = {
   id: string;
   fullName: string;
   email: string;
-  role: "student" | "admin" | "employee";
+  role: "student" | "admin" | "employee" | "superadmin";
   companyName: string;
   companyWebsite: string;
   companyDescription: string;
@@ -63,7 +63,7 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
     fullName: user.fullName,
     email: user.email,
     role:
-      user.role === "admin"
+      user.role === "superadmin" ? "superadmin" : user.role === "admin"
         ? "admin"
         : user.role === "employee"
           ? "employee"
