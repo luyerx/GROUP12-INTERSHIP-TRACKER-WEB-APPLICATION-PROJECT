@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 // Optional browser regression: RUN_UI_TESTS=1, with Playwright installed or PLAYWRIGHT_MODULE set.
-export async function testWorkspaceUI({ base, student, employee, admin, superadmin, appId }) {
+export async function testWorkspaceUI({ base, student, employee, admin, superadmin, newAdmin, password, appId }) {
   const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const errors = [];
@@ -117,6 +117,51 @@ export async function testWorkspaceUI({ base, student, employee, admin, superadm
     await superPage.getByText("User account updated.", { exact: true }).waitFor();
     check(await superPage.getByRole("button", { name: "Manage Workflow Super Admin", exact: true }).isDisabled(), "Super Admin self role status delete controls protected");
     await shot(superPage, "superadmin-users");
+    check(await adminPage.getByRole("button", { name: "Add Admin", exact: true }).count() === 0, "Ordinary Admin cannot see Add Admin");
+    const createdAdminPage = await session(newAdmin);
+    await createdAdminPage.goto(base + "/admin/users");
+    await createdAdminPage.getByRole("button", { name: "Manage Created Admin", exact: true }).waitFor();
+    check(await createdAdminPage.getByRole("button", { name: "Add Admin", exact: true }).count() === 0, "New Admin cannot see Add Admin");
+    check(await superPage.getByRole("button", { name: "Add Admin", exact: true }).isVisible(), "Super Admin sees Add Admin");
+    await superPage.getByRole("button", { name: "Add Admin", exact: true }).click();
+    let dialog = superPage.getByRole("dialog", { name: "Add Admin", exact: true });
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    check(await dialog.count() === 0, "Add Admin cancels without creation");
+    await superPage.getByLabel("Search users").fill("no matching user");
+    await superPage.getByRole("button", { name: "Add Admin", exact: true }).click();
+    await superPage.setViewportSize({ width: 390, height: 844 });
+    await dialog.getByLabel("Full Name", { exact: true }).fill("UI Created Admin");
+    await dialog.getByLabel("Email", { exact: true }).fill("ui-created-admin@example.test");
+    await dialog.getByLabel("Temporary Password", { exact: true }).fill(password);
+    check(await dialog.locator('select').count() === 0, "Create Admin has no role selector");
+    await noOverflow(superPage, "Mobile Add Admin dialog");
+    // Hold the real request to verify disabled controls and close protection.
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    await superPage.route("**/api/admin/users", async route => { if (route.request().method() === "POST") await gate; await route.continue(); });
+    await dialog.getByLabel("Temporary Password", { exact: true }).press("Enter");
+    await dialog.getByRole("button", { name: "Creating…", exact: true }).waitFor();
+    check(await dialog.getByRole("button", { name: "Creating…", exact: true }).isDisabled(), "Create submission disables button");
+    check(await dialog.getByLabel("Email", { exact: true }).isDisabled(), "Create submission disables fields");
+    await superPage.keyboard.press("Escape");
+    check(await dialog.isVisible(), "Busy modal stays open");
+    release();
+    await superPage.getByText("Admin account created successfully.", { exact: true }).waitFor();
+    check(await dialog.count() === 0, "Successful create closes modal");
+    await superPage.getByRole("button", { name: "Manage UI Created Admin", exact: true }).waitFor();
+    check(await superPage.getByLabel("Search users").inputValue() === "", "Creation clears filters to show new admin immediately");
+    await noOverflow(superPage, "Mobile Users after creation");
+    await superPage.unroute("**/api/admin/users");
+    await superPage.getByRole("button", { name: "Add Admin", exact: true }).click();
+    await dialog.getByLabel("Full Name", { exact: true }).fill("Duplicate Admin");
+    await dialog.getByLabel("Email", { exact: true }).fill("UI-CREATED-ADMIN@example.test");
+    await dialog.getByLabel("Temporary Password", { exact: true }).fill(password);
+    await dialog.getByRole("button", { name: "Create Admin", exact: true }).click();
+    await dialog.getByRole("alert").filter({ hasText: "An account with this email already exists." }).waitFor();
+    check(await dialog.isVisible(), "Duplicate error keeps modal open for correction");
+    check(await dialog.getByRole("button", { name: "Create Admin", exact: true }).isEnabled(), "Duplicate error allows retry");
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await superPage.setViewportSize({ width: 1440, height: 1000 });
     const employeePage = await session(employee);
     for (const route of ["/employee/dashboard", "/employee/opportunities", "/employee/opportunities/new", "/employee/profile"]) {
       await employeePage.goto(base + route); await employeePage.locator('h1').waitFor();

@@ -385,6 +385,38 @@ async function main() {
   check((await request("/api/auth/me", "GET", undefined, superadmin)).data.user.role === "superadmin", "superadmin identity preserved");
   check((await request("/api/admin/users", "GET", undefined, superadmin)).data.data.some(u => u.role === "Super Admin"), "directory labels Super Admin");
   check((await request("/api/admin/stats", "GET", undefined, superadmin)).status === 200, "superadmin uses admin workspace APIs");
+  const adminInput = { fullName: "Created Admin", email: "created-admin@example.test", password };
+  for (const [actor, expected] of [[undefined, 401], [admin, 403], [student, 403], [outsider, 403], [employee, 401]]) {
+    check((await request("/api/admin/users", "POST", adminInput, actor)).status === expected, "create admin requires Super Admin session: " + expected);
+  }
+  for (const role of ["admin", "superadmin", "student", "employee"]) {
+    check((await request("/api/admin/users", "POST", { ...adminInput, role }, superadmin)).status === 400, "create rejects client supplied role: " + role);
+  }
+  check((await request("/api/admin/users", "POST", { ...adminInput, status: "Suspended" }, superadmin)).status === 400, "create rejects supplied status");
+  for (const invalid of [{ password: "short" }, { password: "x".repeat(73) }, { fullName: " " }, { email: "invalid" }]) {
+    check((await request("/api/admin/users", "POST", { ...adminInput, ...invalid }, superadmin)).status === 400, "create validates account details: " + Object.keys(invalid)[0]);
+  }
+  const malformed = await fetch(base + "/api/admin/users", { method: "POST", headers: { Cookie: superadmin, "Content-Type": "application/json" }, body: "{" });
+  check(malformed.status === 400, "create rejects malformed JSON");
+  const createdAdmin = await request("/api/admin/users", "POST", { ...adminInput, email: " CREATED-ADMIN@EXAMPLE.TEST " }, superadmin);
+  check(createdAdmin.status === 201, "Super Admin creates admin");
+  const createdRow = await db.collection("users").findOne({ email: adminInput.email });
+  check(createdRow.role === "admin" && createdRow.status === "Active", "new admin has fixed role and active status");
+  check(createdRow.passwordHash !== password && await bcrypt.compare(password, createdRow.passwordHash), "temporary password stored as valid bcrypt hash");
+  check(!("password" in createdRow) && !JSON.stringify(createdAdmin.data).includes(password) && !JSON.stringify(createdAdmin.data).includes(createdRow.passwordHash), "no plaintext persisted or password/hash returned");
+  const duplicate = await request("/api/admin/users", "POST", adminInput, superadmin);
+  check(duplicate.status === 409 && duplicate.data.message === "An account with this email already exists.", "duplicate email has clear conflict response");
+  const concurrent = await Promise.all([1, 2].map(() => request("/api/admin/users", "POST", { ...adminInput, fullName: "Concurrent Admin", email: "race-admin@example.test" }, superadmin)));
+  check(concurrent.map(r => r.status).sort().join(",") === "201,409", "concurrent duplicate email creates only one account");
+  const newAdmin = await login(adminInput.email);
+  check((await request("/api/auth/me", "GET", undefined, newAdmin)).data.user.role === "admin", "created admin logs in as ordinary admin");
+  const workspace = await fetch(base + "/admin/dashboard", { headers: { Cookie: newAdmin }, redirect: "manual" });
+  check(workspace.status === 200, "created admin enters Admin Workspace");
+  check((await request("/api/admin/users", "POST", { ...adminInput, email: "forbidden@example.test" }, newAdmin)).status === 403, "created admin cannot create admins");
+  check((await request("/api/admin/users/" + employeeUser.id, "PATCH", { programme: "", role: "Admin", status: "Active" }, newAdmin)).status === 403, "created admin cannot change roles");
+  for (const method of ["PATCH", "DELETE"]) {
+    check((await request("/api/admin/users/" + superRow.insertedId, method, method === "PATCH" ? { programme: "", status: "Suspended" } : undefined, newAdmin)).status === 403, "created admin cannot manage Super Admin: " + method);
+  }
   const userUrl = "/api/admin/users/" + employeeUser.id;
   check((await request(userUrl, "PATCH", { programme: "", role: "Admin", status: "Active" }, admin)).status === 403, "ordinary admin cannot promote users");
   check((await request(userUrl, "PATCH", { programme: "", role: "Employee", status: "Active" }, admin)).status === 403, "ordinary admin cannot submit any role field");
@@ -404,7 +436,7 @@ async function main() {
   check(publicSuper.status === 403, "public Super Admin registration denied");
   if (process.env.RUN_UI_TESTS === "1") {
     const { testWorkspaceUI } = await import("./test-workspace-ui.mjs");
-    await testWorkspaceUI({ base, student, employee, admin, superadmin, appId });
+    await testWorkspaceUI({ base, student, employee, admin, superadmin, newAdmin, password, appId });
   }
   const studentRow = await db.collection("users").findOne({ email: "student@example.test" });
   const token = randomBytes(32).toString("hex");

@@ -9,6 +9,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import { Search } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
+import { ACCOUNT_PASSWORD_MIN, ACCOUNT_PASSWORD_MAX } from "@/lib/accountPassword";
 import type { AdminUser } from "@/lib/adminTypes";
 import AdminModal, { fieldClass, labelClass, ModalActions } from "./AdminModal";
 
@@ -21,6 +22,8 @@ export default function AdminUsersTable({ currentUserId, canManageRoles }: { cur
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("All");
   const [status, setStatus] = useState("All");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [error, setError] = useState("");
 
@@ -96,6 +99,38 @@ export default function AdminUsersTable({ currentUserId, canManageRoles }: { cur
     }
   }
 
+  async function createAdmin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canManageRoles || busy) return;
+    const form = new FormData(event.currentTarget);
+    setBusy(true);
+    setCreateError("");
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName: form.get("fullName"), email: form.get("email"), password: form.get("password") }),
+      });
+      const result: { success: boolean; data?: AdminUser; message?: string } = await response.json();
+      if (!response.ok || !result.success || !result.data) {
+        setCreateError(result.message || "Unable to create admin account.");
+        return;
+      }
+      const created = result.data;
+      setAll((users) => [created, ...users.filter((user) => user.id !== created.id)]);
+      setQuery("");
+      setRole("All");
+      setStatus("All");
+      setError("");
+      setCreating(false);
+      setSuccess("Admin account created successfully.");
+    } catch {
+      setCreateError("Unable to create admin account. Please retry.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function remove() {
     if (!editing || !canManage(editing) || !confirm(`Delete ${editing.name}'s account?`)) return;
     setBusy(true);
@@ -122,6 +157,11 @@ export default function AdminUsersTable({ currentUserId, canManageRoles }: { cur
 
   return (
     <>
+      {canManageRoles && (
+        <div className="mt-6 flex justify-end">
+          <button className="btn" disabled={loading || busy} onClick={() => { setCreateError(""); setSuccess(""); setCreating(true); }}>Add Admin</button>
+        </div>
+      )}
       {!loading && !error && (
         <section
           aria-label="User roles"
@@ -281,6 +321,22 @@ export default function AdminUsersTable({ currentUserId, canManageRoles }: { cur
           </table>
         </div>
       </section>
+      {creating && canManageRoles && (
+        <AdminModal title="Add Admin" description="Create an administrator account with a temporary password." onClose={() => { if (!busy) setCreating(false); }}>
+          <form onSubmit={(event) => void createAdmin(event)} aria-busy={busy}>
+            <fieldset disabled={busy}>
+              <div className="grid gap-5 p-5">
+                <label className={labelClass}>Full Name<input name="fullName" required maxLength={120} autoComplete="name" className={fieldClass} /></label>
+                <label className={labelClass}>Email<input name="email" type="email" required maxLength={160} autoComplete="off" className={fieldClass} /></label>
+                <label className={labelClass}>Temporary Password<input name="password" type="password" required minLength={ACCOUNT_PASSWORD_MIN} maxLength={ACCOUNT_PASSWORD_MAX} autoComplete="new-password" aria-describedby="admin-password-hint" className={fieldClass} /></label>
+                <p id="admin-password-hint" className="text-sm text-slate-500">Use {ACCOUNT_PASSWORD_MIN}–{ACCOUNT_PASSWORD_MAX} characters. Share the temporary password securely with the new administrator.</p>
+              </div>
+              {createError && <p role="alert" className="px-5 pb-3 text-rose-700">{createError}</p>}
+              <ModalActions onCancel={() => setCreating(false)} submitLabel={busy ? "Creating…" : "Create Admin"} />
+            </fieldset>
+          </form>
+        </AdminModal>
+      )}
       {editing && (
         <AdminModal
           title="Manage user"

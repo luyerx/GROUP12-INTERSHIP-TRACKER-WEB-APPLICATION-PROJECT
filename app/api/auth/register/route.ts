@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { accountPasswordError, PASSWORD_HASH_ROUNDS } from "@/lib/accountPassword";
 
 import { connectToDatabase } from "@/lib/mongodb";
 import { UserModel } from "@/lib/models/User";
@@ -57,8 +58,7 @@ export async function POST(request: Request) {
     if (
       fullName.length > 120 ||
       email.length > 160 ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
-      password.length > 72
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     )
       return NextResponse.json(
         {
@@ -69,11 +69,12 @@ export async function POST(request: Request) {
         { status: 400 },
       );
 
-    if (password.length < 8) {
+    const passwordError = accountPasswordError(password);
+    if (passwordError) {
       return NextResponse.json(
         {
           success: false,
-          message: "Password must contain at least 8 characters.",
+          message: passwordError,
         },
         { status: 400 },
       );
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, PASSWORD_HASH_ROUNDS);
 
     const user = await UserModel.create({
       fullName,

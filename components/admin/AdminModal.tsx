@@ -56,10 +56,12 @@ export default function AdminModal({
 
 export function ModalActions({
   onCancel,
+  submitLabel = "Save changes",
   destructiveLabel,
   onDelete,
 }: {
   onCancel: () => void;
+  submitLabel?: string;
   destructiveLabel?: string;
   onDelete?: () => void;
 }) {
@@ -84,7 +86,7 @@ export function ModalActions({
         Cancel
       </button>
       <button type="submit" className="btn ">
-        Save changes
+        {submitLabel}
       </button>
     </div>
   );
