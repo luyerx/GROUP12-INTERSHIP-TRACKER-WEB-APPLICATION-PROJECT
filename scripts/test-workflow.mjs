@@ -46,6 +46,7 @@ async function login(email) {
   return r.cookie;
 }
 async function main() {
+  await import("./test-ai.mjs");
   if (!process.env.MONGODB_URI) throw new Error("MONGODB_URI required");
   client = new MongoClient(process.env.MONGODB_URI, {
     serverSelectionTimeoutMS: 10000,
@@ -68,7 +69,7 @@ async function main() {
     [require.resolve("next/dist/bin/next"), "start", "--port", String(port)],
     {
       cwd: process.cwd(),
-      env: { ...process.env, MONGODB_DB: dbName },
+      env: { ...process.env, MONGODB_DB: dbName, GEMINI_API_KEY: "" },
       windowsHide: true,
       stdio: "ignore",
     },
@@ -434,6 +435,12 @@ async function main() {
   check((await request("/api/admin/users/" + secondAdmin.insertedId, "DELETE", undefined, superadmin)).status === 200, "Super Admin can delete another admin");
   const publicSuper = await fetch(base + "/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json", "x-forwarded-for": "192.0.2.42" }, body: JSON.stringify({ fullName: "Blocked", email: "blocked-super@example.test", password, role: "superadmin" }) });
   check(publicSuper.status === 403, "public Super Admin registration denied");
+  const { testAIWorkflow } = await import("./test-ai-workflow.mjs");
+  await testAIWorkflow({ base, student, employee, admin, superadmin, appId, other });
+  if (process.env.RUN_AI_UI_TESTS === "1") {
+    const { testAIUI } = await import("./test-ai-ui.mjs");
+    await testAIUI({ base, student, appId });
+  }
   if (process.env.RUN_UI_TESTS === "1") {
     const { testWorkspaceUI } = await import("./test-workspace-ui.mjs");
     await testWorkspaceUI({ base, student, employee, admin, superadmin, newAdmin, password, appId });

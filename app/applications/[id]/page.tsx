@@ -483,12 +483,12 @@ export default function ApplicationDetailPage() {
               </h2>
 
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                Review the saved role description and plan your interview
-                preparation. Personalised AI analysis is not yet available.
+                Use your profile and this role to generate personalised
+                interview preparation and application insights.
               </p>
 
-              <Link className="btn-secondary mt-5 w-full" href="/ai-assistant">
-                Open preparation tools
+              <Link className="btn-secondary mt-5 w-full" href={`/ai-assistant?applicationId=${encodeURIComponent(application.id)}`}>
+                Prepare with AI
               </Link>
             </section>
           </div>
