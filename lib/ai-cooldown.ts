@@ -1,28 +1,32 @@
 import "server-only";
 
-// Shared by the two AI features for a student, independently of auth limiters.
-// Pending leases expire too, so an abandoned request cannot lock a user out.
-const entries = new Map<string, { startedAt: number; expiresAt: number }>();
-const cooldownMs = 10000;
-const pendingMs = 35000;
+// Process-local, shared across both AI features; independent of auth limiters.
+const entries = new Map<string, { starts: number[]; pending?: { expiresAt: number } }>();
+const windowMs = 60000;
+const pendingMs = 60000; // Safety lease exceeds the complete 48s route budget.
 
 export function acquireAICooldown(userId: string) {
   const now = Date.now();
   for (const [key, entry] of entries) {
-    if (entry.expiresAt <= now || entry.startedAt > now) entries.delete(key);
+    entry.starts = entry.starts.filter(start => start > now - windowMs && start <= now);
+    if (entry.pending && entry.pending.expiresAt <= now) entry.pending = undefined;
+    if (!entry.pending && !entry.starts.length) entries.delete(key);
   }
-  const current = entries.get(userId);
-  if (current) return { allowed: false as const, retryAfter: Math.max(1, Math.ceil((current.expiresAt - now) / 1000)) };
-
-  const entry = { startedAt: now, expiresAt: now + pendingMs };
+  const entry = entries.get(userId) ?? { starts: [] };
+  if (entry.pending) return { allowed: false as const, code: "AI_IN_FLIGHT", retryAfter: Math.max(1, Math.ceil((entry.pending.expiresAt - now) / 1000)), message: "AI guidance is already being generated. Please wait for it to finish." };
+  if (entry.starts.length >= 5) {
+    const retryAfter = Math.max(1, Math.ceil((entry.starts[0] + windowMs - now) / 1000));
+    return { allowed: false as const, code: "AI_RATE_LIMIT", retryAfter, message: `Too many AI requests. Please try again in ${retryAfter} seconds.` };
+  }
+  const lease = { expiresAt: now + pendingMs };
+  entry.pending = lease;
+  entry.starts.push(now);
   entries.set(userId, entry);
   return {
     allowed: true as const,
-    finish(success: boolean) {
+    finish() {
       // A late completion must not release a newer request's lease.
-      if (entries.get(userId) !== entry) return;
-      if (success) entry.expiresAt = entry.startedAt + cooldownMs;
-      else entries.delete(userId);
+      if (entries.get(userId)?.pending === lease) entry.pending = undefined;
     },
   };
 }

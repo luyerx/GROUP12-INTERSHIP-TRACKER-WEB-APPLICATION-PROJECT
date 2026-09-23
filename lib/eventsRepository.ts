@@ -34,7 +34,7 @@ export async function updateCalendarEvent(id: string, userId: string, input: Cal
   const application = await ApplicationModel.findOne({ _id: input.applicationId, userId }).select("_id").lean();
   if (!application) return null;
   const row = await CalendarEventModel.findOneAndUpdate(
-    { _id: id, userId }, input, { new: true, runValidators: true }
+    { _id: id, userId }, input, { returnDocument: "after", runValidators: true }
   ).lean();
   return row ? serialize(row as Record<string, unknown>) : null;
 }

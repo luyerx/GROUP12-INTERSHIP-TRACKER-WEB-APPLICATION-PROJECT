@@ -49,11 +49,11 @@ export async function PUT(
   const row =
     kind === "resources"
       ? await ResourceModel.findByIdAndUpdate(id, input.data, {
-          new: true,
+          returnDocument: "after",
           runValidators: true,
         }).lean()
       : await OpportunityModel.findByIdAndUpdate(id, input.data, {
-          new: true,
+          returnDocument: "after",
           runValidators: true,
         }).lean();
   if (!row)

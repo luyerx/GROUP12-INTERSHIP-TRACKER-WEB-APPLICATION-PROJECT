@@ -13,6 +13,8 @@ const port = 3101,
   base = "http://localhost:" + port;
 const password = "Test-only-" + randomBytes(12).toString("hex");
 let server, client;
+let deprecatedUpdateWarning = false;
+let stderrTail = "";
 let assertions = 0;
 function check(value, message) {
   assert.ok(value, message);
@@ -71,9 +73,13 @@ async function main() {
       cwd: process.cwd(),
       env: { ...process.env, MONGODB_DB: dbName, GEMINI_API_KEY: "" },
       windowsHide: true,
-      stdio: "ignore",
+      stdio: ["ignore", "ignore", "pipe"],
     },
   );
+  server.stderr.on("data", chunk => {
+    stderrTail = (stderrTail + chunk.toString()).slice(-2000);
+    if (/mongoose:.*(?:new|returnOriginal).*deprecated/.test(stderrTail)) deprecatedUpdateWarning = true;
+  });
   for (let i = 0; i < 40; i++) {
     try {
       const r = await fetch(base + "/login");
@@ -384,7 +390,26 @@ async function main() {
   const superRow = await db.collection("users").insertOne({ fullName: "Workflow Super Admin", email: "superadmin@example.test", role: "superadmin", status: "Active", passwordHash: await bcrypt.hash(password, 10), createdAt: new Date() });
   const superadmin = await login("superadmin@example.test");
   check((await request("/api/auth/me", "GET", undefined, superadmin)).data.user.role === "superadmin", "superadmin identity preserved");
-  check((await request("/api/admin/users", "GET", undefined, superadmin)).data.data.some(u => u.role === "Super Admin"), "directory labels Super Admin");
+  const directory = await request("/api/admin/users", "GET", undefined, superadmin);
+  check(directory.status === 200 && directory.data.success, "Super Admin GET users succeeds");
+  check(directory.data.data.some(u => u.role === "Super Admin"), "directory labels Super Admin");
+  for (const [label, cookie] of [["Admin", admin], ["Super Admin", superadmin]]) {
+    const resource = await request("/api/admin/content?kind=resources", "POST", { title: label + " delete regression", category: "Regression", type: "Guide", status: "Draft" }, cookie);
+    check(resource.status === 201, label + " creates delete fixture");
+    const id = resource.data.data.id;
+    const updated = await request("/api/admin/content/" + id + "?kind=resources", "PUT", { title: label + " updated resource", category: "Regression", type: "Guide", status: "Draft", description: "", featured: false, source: "Regression", url: "" }, cookie);
+    check(updated.status === 200 && updated.data.data.title === label + " updated resource", "resource update returns the updated document");
+    const endpoint = "/api/admin/content/" + id + "?kind=resources";
+    for (const [name, forbidden] of [["student", student], ["employee", outsider], ["anonymous", undefined]]) {
+      check((await request(endpoint, "DELETE", undefined, forbidden)).status === (forbidden ? 403 : 401), name + " resource DELETE denied");
+      check(await db.collection("resources").findOne({ _id: new ObjectId(id) }), "denied delete preserves resource");
+    }
+    check((await request(endpoint, "DELETE", undefined, cookie)).status === 200, label + " DELETE resource succeeds");
+    check(!await db.collection("resources").findOne({ _id: new ObjectId(id) }), "deleted resource absent from database");
+    const refreshed = await request("/api/admin/content?kind=resources", "GET", undefined, cookie);
+    check(refreshed.status === 200 && !refreshed.data.data.some(row => row.id === id), "resource absent from refreshed list");
+    check((await request(endpoint, "DELETE", undefined, cookie)).status === 404, "repeated resource delete returns not found");
+  }
   check((await request("/api/admin/stats", "GET", undefined, superadmin)).status === 200, "superadmin uses admin workspace APIs");
   const adminInput = { fullName: "Created Admin", email: "created-admin@example.test", password };
   for (const [actor, expected] of [[undefined, 401], [admin, 403], [student, 403], [outsider, 403], [employee, 401]]) {
@@ -457,6 +482,7 @@ async function main() {
   check((await request("/api/auth/me", "GET", undefined, student)).status === 401, "successful reset revokes old session");
   check((await request("/api/auth/login", "POST", { email: "student@example.test", password: newPassword })).status === 200, "new password login succeeds");
   check((await request("/api/auth/reset-password", "POST", { token, password })).status === 400, "consumed reset token rejected");
+  check(!deprecatedUpdateWarning, "workflow updates emit no deprecated Mongoose return-option warning");
   console.log("SUCCESS " + assertions + " assertions");
 }
 main()

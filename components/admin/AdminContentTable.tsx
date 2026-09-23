@@ -139,7 +139,8 @@ export default function AdminContentTable({ kind }: { kind: Kind }) {
   }
 
   async function remove() {
-    if (!editing || !editing.id || !confirm("Delete this item?")) return;
+    if (busy || !editing || !editing.id || !confirm("Delete this item?")) return;
+    setSuccess("");
     setBusy(true);
     setError("");
     try {
@@ -147,8 +148,10 @@ export default function AdminContentTable({ kind }: { kind: Kind }) {
         `/api/admin/content/${editing.id}?kind=${kind}`,
         { method: "DELETE" },
       );
-      if (!response.ok) {
-        setError("Unable to delete content.");
+      const result: { success?: boolean; message?: string } =
+        await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
+        setError(result.message || "Unable to delete content. Please retry.");
         return;
       }
       setEditing(null);

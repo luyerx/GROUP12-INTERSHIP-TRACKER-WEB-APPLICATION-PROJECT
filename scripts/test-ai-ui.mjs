@@ -21,8 +21,8 @@ export async function testAIUI({ base, student, appId }) {
       aiRequests++;
       if (mode === "pending") await new Promise(resolve => { release = resolve; });
       const feature = route.request().url().split("/").pop();
-      const body = mode === "invalid-response" ? { success: false, code: "AI_INVALID_RESPONSE", message: "AI could not return usable guidance. Please try again." } : mode === "denied" ? { success: false, code: "AI_PROVIDER_ACCESS_DENIED", message: "Gemini access was denied for the configured project. Please contact the project administrator." } : mode === "cooldown" ? { success: false, code: "AI_COOLDOWN", message: "Please wait a few seconds before generating again." } : mode === "quota" ? { success: false, code: "AI_PROVIDER_QUOTA", message: "AI quota is temporarily busy. Please try again later." } : mode === "error" ? { success: false, message: "AI is temporarily unavailable." } : mode === "invalid" ? { success: true, data: {} } : { success: true, data: output[feature] };
-      await route.fulfill({ status: mode === "invalid-response" ? 502 : ["cooldown", "quota"].includes(mode) ? 429 : ["error", "denied"].includes(mode) ? 503 : 200, json: body });
+      const body = mode === "invalid-response" ? { success: false, code: "AI_INVALID_RESPONSE", message: "AI could not return usable guidance. Please try again." } : mode === "denied" ? { success: false, code: "AI_PROVIDER_ACCESS_DENIED", message: "AI access is unavailable. Please contact the project administrator." } : mode === "rate-limit" ? { success: false, code: "AI_RATE_LIMIT", message: "Too many AI requests. Please try again in 30 seconds." } : mode === "quota" ? { success: false, code: "AI_PROVIDER_QUOTA", message: "AI is busy. Please try again shortly." } : mode === "error" ? { success: false, message: "AI is temporarily unavailable." } : mode === "invalid" ? { success: true, data: {} } : { success: true, data: output[feature] };
+      await route.fulfill({ status: mode === "invalid-response" ? 502 : ["rate-limit", "quota"].includes(mode) ? 429 : ["error", "denied"].includes(mode) ? 503 : 200, json: body });
     });
     await page.goto(base + "/applications/" + appId);
     await page.getByRole("link", { name: "Prepare with AI", exact: true }).click();
@@ -40,10 +40,15 @@ export async function testAIUI({ base, student, appId }) {
     check(aiRequests === 1, "first Generate sends exactly one request");
     while (!release) await new Promise(resolve => setTimeout(resolve, 10));
     await page.clock.fastForward(45000);
-    check(await page.getByRole("button", { name: "Generating…", exact: true }).isDisabled(), "client still waits at provider 45-second deadline");
+    check(await page.getByRole("button", { name: "Generating…", exact: true }).isDisabled(), "client remains pending within the 48-second server budget");
     mode = "success"; release();
     await page.getByRole("heading", { name: "Interview questions", exact: true }).waitFor();
     check(await page.getByRole("region", { name: "AI guidance" }).locator("article").count() === 4, "interview output has four sections");
+    await page.getByRole("radio", { name: /Application Insights/ }).check();
+    await page.getByRole("button", { name: "Generate", exact: true }).click();
+    await page.getByRole("heading", { name: "Preparation checklist", exact: true }).waitFor();
+    check(aiRequests === 2, "successful Interview can immediately generate Insights without refreshing");
+    await page.getByRole("radio", { name: /Interview Preparation/ }).check();
     mode = "pending"; release = undefined;
     await page.getByRole("button", { name: "Generate", exact: true }).click();
     while (!release) await new Promise(resolve => setTimeout(resolve, 10));
@@ -64,7 +69,7 @@ export async function testAIUI({ base, student, appId }) {
     mode = "error"; await page.getByRole("button", { name: "Generate", exact: true }).click();
     await page.locator('section[role="alert"]').waitFor();
     check((await page.locator('section[role="alert"]').textContent()).includes("temporarily unavailable"), "friendly provider error");
-    for (const [nextMode, message] of [["invalid-response", "AI could not return usable guidance. Please try again."], ["cooldown", "Please wait a few seconds before generating again."], ["quota", "AI quota is temporarily busy. Please try again later."], ["denied", "Gemini access was denied for the configured project. Please contact the project administrator."]]) {
+    for (const [nextMode, message] of [["invalid-response", "AI could not return usable guidance. Please try again."], ["rate-limit", "Too many AI requests. Please try again in 30 seconds."], ["quota", "AI is busy. Please try again shortly."], ["denied", "AI access is unavailable. Please contact the project administrator."]]) {
       mode = nextMode;
       await page.getByRole("button", { name: "Generate", exact: true }).click();
       await page.getByText(message, { exact: true }).waitFor();

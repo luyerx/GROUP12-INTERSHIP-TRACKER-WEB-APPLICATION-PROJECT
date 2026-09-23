@@ -56,7 +56,7 @@ export async function updateApplication(
   const row = await ApplicationModel.findOneAndUpdate(
     { _id: id, userId },
     input,
-    { new: true, runValidators: true },
+    { returnDocument: "after", runValidators: true },
   ).lean();
   return row ? serialize(row as Record<string, unknown>) : null;
 }
@@ -84,7 +84,7 @@ export async function updateApplicationStatus(
   const row = await ApplicationModel.findOneAndUpdate(
     { _id: id, userId },
     { $set: { status } },
-    { new: true, runValidators: true },
+    { returnDocument: "after", runValidators: true },
   ).lean();
   return row ? serialize(row as Record<string, unknown>) : null;
 }

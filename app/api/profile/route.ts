@@ -42,7 +42,7 @@ export async function PATCH(request: Request) {
     const user = await UserModel.findByIdAndUpdate(
       currentUser.id,
       { ...input.data, email: currentUser.email },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
 
     if (!user) {

@@ -30,7 +30,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       major: input.data.programme, status: input.data.status,
       ...(input.data.role !== undefined ? { role: input.data.role.toLowerCase() } : {})
     },
-    { new: true, runValidators: true },
+    { returnDocument: "after", runValidators: true },
   );
   if (!user) return deny("Account is protected or no longer available.");
   return Response.json({ success: true });

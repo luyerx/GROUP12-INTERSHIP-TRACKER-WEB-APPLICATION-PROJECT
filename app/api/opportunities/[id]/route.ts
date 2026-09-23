@@ -37,7 +37,7 @@ export async function PATCH(
     const row = await OpportunityModel.findOneAndUpdate(
       { _id: id, ...(user.role === "employee" ? { createdBy: user.id } : {}) },
       input.data,
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
     if (!row)
       return Response.json(

@@ -7,6 +7,7 @@ import ts from "typescript";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 const require = createRequire(import.meta.url);
+await import("./test-admin-regression.mjs");
 let count = 0;
 function check(value, message) { assert.ok(value, message); count++; console.log("PASS " + message); }
 const cache = new Map();
