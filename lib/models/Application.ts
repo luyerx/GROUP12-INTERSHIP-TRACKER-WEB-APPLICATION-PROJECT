@@ -5,6 +5,8 @@ import { applicationStatuses } from "@/lib/application";
 
 const applicationSchema = new Schema(
   {
+    // Transaction write lock shared by event mutations and application deletion.
+    calendarRevision: { type: Number, select: false },
     opportunityId: { type: Schema.Types.ObjectId, ref: "Opportunity" },
     userId: {
       type: Schema.Types.ObjectId,

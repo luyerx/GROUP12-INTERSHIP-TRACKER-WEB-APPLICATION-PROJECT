@@ -61,7 +61,7 @@ export default function DeleteApplicationModal({ application, isDeleting, setSho
 
       <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50/60 px-4 py-3">
         <p className="text-xs leading-5 text-rose-700">
-          This action cannot be undone once the application is deleted.
+          Linked calendar events, including interviews and reminders, will also be deleted. This action cannot be undone.
         </p>
       </div>
 

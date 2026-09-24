@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { validResourceLink } from "@/lib/resource-url";
 import { opportunityInputSchema } from "@/lib/opportunity";
 
 import { authorizeRole } from "@/lib/authorization";
@@ -15,7 +16,7 @@ const resourceSchema = z.object({
   source: z.string().trim().max(160),
   url: z.string().trim().max(2000),
   status: z.enum(["Published", "Draft"]),
-});
+}).refine(validResourceLink, { path: ["url"], message: "Published resources require a public HTTP(S) URL. Draft resources may leave the URL empty." });
 const opportunitySchema = opportunityInputSchema;
 
 function getKind(request: Request) {

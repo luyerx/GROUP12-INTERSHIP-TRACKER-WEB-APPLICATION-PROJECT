@@ -8,6 +8,7 @@ import type {
 } from "@/lib/application";
 import { connectToDatabase } from "@/lib/mongodb";
 import { ApplicationModel } from "@/lib/models/Application";
+import { CalendarEventModel } from "@/lib/models/CalendarEvent";
 
 function serialize(document: Record<string, unknown>): Application {
   return {
@@ -66,12 +67,18 @@ export async function deleteApplication(
   userId: string,
 ): Promise<Application | null> {
   if (!isObjectIdOrHexString(id)) return null;
-  await connectToDatabase();
-  const row = await ApplicationModel.findOneAndDelete({
-    _id: id,
-    userId,
-  }).lean();
-  return row ? serialize(row as Record<string, unknown>) : null;
+  const mongoose = await connectToDatabase();
+  return mongoose.connection.transaction(async (session) => {
+    // The parent write conflicts with event creation/reassignment on this application.
+    const row = await ApplicationModel.findOneAndDelete({ _id: id, userId }, { session }).lean();
+    if (!row) return null;
+    await CalendarEventModel.deleteMany({
+      userId,
+      // Older event writes accepted uppercase ObjectId strings as well.
+      applicationId: new RegExp("^" + id + "$", "i"),
+    }, { session });
+    return serialize(row as Record<string, unknown>);
+  });
 }
 
 export async function updateApplicationStatus(

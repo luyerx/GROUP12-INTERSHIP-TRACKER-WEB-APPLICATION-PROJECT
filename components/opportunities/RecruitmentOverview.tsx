@@ -13,6 +13,13 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import Deadline from "@/components/ui/Deadline";
 import PageHeader from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/Feedback";
+// Lean MongoDB records may contain Dates; legacy records may have no valid date.
+function updatedTime(value: unknown): number {
+  const time = value instanceof Date ? value.getTime()
+    : typeof value === "string" ? Date.parse(value) : NaN;
+  return Number.isFinite(time) ? time : -8640000000000001;
+}
+
 export default function RecruitmentOverview({
   name,
   rows,
@@ -29,7 +36,7 @@ export default function RecruitmentOverview({
   );
   const soon = open.filter((r) => r.closingDate <= weekEnd);
   const recent = [...rows]
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .sort((a, b) => updatedTime(b.updatedAt) - updatedTime(a.updatedAt))
     .slice(0, 5);
   return (
     <>

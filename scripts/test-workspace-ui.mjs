@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 // Optional browser regression: RUN_UI_TESTS=1, with Playwright installed or PLAYWRIGHT_MODULE set.
-export async function testWorkspaceUI({ base, student, employee, admin, superadmin, newAdmin, password, appId }) {
+export async function testWorkspaceUI({ base, student, employee, admin, superadmin, newAdmin, password, appId, seedLegacyResource }) {
   const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const errors = [];
@@ -47,9 +47,23 @@ export async function testWorkspaceUI({ base, student, employee, admin, superadm
     await page.getByLabel("Full name", { exact: true }).fill("UI Updated Student");
     await page.getByRole("textbox", { name: "Add skill", exact: true }).fill("TypeScript");
     await page.getByRole("button", { name: "Add skill", exact: true }).click();
+    for (const name of ["Email notifications", "Deadline reminders", "Interview reminders"]) {
+      const toggle = page.getByRole("switch", { name, exact: true });
+      check(await toggle.getAttribute("aria-checked") === "true", name + " initially on");
+      await toggle.click();
+    }
     await page.getByRole("button", { name: "Save changes", exact: true }).click();
     await page.getByText("Profile saved. Your career details are up to date.").waitFor();
     check(await page.getByRole("heading", { name: "UI Updated Student", exact: true }).count() === 1, "Profile sections save through original flow");
+    await page.reload();
+    await page.getByRole("heading", { name: "UI Updated Student", exact: true }).waitFor();
+    for (const name of ["Email notifications", "Deadline reminders", "Interview reminders"]) {
+      const toggle = page.getByRole("switch", { name, exact: true });
+      await toggle.waitFor();
+      check(await toggle.getAttribute("aria-checked") === "false", name + " remains off after reload");
+    }
+    const savedProfile = await (await page.request.get(base + "/api/auth/me")).json();
+    check(Object.values(savedProfile.user.notifications).every(value => value === false), "all three UI preferences persisted in backend");
     await noOverflow(page, "Mobile Profile");
     await page.goto(base + "/applications/" + appId);
     await page.getByLabel("Application status").waitFor();
@@ -84,10 +98,15 @@ export async function testWorkspaceUI({ base, student, employee, admin, superadm
     check(await page.getByRole("button", { name: /interview:.*UI edited interview/ }).count() === 0, "Calendar create edit delete completes");
     await noOverflow(page, "Mobile Calendar");
     const adminPage = await session(admin);
-    for (const resource of [{ title: "UI featured guide", category: "Career Planning", featured: true, url: "https://example.org/guide" }, { title: "UI unavailable template", category: "Templates", featured: false, url: "" }]) {
-      const response = await adminPage.request.post(base + "/api/admin/content?kind=resources", { data: { ...resource, type: "Guide", description: "Browser regression resource", status: "Published" } });
-      check(response.ok(), "Admin creates resource: " + resource.title);
+    const resource = { title: "UI featured guide", category: "Career Planning", featured: true, url: "https://react.dev/learn", type: "Guide", description: "Browser regression resource", status: "Published" };
+    const createdResource = await adminPage.request.post(base + "/api/admin/content?kind=resources", { data: resource });
+    check(createdResource.ok(), "Admin creates resource with a valid public URL");
+    for (const url of ["", "https://example.org/guide"]) {
+      const invalid = await adminPage.request.post(base + "/api/admin/content?kind=resources", { data: { ...resource, url } });
+      check(invalid.status() === 400, "Published resource rejects invalid URL: " + url);
     }
+    // Historical invalid data must still render safely; never bypass validation in the app.
+    await seedLegacyResource({ title: "UI unavailable template", category: "Templates", featured: false, url: "", type: "Guide", description: "Legacy browser fixture", status: "Published" });
     await page.goto(base + "/resources");
     await page.locator('.resource-row').first().waitFor();
     check(await page.locator('.resource-group').count() === 2, "Resources grouped by actual categories");

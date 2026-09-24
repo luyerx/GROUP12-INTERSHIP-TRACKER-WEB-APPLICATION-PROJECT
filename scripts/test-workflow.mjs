@@ -468,7 +468,12 @@ async function main() {
   }
   if (process.env.RUN_UI_TESTS === "1") {
     const { testWorkspaceUI } = await import("./test-workspace-ui.mjs");
-    await testWorkspaceUI({ base, student, employee, admin, superadmin, newAdmin, password, appId });
+    await testWorkspaceUI({ base, student, employee, admin, superadmin, newAdmin, password, appId,
+      seedLegacyResource: async resource => {
+        assert.ok(dbName.startsWith("internship_tracker_test_") && db.databaseName === dbName);
+        await db.collection("resources").insertOne(resource);
+      },
+    });
   }
   const studentRow = await db.collection("users").findOne({ email: "student@example.test" });
   const token = randomBytes(32).toString("hex");

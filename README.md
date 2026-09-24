@@ -101,3 +101,5 @@ Import the GitHub repository into Vercel and add `MONGODB_URI` and `MONGODB_DB` 
 - Password reset links are generated securely; production deployments should connect the reset flow to an email provider.
 - Rate limiting is currently process-local; production deployments should move it to a shared store and complete security hardening.
 - Existing database migration scripts are available under `scripts/` for application ownership and initial shared content.
+
+Student deadline and interview email reminders: see [notification setup and limits](docs/NOTIFICATIONS.md).

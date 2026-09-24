@@ -35,7 +35,7 @@ export default function NotificationSettings({ profile, draft, isEditing, setDra
     <div className="mt-5 divide-y divide-slate-100">
       <NotificationSetting
         title="Email notifications"
-        description="Receive important account and application updates by email."
+        description="Allow email reminders for application deadlines and interviews."
         checked={
           isEditing
             ? draft.emailNotifications
@@ -52,7 +52,7 @@ export default function NotificationSettings({ profile, draft, isEditing, setDra
 
       <NotificationSetting
         title="Deadline reminders"
-        description="Get reminders before internship application deadlines."
+        description="Email me before my tracked application deadlines."
         checked={
           isEditing
             ? draft.deadlineReminders
@@ -69,7 +69,7 @@ export default function NotificationSettings({ profile, draft, isEditing, setDra
 
       <NotificationSetting
         title="Interview reminders"
-        description="Receive reminders before scheduled interviews."
+        description="Email me before interviews with a valid UTC time."
         checked={
           isEditing
             ? draft.interviewReminders
