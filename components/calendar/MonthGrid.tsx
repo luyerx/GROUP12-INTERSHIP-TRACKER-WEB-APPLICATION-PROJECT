@@ -1,5 +1,6 @@
 "use client";
 import { CalendarEvent, eventStyles, monthNames, weekdayNames } from "@/components/calendar/calendarTypes";
+import { aucklandDateKey } from "@/lib/aucklandTime";
 import { formatDateKey } from "@/lib/date";
 import {
   CalendarDays
@@ -75,7 +76,7 @@ export default function MonthGrid({ currentMonth, currentYear, calendarDays, eve
                 (event) => event.date === dateKey,
               );
 
-              const isToday = dateKey === formatDateKey(new Date());
+              const isToday = dateKey === aucklandDateKey();
 
               return (
                 <div
@@ -123,7 +124,7 @@ export default function MonthGrid({ currentMonth, currentYear, calendarDays, eve
                             ? "Deadline"
                             : event.type === "reminder"
                               ? event.title
-                              : event.time || "Interview"}
+                              : event.time ? `${event.time} NZ time` : "Interview"}
                         </span>
                       </button>
                     ))}

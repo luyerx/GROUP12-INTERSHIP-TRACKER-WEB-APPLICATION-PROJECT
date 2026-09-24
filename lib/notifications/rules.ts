@@ -1,3 +1,5 @@
+import { aucklandOccurrence, formatAucklandTime } from "@/lib/aucklandTime";
+
 export const REMINDER_LEAD_HOURS = 24;
 export const REMINDER_SCAN_HOURS = 24;
 export const REMINDER_WINDOW_MS = (REMINDER_LEAD_HOURS + REMINDER_SCAN_HOURS) * 60 * 60 * 1000;
@@ -7,23 +9,9 @@ export type ReminderKind = "deadline" | "interview";
 export type Candidate = { id: string; userId: string; applicationId?: string; organisation: string; title: string; date: string; time?: string };
 export type Recipient = { id: string; email: string; role: string; status: string; emailNotifications?: boolean; deadlineReminders?: boolean; interviewReminders?: boolean };
 
-// Application deadlines are date-only; use end of the ISO day in UTC.
-// Interviews must have an unambiguous HH:mm time, interpreted in UTC.
+// Date-only deadlines end at 23:59:59.999 in Auckland; interviews use its local clock.
 export function occurrence(kind: ReminderKind, date: string, time = ""): Date | null {
-  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-  if (!parts) return null;
-  const [year, month, day] = parts.slice(1).map(Number);
-  if (year < 1) return null;
-  let hour = 23, minute = 59;
-  if (kind === "interview") {
-    const clock = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);
-    if (!clock) return null;
-    hour = Number(clock[1]); minute = Number(clock[2]);
-  }
-  const result = new Date(0);
-  result.setUTCFullYear(year, month - 1, day);
-  result.setUTCHours(hour, minute, kind === "deadline" ? 59 : 0, kind === "deadline" ? 999 : 0);
-  return result.getUTCFullYear() === year && result.getUTCMonth() === month - 1 && result.getUTCDate() === day ? result : null;
+  return aucklandOccurrence(date, kind === "deadline" ? "23:59" : time, kind === "deadline");
 }
 
 export function eligible(kind: ReminderKind, candidate: Candidate, user: Recipient | null, now: Date): Date | null {
@@ -92,7 +80,7 @@ export async function runReminders(deps: Dependencies, now = new Date()): Promis
         }
         const label = `${current.organisation} — ${current.title}`;
         const subject = kind === "deadline" ? "Application deadline reminder" : "Interview reminder";
-        const body = `${subject}\n\n${label}\n${kind === "deadline" ? "Deadline" : "Interview date/time"}: ${due.toISOString()} (UTC)\n\nLog in to your internship tracker to review the details.`;
+        const body = `${subject}\n\n${label}\n${kind === "deadline" ? "Deadline" : "Interview date/time"}: ${formatAucklandTime(due)}\n\nLog in to your internship tracker to review the details.`;
         await deps.begin(claim);
         sending = true;
         await deps.send(latest!.email, subject, body, key);

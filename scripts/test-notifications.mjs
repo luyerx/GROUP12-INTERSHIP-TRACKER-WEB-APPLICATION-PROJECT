@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+const zoneModule = { exports: {} };
+const zoneCode = ts.transpileModule(fs.readFileSync("lib/aucklandTime.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+vm.runInThisContext("(function(module,exports){" + zoneCode + "\n})")(zoneModule, zoneModule.exports);
 const compiled = ts.transpileModule(fs.readFileSync("lib/notifications/rules.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 const sandboxModule = { exports: {} };
-vm.runInThisContext("(function(module,exports){" + compiled + "\n})")(sandboxModule, sandboxModule.exports);
+vm.runInThisContext("(function(require,module,exports){" + compiled + "\n})")(name => { assert.equal(name, "@/lib/aucklandTime"); return zoneModule.exports; }, sandboxModule, sandboxModule.exports);
 const { runReminders, occurrence, cronAuthorized, DeliveryRejected } = sandboxModule.exports;
 const now = new Date("2026-09-23T23:00:00Z");
 const user = { id: "u1", email: "student@example.test", role: "student", status: "Active", emailNotifications: true, deadlineReminders: true, interviewReminders: true };
@@ -136,3 +139,44 @@ try {
 for(const auth of [null,'Basic invalid','Bearer ']) assert.equal(cronAuthorized(auth,'secret'),false);
 assert.equal(cronAuthorized('Bearer anything',undefined),false);
 console.log('SUCCESS additional notification failure/concurrency/provider regressions');
+
+// Auckland wall-clock conversion is independent of the machine's local timezone.
+for (const [date, time, expected] of [
+ ['2026-07-15','09:00','2026-07-14T21:00:00.000Z'],
+ ['2026-01-15','09:00','2026-01-14T20:00:00.000Z'],
+ ['2026-07-15','00:00','2026-07-14T12:00:00.000Z'],
+ ['2026-01-15','23:59','2026-01-15T10:59:00.000Z'],
+ ['2026-09-26','09:00','2026-09-25T21:00:00.000Z'],
+ ['2026-09-27','09:00','2026-09-26T20:00:00.000Z'],
+ ['2026-04-04','09:00','2026-04-03T20:00:00.000Z'],
+ ['2026-04-05','09:00','2026-04-04T21:00:00.000Z'],
+ ['2026-09-27','01:59','2026-09-26T13:59:00.000Z'],
+ ['2026-09-27','03:00','2026-09-26T14:00:00.000Z'],
+ ['2026-04-05','01:59','2026-04-04T12:59:00.000Z'],
+ ['2026-04-05','03:00','2026-04-04T15:00:00.000Z'],
+]) assert.equal(occurrence('interview',date,time)?.toISOString(),expected);
+for (const [date, expected] of [
+ ['2026-07-15','2026-07-15T11:59:59.999Z'],
+ ['2026-01-15','2026-01-15T10:59:59.999Z'],
+ ['2026-09-27','2026-09-27T10:59:59.999Z'],
+ ['2026-04-05','2026-04-05T11:59:59.999Z'],
+]) assert.equal(occurrence('deadline',date)?.toISOString(),expected);
+for (const [date,time] of [['2026-09-27','02:30'],['2026-04-05','02:30'],['2026-02-30','09:00'],['2026-07-15','24:00'],['2026-07-15','9:00'],['2026-07-15','noon'],['2026-07-15',''],['invalid','09:00']]) {
+ assert.equal(occurrence('interview',date,time),null);
+ const f=fixture({applications:[],interviews:[{...interview,date,time}]});
+ const result=await runReminders(f.deps,new Date('2026-01-01T00:00:00Z'));
+ assert.equal(result.failed,0);assert.equal(result.skipped,1);
+}
+const {eligible}=sandboxModule.exports;
+const end=occurrence('deadline','2026-09-24');
+assert.ok(eligible('deadline',deadline,user,new Date(end.getTime()-1)));
+assert.equal(eligible('deadline',deadline,user,end),null);
+assert.equal(eligible('deadline',deadline,user,new Date(end.getTime()+1)),null);
+assert.ok(eligible('deadline',deadline,user,new Date(end.getTime()-48*3600000)));
+assert.equal(eligible('deadline',deadline,user,new Date(end.getTime()-48*3600000-1)),null);
+assert.equal(zoneModule.exports.aucklandDateKey(new Date('2026-01-14T11:00:00Z')),'2026-01-15');
+assert.equal(zoneModule.exports.aucklandDateKey(new Date('2026-07-14T12:00:00Z')),'2026-07-15');
+const nzMail=fixture();await runReminders(nzMail.deps,now);
+for(const mail of nzMail.sends){assert.match(mail[2],/New Zealand \/ Auckland time/);assert.ok(!mail[2].includes('(UTC)'));}
+assert.match(nzMail.sends[1][2],/23:00:00/);
+console.log('SUCCESS Auckland NZST/NZDT, midnight, DST gap/fold, deadline end/window, invalid values and email display');

@@ -40,7 +40,8 @@ try {
  const {PATCH}=load('app/api/profile/route.ts');
  const u=await User.create({fullName:'Notification test',email:'notification@example.test',passwordHash:'unused-test-only',role:'student',status:'Active'});
  actor={id:String(u._id),email:u.email,role:'student'};
- const tomorrow=new Date(Date.now()+24*60*60*1000), date=tomorrow.toISOString().slice(0,10), time=tomorrow.toISOString().slice(11,16);
+ const {aucklandDateKey}=load('lib/aucklandTime.ts');
+ const date=aucklandDateKey(new Date(Date.now()+24*60*60*1000)), time='12:00';
  const a=await App.create({userId:u._id,organisation:'Test only',roleTitle:'Notification test',deadline:date,status:'Applied'});
  await Event.create({userId:u._id,applicationId:String(a._id),type:'interview',title:'Notification test',organisation:'Test only',date,time});
  const prefs={fullName:u.fullName,email:u.email,university:'',degree:'',major:'',graduationYear:'',location:'',preferredRoles:[],preferredLocations:[],skills:[],openToInternships:true};

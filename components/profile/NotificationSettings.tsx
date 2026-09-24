@@ -52,7 +52,7 @@ export default function NotificationSettings({ profile, draft, isEditing, setDra
 
       <NotificationSetting
         title="Deadline reminders"
-        description="Email me before my tracked application deadlines."
+        description="Email me before my tracked application deadlines (end of day in New Zealand / Auckland time)."
         checked={
           isEditing
             ? draft.deadlineReminders
@@ -69,7 +69,7 @@ export default function NotificationSettings({ profile, draft, isEditing, setDra
 
       <NotificationSetting
         title="Interview reminders"
-        description="Email me before interviews with a valid UTC time."
+        description="Email me before interviews with a valid New Zealand / Auckland time."
         checked={
           isEditing
             ? draft.interviewReminders

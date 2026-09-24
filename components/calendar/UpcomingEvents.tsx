@@ -77,7 +77,7 @@ export default function UpcomingEvents({ events, onSelect }: { events: CalendarE
                           {event.time && (
                             <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                               <Clock3 className="h-3.5 w-3.5" />
-                              {event.time}
+                              {event.time} NZ time
                             </p>
                           )}
 

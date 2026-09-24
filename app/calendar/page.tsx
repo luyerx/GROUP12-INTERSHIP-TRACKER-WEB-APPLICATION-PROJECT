@@ -9,7 +9,8 @@ import PageHeader from "@/components/ui/PageHeader";
 
 import UpcomingEvents from "@/components/calendar/UpcomingEvents";
 import ModalFrame from "@/components/ui/ModalFrame";
-import { formatDateKey, isDateInputValue, toDateInputValue } from "@/lib/date";
+import { aucklandDateKey } from "@/lib/aucklandTime";
+import { parseAppDate, isDateInputValue, toDateInputValue } from "@/lib/date";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -83,7 +84,7 @@ function formatDisplayDate(date: string, longMonth = false) {
 }
 
 export default function CalendarPage() {
-  const today = new Date();
+  const today = parseAppDate(aucklandDateKey())!;
 
   const [currentDate, setCurrentDate] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1),
@@ -316,7 +317,7 @@ export default function CalendarPage() {
   }, [currentYear, currentMonth]);
 
   const upcomingEvents = useMemo(() => {
-    const todayKey = formatDateKey(new Date());
+    const todayKey = aucklandDateKey();
 
     return [...events]
       .filter((event) => event.date >= todayKey)
@@ -574,7 +575,7 @@ export default function CalendarPage() {
   };
 
   const goToToday = () => {
-    const today = new Date();
+    const today = parseAppDate(aucklandDateKey())!;
 
     setCurrentDate(new Date(today.getFullYear(), today.getMonth(), 1));
   };
@@ -587,7 +588,7 @@ export default function CalendarPage() {
     <DashboardLayout>
       <div>
         {/* Header */}
-        <PageHeader eyebrow="Schedule management" title="Calendar" description="Keep track of application deadlines, interviews, reminders, and important recruitment dates." action={<CalendarToolbar openCreateEvent={openCreateEvent} applications={applications} isLoadingApplications={isLoadingApplications} goToToday={goToToday} goToPreviousMonth={goToPreviousMonth} goToNextMonth={goToNextMonth} />} />
+        <PageHeader eyebrow="Schedule management" title="Calendar" description="Keep track of application deadlines, interviews, reminders, and important recruitment dates. All dates and times use New Zealand (Auckland) time." action={<CalendarToolbar openCreateEvent={openCreateEvent} applications={applications} isLoadingApplications={isLoadingApplications} goToToday={goToToday} goToPreviousMonth={goToPreviousMonth} goToNextMonth={goToNextMonth} />} />
 
         {!isLoadingApplications &&
           !applicationsError &&
@@ -761,11 +762,11 @@ export default function CalendarPage() {
 
                 <div className="rounded-xl bg-slate-50 p-4">
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                    Time
+                    Time (New Zealand / Auckland)
                   </p>
 
                   <p className="mt-2 text-sm font-medium text-slate-800">
-                    {selectedEvent.time || "Not specified"}
+                    {selectedEvent.time ? `${selectedEvent.time} NZ time` : "Not specified"}
                   </p>
                 </div>
               </div>
@@ -1055,6 +1056,7 @@ export default function CalendarPage() {
                   </label>
 
                   <input
+                    aria-describedby="eventTimeHelp"
                     id="eventTime"
                     type="time"
                     value={eventTime}
@@ -1065,6 +1067,8 @@ export default function CalendarPage() {
                   />
                 </div>
               </div>
+
+              <p id="eventTimeHelp" className="text-sm text-slate-500">Use Auckland local time. Reminders skip missing times and ambiguous or nonexistent times during daylight saving changes.</p>
 
               {/* Location */}
               <div>
