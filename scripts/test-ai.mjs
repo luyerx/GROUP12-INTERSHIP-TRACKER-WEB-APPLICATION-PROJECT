@@ -130,6 +130,11 @@ for (const [feature, post] of Object.entries(routes)) {
 }
 check(providerTimeouts.length === 4 && providerTimeouts.every(ms => ms === 22000), "both features bound each Gemini attempt to 22 seconds");
 check(providerCalls === 4, "rejected requests never call Gemini");
+application.opportunityId = "333333333333333333333333";
+check((await routes["interview-prep"](request())).status === 200, "linked application uses snapshot without querying latest opportunity (including deleted/closed listings)");
+const snapshotContext = JSON.parse(lastRequest.contents[0].parts[0].text).data;
+check(snapshotContext.jobDataSource.includes("Tracking snapshot") && !("opportunity" in snapshotContext), "linked AI context labels snapshot and contains no current opportunity facts");
+delete application.opportunityId;
 const context = JSON.parse(lastRequest.contents[0].parts[0].text).data;
 check(context.application.jobDescription.length === 12000 && !JSON.stringify(context).includes("PRIVATE") && !JSON.stringify(context).includes("private@example"), "bounded context excludes notes and email");
 check(lastRequest.generationConfig.responseFormat.text.mimeType === "APPLICATION_JSON", "provider requests REST JSON schema enum");

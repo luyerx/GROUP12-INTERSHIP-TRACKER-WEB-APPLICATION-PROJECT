@@ -1,3 +1,4 @@
+import { readJson } from "@/lib/apiValidation";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -29,7 +30,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, message: "Not authenticated." }, { status: 401 });
     }
 
-    const input = profileSchema.safeParse(await request.json());
+    const input = profileSchema.safeParse(await readJson(request));
     if (!input.success) {
       return NextResponse.json({ success: false, message: input.error.issues[0].message }, { status: 400 });
     }

@@ -1,8 +1,8 @@
+import { studentOpportunityFilter } from "@/lib/opportunityAccess";
 import { isObjectIdOrHexString } from "mongoose";
 import { authorizeRole } from "@/lib/authorization";
 import { OpportunityModel } from "@/lib/models/Opportunity";
 import { ApplicationModel } from "@/lib/models/Application";
-import { todayDate } from "@/lib/opportunity";
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -27,8 +27,7 @@ export async function POST(
       });
     const opportunity = await OpportunityModel.findOne({
       _id: id,
-      status: "Published",
-      closingDate: { $gte: todayDate() },
+      ...await studentOpportunityFilter(),
     });
     if (!opportunity)
       return Response.json(

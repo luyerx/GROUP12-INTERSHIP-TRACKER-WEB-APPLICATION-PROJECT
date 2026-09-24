@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { ArrowLeft, ArrowRight, Eye, EyeOff, LoaderCircle } from "lucide-react";
 
+import { accountPasswordError } from "@/lib/accountPassword";
 import AuthLayout from "@/components/auth/AuthLayout";
 
 export default function RegisterPage() {
@@ -74,8 +75,8 @@ export default function RegisterPage() {
       setPasswordError("Password is required.");
 
       isValid = false;
-    } else if (password.length < 8) {
-      setPasswordError("Password must contain at least 8 characters.");
+    } else if (accountPasswordError(password)) {
+      setPasswordError(accountPasswordError(password) || "");
 
       isValid = false;
     }

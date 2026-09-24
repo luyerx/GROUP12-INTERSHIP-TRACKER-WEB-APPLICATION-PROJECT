@@ -1,3 +1,4 @@
+import { readJson } from "@/lib/apiValidation";
 import { z } from "zod";
 import { validResourceLink } from "@/lib/resource-url";
 import { opportunityInputSchema } from "@/lib/opportunity";
@@ -90,8 +91,8 @@ export async function POST(request: Request) {
     );
   const input =
     kind === "resources"
-      ? resourceSchema.safeParse(await request.json())
-      : opportunitySchema.safeParse(await request.json());
+      ? resourceSchema.safeParse(await readJson(request))
+      : opportunitySchema.safeParse(await readJson(request));
 
   if (!input.success)
     return Response.json(

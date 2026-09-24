@@ -3,11 +3,11 @@
 export default function ApplicationTimeline({ timelineItems }: { timelineItems: { title: string; subtitle: string; active: boolean }[] }) {
   return (<section className="card p-6">
     <h2 className="text-base font-semibold text-slate-950">
-      Application timeline
+      Application Progress
     </h2>
 
     <p className="mt-1 text-sm text-slate-500">
-      A history of important application milestones.
+      Based on your current status. This is a progress overview, not a record of past events.
     </p>
 
     <div className="mt-6 space-y-6">

@@ -15,7 +15,7 @@ export const applicationInputSchema = z.object({
   roleTitle: z.string().trim().min(1, "Role title is required").max(160),
   location: z.string().trim().max(120).default(""),
   sourceLink: z
-    .union([z.url("Please enter a valid URL"), z.literal("")])
+    .union([z.url("Please enter a valid URL").refine(value => /^https?:\/\//i.test(value), "Use an HTTP or HTTPS URL"), z.literal("")])
     .default(""),
   deadline: z.union([z.iso.date(), z.literal("")]).default(""),
   status: z.enum(applicationStatuses).default("Interested"),

@@ -22,7 +22,6 @@ export default function ForgotPasswordPage() {
 
   const [isSent, setIsSent] = useState(false);
 
-  const [resetUrl, setResetUrl] = useState("");
 
   const validateEmail = () => {
     setEmailError("");
@@ -42,7 +41,7 @@ export default function ForgotPasswordPage() {
   };
 
   const handleSubmit = async () => {
-    if (!validateEmail()) {
+    if (isSubmitting || !validateEmail()) {
       return;
     }
 
@@ -55,13 +54,12 @@ export default function ForgotPasswordPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const result: { success: boolean; message?: string; resetUrl?: string } =
+      const result: { success: boolean; message?: string } =
         await response.json();
       if (!response.ok || !result.success)
         throw new Error(
           result.message || "Unable to create reset instructions.",
         );
-      setResetUrl(result.resetUrl || "");
       setIsSent(true);
     } catch (error) {
       console.error("Password reset error:", error);
@@ -199,10 +197,8 @@ export default function ForgotPasswordPage() {
       ) : (
         <SuccessState
           email={email}
-          resetUrl={resetUrl}
           onTryAgain={() => {
             setIsSent(false);
-            setResetUrl("");
             setEmailError("");
             setRequestError("");
           }}
@@ -214,11 +210,9 @@ export default function ForgotPasswordPage() {
 
 function SuccessState({
   email,
-  resetUrl,
   onTryAgain,
 }: {
   email: string;
-  resetUrl: string;
   onTryAgain: () => void;
 }) {
   return (
@@ -231,7 +225,7 @@ function SuccessState({
         Check your inbox
       </p>
 
-      <h1 className="mt-2 page-title">Reset instructions sent</h1>
+      <h1 className="mt-2 page-title">Check your email</h1>
 
       <p className="mt-3 text-sm leading-6 text-slate-500">
         If an Internship Tracker account exists for{" "}
@@ -239,12 +233,6 @@ function SuccessState({
         reset instructions have been sent to that address.
       </p>
 
-      {resetUrl && (
-        <Link href={resetUrl} className="btn mt-6 w-full">
-          Continue to reset password
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      )}
 
       <div className="mt-7 rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <p className="text-sm font-medium text-slate-800">

@@ -1,3 +1,4 @@
+import { readJson } from "@/lib/apiValidation";
 import { calendarEventSchema } from "@/lib/calendarEvent";
 import { authorizeRole } from "@/lib/authorization";
 import { createCalendarEvent, listCalendarEvents } from "@/lib/eventsRepository";
@@ -11,7 +12,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const authorization = await authorizeRole("student");
   if (!authorization.authorized) return authorization.response;
-  const input = calendarEventSchema.safeParse(await request.json());
+  const input = calendarEventSchema.safeParse(await readJson(request));
   if (!input.success) return Response.json({ success: false, message: input.error.issues[0].message }, { status: 400 });
   const data = await createCalendarEvent(authorization.user.id, input.data);
   if (!data) return Response.json({ success: false, message: "The selected application does not belong to this user." }, { status: 400 });

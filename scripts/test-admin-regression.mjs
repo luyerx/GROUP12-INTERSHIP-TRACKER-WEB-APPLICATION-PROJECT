@@ -9,11 +9,11 @@ let count = 0;
 const check = (value, label) => { assert.ok(value, label); count++; console.log("ADMIN PASS " + label); };
 let actor = { id: "actor", role: "superadmin" };
 let deleted = false;
-const resource = { _id: "resource", title: "Regression resource" };
+const resource = { _id: "000000000000000000000001", title: "Regression resource" };
 const query = value => ({ sort: () => query(value), lean: async () => value });
 const models = {
   "@/lib/models/User": { UserModel: { find: () => query([{ _id: "user", fullName: "Regression User", role: "student", createdAt: new Date() }]) } },
-  "@/lib/models/Resource": { ResourceModel: { findByIdAndDelete: id => { check(id === "resource", "DELETE uses the route ID"); deleted = true; return query(resource); } } },
+  "@/lib/models/Resource": { ResourceModel: { findByIdAndDelete: id => { check(id === "000000000000000000000001", "DELETE uses the route ID"); deleted = true; return query(resource); } } },
   "@/lib/models/Opportunity": { OpportunityModel: { findByIdAndDelete: () => { throw new Error("Resource DELETE touched opportunities"); } } },
 };
 const cache = new Map();
@@ -45,7 +45,7 @@ for (const role of ["superadmin", "admin", "student", "employee", null]) {
   check(response.status === expected, role + " GET users status");
   if (expected === 200) check((await response.json()).data[0].name === "Regression User", role + " GET returns real model rows");
   deleted = false;
-  const deletion = await content.DELETE(new Request("http://localhost/api/admin/content/resource?kind=resources", { method: "DELETE" }), { params: Promise.resolve({ id: "resource" }) });
+  const deletion = await content.DELETE(new Request("http://localhost/api/admin/content/000000000000000000000001?kind=resources", { method: "DELETE" }), { params: Promise.resolve({ id: "000000000000000000000001" }) });
   check(deletion.status === expected && deleted === (expected === 200), role + " resource delete authorization and model selection");
   check((await guard.authorizeRole("superadmin")).authorized === (role === "superadmin"), role + " Super Admin-only authorization is correct");
 }
@@ -59,7 +59,7 @@ visit(ast);
 assert.ok(remove);
 const code = ts.transpileModule(remove.getText(ast) + "; remove;", { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 for (const scenario of ["success", "forbidden", "missing", "invalid-json", "network", "unsuccessful-body", "cancel"]) {
-  const state = { editing: { id: "resource" }, busy: false, error: "", success: "old", refreshed: false, requested: false };
+  const state = { editing: { id: "000000000000000000000001" }, busy: false, error: "", success: "old", refreshed: false, requested: false };
   const context = {
     editing: state.editing, busy: false, kind: "resources", confirm: () => scenario !== "cancel",
     setBusy: value => { state.busy = value; }, setError: value => { state.error = value; },
@@ -67,7 +67,7 @@ for (const scenario of ["success", "forbidden", "missing", "invalid-json", "netw
     load: async () => { state.refreshed = true; },
     fetch: async (url, options) => {
       state.requested = true;
-      check(url === "/api/admin/content/resource?kind=resources" && options.method === "DELETE", "client sends ID, kind and DELETE");
+      check(url === "/api/admin/content/000000000000000000000001?kind=resources" && options.method === "DELETE", "client sends ID, kind and DELETE");
       if (scenario === "network") throw new Error("network");
       return { ok: scenario === "success" || scenario === "unsuccessful-body", json: async () => {
         if (scenario === "invalid-json") throw new Error("json");

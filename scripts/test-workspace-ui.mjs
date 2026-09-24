@@ -23,6 +23,23 @@ export async function testWorkspaceUI({ base, student, employee, admin, superadm
   async function noOverflow(page, label) { check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), label + " has no page overflow"); }
   try {
     const page = await session(student);
+    // Exercise the snapshot notice and latest link; data persistence is covered by test-feature-freeze.
+    const snapshot = (await (await page.request.get(base + "/api/applications/" + appId)).json()).data;
+    const latestEndpoint = "**/api/opportunities/" + snapshot.opportunityId;
+    await page.route(latestEndpoint, route => route.fulfill({ json: { success: true, data: {
+      id: snapshot.opportunityId, organisation: snapshot.organisation, role: "Latest role", location: "Wellington", closingDate: "2099-12-31", status: "Published", description: "Latest employer description", employmentType: "Internship", workMode: "Hybrid", applicationUrl: "https://example.test", applicationId: appId,
+    } } }));
+    await page.goto(base + "/applications/" + appId);
+    await page.getByRole("link", { name: "View latest opportunity", exact: true }).waitFor();
+    check(await page.getByText(/Tracking snapshot: these job details/).count() === 1, "Application clearly labels tracking snapshot and AI source");
+    await page.getByRole("link", { name: "View latest opportunity", exact: true }).click();
+    await page.getByRole("heading", { name: "Latest role", exact: true }).waitFor();
+    check(page.url().endsWith("/opportunities/" + snapshot.opportunityId), "latest link opens current opportunity detail");
+    await page.unroute(latestEndpoint);
+    // This workflow fixture is Closed: the actual API must hide the unavailable link.
+    await page.goto(base + "/applications/" + appId);
+    await page.getByText(/The latest opportunity is unavailable/).waitFor();
+    check(await page.getByRole("link", { name: "View latest opportunity", exact: true }).count() === 0, "unavailable opportunity has no broken latest link; application still opens");
     await page.goto(base + "/applications");
     await page.locator(".tracker-table tbody tr").first().waitFor();
     const listCount = await page.locator(".tracker-table tbody tr").count();
@@ -67,6 +84,17 @@ export async function testWorkspaceUI({ base, student, employee, admin, superadm
     await noOverflow(page, "Mobile Profile");
     await page.goto(base + "/applications/" + appId);
     await page.getByLabel("Application status").waitFor();
+    for (const status of ["Interested", "Preparing", "Applied", "Interview", "Offer", "Rejected", "Withdrawn"]) {
+      const updated = page.waitForResponse(r => r.url().endsWith("/status") && r.request().method() === "PATCH");
+      await page.getByLabel("Application status").selectOption(status);
+      check((await updated).ok(), status + " status update succeeds");
+      const progress = page.locator("section").filter({ has: page.getByRole("heading", { name: "Application Progress", exact: true }) });
+      await progress.getByText(status, { exact: true }).waitFor();
+      check((await progress.textContent()).includes("not a record of past events"), status + " progress clarifies current-status semantics");
+      check(!/sent to employer|Application submitted|Submitted on|Employer received/i.test(await progress.textContent()), status + " has no invented historical claims");
+      check(await page.getByRole("heading", { name: "Application details", exact: true }).count() === 1, status + " retains detail modules");
+    }
+
     await page.getByLabel("Application status").selectOption("Interview");
     await page.waitForFunction(() => !document.querySelector('[aria-label="Application status"]').disabled);
     await page.reload();

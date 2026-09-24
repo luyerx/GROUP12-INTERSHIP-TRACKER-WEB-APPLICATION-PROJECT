@@ -1,3 +1,4 @@
+import { readJson } from "@/lib/apiValidation";
 import { applicationInputSchema } from "@/lib/application";
 import { applicationApiError } from "@/lib/applicationApi";
 import { createApplication, listApplications } from "@/lib/applicationsRepository";
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
   try {
     const authorization = await authorizeRole("student");
     if (!authorization.authorized) return authorization.response;
-    const input = applicationInputSchema.safeParse(await request.json());
+    const input = applicationInputSchema.safeParse(await readJson(request));
     if (!input.success) {
       return Response.json({ success: false, message: input.error.issues[0].message }, { status: 400 });
     }

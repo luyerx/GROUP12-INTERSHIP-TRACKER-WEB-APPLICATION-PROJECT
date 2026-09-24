@@ -1,3 +1,4 @@
+import { readJson } from "@/lib/apiValidation";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { listOpportunities } from "@/lib/opportunitiesRepository";
 import { opportunityInputSchema, todayDate } from "@/lib/opportunity";
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
         },
         { status: 403 },
       );
-    const input = opportunityInputSchema.safeParse(await request.json());
+    const input = opportunityInputSchema.safeParse(await readJson(request));
     if (!input.success)
       return Response.json(
         { message: input.error.issues[0].message },

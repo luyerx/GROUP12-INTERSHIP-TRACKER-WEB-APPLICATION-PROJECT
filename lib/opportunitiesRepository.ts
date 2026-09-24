@@ -4,12 +4,12 @@ import { ApplicationModel } from "@/lib/models/Application";
 import { UserModel } from "@/lib/models/User";
 import { connectToDatabase } from "@/lib/mongodb";
 import type { AuthenticatedUser } from "@/lib/auth";
-import { todayDate } from "@/lib/opportunity";
+import { studentOpportunityFilter } from "@/lib/opportunityAccess";
 export async function listOpportunities(user: AuthenticatedUser) {
   await connectToDatabase();
   const filter =
     user.role === "student"
-      ? { status: "Published", closingDate: { $gte: todayDate() } }
+      ? await studentOpportunityFilter()
       : user.role === "employee"
         ? { createdBy: user.id }
         : {};

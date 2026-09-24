@@ -261,7 +261,7 @@ export default function ApplicationForm({
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              {isSystemTracked ? "Opportunity information is read-only and managed by the employer or admin. You can edit your personal tracking details below." : "Add the main details about the external internship opportunity."}
+              {isSystemTracked ? "Job details are a read-only tracking snapshot and do not update with the listing. AI uses this saved snapshot. You can edit your personal tracking details below." : "Add the main details about the external internship opportunity."}
             </p>
           </div>
         </div>

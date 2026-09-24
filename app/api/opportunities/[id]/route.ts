@@ -1,3 +1,5 @@
+import { studentOpportunityFilter } from "@/lib/opportunityAccess";
+import { readJson } from "@/lib/apiValidation";
 import { isObjectIdOrHexString } from "mongoose";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { OpportunityModel } from "@/lib/models/Opportunity";
@@ -18,7 +20,7 @@ export async function PATCH(
         { message: "Invalid opportunity." },
         { status: 400 },
       );
-    const input = opportunityInputSchema.safeParse(await request.json());
+    const input = opportunityInputSchema.safeParse(await readJson(request));
     if (!input.success)
       return Response.json(
         { message: input.error.issues[0].message },
@@ -70,7 +72,7 @@ export async function GET(
     const row = await OpportunityModel.findOne({
       _id: id,
       ...(user.role === "student"
-        ? { status: "Published" }
+        ? await studentOpportunityFilter()
         : user.role === "employee"
           ? { createdBy: user.id }
           : {}),

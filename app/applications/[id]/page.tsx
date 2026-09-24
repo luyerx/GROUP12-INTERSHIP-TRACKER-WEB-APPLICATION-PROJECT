@@ -6,6 +6,7 @@ import ApplicationProgress from "@/components/applications/ApplicationProgress";
 
 import ApplicationContact from "@/components/applications/ApplicationContact";
 
+import { getApplicationProgressItems } from "@/lib/applicationProgress";
 import ApplicationTimeline from "@/components/applications/ApplicationTimeline";
 
 import ApplicationNotes from "@/components/applications/ApplicationNotes";
@@ -115,82 +116,6 @@ function formatDeadline(deadline: string): string {
   });
 }
 
-function getTimelineItems(status: ApplicationStatus) {
-  const items = [
-    {
-      title: "Application created",
-      subtitle: "Application added to tracker",
-      active: true,
-    },
-  ];
-
-  if (["Applied", "Interview", "Offer", "Rejected"].includes(status)) {
-    items.push({
-      title: "Application submitted",
-      subtitle: "Application sent to employer",
-      active: true,
-    });
-  }
-
-  if (status === "Interested") {
-    items.push({
-      title: "Interested in opportunity",
-      subtitle: "Current stage",
-      active: false,
-    });
-  }
-
-  if (status === "Preparing") {
-    items.push({
-      title: "Preparing application",
-      subtitle: "Current stage",
-      active: true,
-    });
-  }
-
-  if (status === "Applied") {
-    items.push({
-      title: "Waiting for employer response",
-      subtitle: "Current stage",
-      active: false,
-    });
-  }
-
-  if (status === "Interview") {
-    items.push({
-      title: "Interview stage",
-      subtitle: "Current stage",
-      active: true,
-    });
-  }
-
-  if (status === "Offer") {
-    items.push({
-      title: "Offer received",
-      subtitle: "Current stage",
-      active: true,
-    });
-  }
-
-  if (status === "Rejected") {
-    items.push({
-      title: "Application rejected",
-      subtitle: "Current stage",
-      active: true,
-    });
-  }
-
-  if (status === "Withdrawn") {
-    items.push({
-      title: "Application withdrawn",
-      subtitle: "Current stage",
-      active: true,
-    });
-  }
-
-  return items;
-}
-
 async function fetchApplication(id: string): Promise<Application> {
   const response = await fetch(`/api/applications/${id}`, {
     method: "GET",
@@ -213,6 +138,18 @@ export default function ApplicationDetailPage() {
   const id = params.id as string;
 
   const [application, setApplication] = useState<Application | null>(null);
+
+  const [latestAvailable, setLatestAvailable] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    const opportunityId = application?.opportunityId;
+    if (opportunityId) {
+      fetch("/api/opportunities/" + opportunityId, { cache: "no-store" })
+        .then(response => { if (!cancelled) setLatestAvailable(response.ok); })
+        .catch(() => { if (!cancelled) setLatestAvailable(false); });
+    }
+    return () => { cancelled = true; };
+  }, [application]);
 
   const [loading, setLoading] = useState(true);
 
@@ -289,7 +226,7 @@ export default function ApplicationDetailPage() {
     }
   };
 
-  const timelineItems = getTimelineItems(status);
+  const timelineItems = getApplicationProgressItems(status);
 
   const handleStatusChange = async (newStatus: ApplicationStatus) => {
     if (!application || isUpdatingStatus) {
@@ -431,15 +368,17 @@ export default function ApplicationDetailPage() {
       <div className="mb-6 rounded-xl border border-teal-100 bg-teal-50 p-4 text-sm text-teal-900">
         {application.opportunityId ? (
           <>
-            Tracked from a published opportunity. This is your personal
-            application record; changing its status does not notify the
-            employer.{" "}
-            <Link
-              className="font-semibold underline"
-              href={"/opportunities/" + application.opportunityId}
-            >
-              View original listing
-            </Link>
+            Tracking snapshot: these job details were saved when you tracked this
+            opportunity and do not update when the employer edits it. AI guidance
+            uses this same saved snapshot. Changing your application status does
+            not notify the employer.{" "}
+            {latestAvailable ? (
+              <Link className="font-semibold underline" href={"/opportunities/" + application.opportunityId}>
+                View latest opportunity
+              </Link>
+            ) : (
+              <span>The latest opportunity is unavailable (closed, expired, removed or inaccessible), or could not be loaded. Your snapshot remains available.</span>
+            )}
           </>
         ) : (
           <>

@@ -1,3 +1,5 @@
+import { validObjectId, invalidIdResponse } from "@/lib/apiValidation";
+import { readJson } from "@/lib/apiValidation";
 import { applicationInputSchema } from "@/lib/application";
 import { applicationApiError, applicationNotFound } from "@/lib/applicationApi";
 import { updateApplicationStatus } from "@/lib/applicationsRepository";
@@ -10,7 +12,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const authorization = await authorizeRole("student");
     if (!authorization.authorized) return authorization.response;
     const { id } = await params;
-    const input = statusSchema.safeParse(await request.json());
+    if (!validObjectId(id)) return invalidIdResponse();
+    const input = statusSchema.safeParse(await readJson(request));
     if (!input.success) {
       return Response.json({ success: false, message: "Invalid application status." }, { status: 400 });
     }

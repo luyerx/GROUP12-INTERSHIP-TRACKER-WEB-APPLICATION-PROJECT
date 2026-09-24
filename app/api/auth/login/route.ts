@@ -11,9 +11,11 @@ export async function POST(request: Request) {
   try {
     const rate = checkRateLimit(`login:${getClientIdentifier(request)}`, 10, 15 * 60 * 1000);
     if (!rate.allowed) return NextResponse.json({ success: false, message: "Too many login attempts. Please try again later." }, { status: 429, headers: { "Retry-After": String(rate.retryAfter) } });
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ success: false, message: "Invalid request body." }, { status: 400 });
 
-    const email = body.email?.trim().toLowerCase();
+    if (typeof body.email !== "string" || typeof body.password !== "string") return NextResponse.json({ success: false, message: "Email and password are required." }, { status: 400 });
+    const email = body.email.trim().toLowerCase();
     const password = body.password;
     const rememberMe = Boolean(body.rememberMe);
 

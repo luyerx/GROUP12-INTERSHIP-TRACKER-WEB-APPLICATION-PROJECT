@@ -1,3 +1,5 @@
+import { validObjectId, invalidIdResponse } from "@/lib/apiValidation";
+import { readJson } from "@/lib/apiValidation";
 import { z } from "zod";
 import { validResourceLink } from "@/lib/resource-url";
 import { opportunityInputSchema } from "@/lib/opportunity";
@@ -31,6 +33,7 @@ export async function PUT(
   const authorization = await authorizeRole("admin");
   if (!authorization.authorized) return authorization.response;
   const { id } = await params;
+    if (!validObjectId(id)) return invalidIdResponse();
   const kind = getKind(request);
   if (!kind)
     return Response.json(
@@ -39,8 +42,8 @@ export async function PUT(
     );
   const input =
     kind === "resources"
-      ? resourceSchema.safeParse(await request.json())
-      : opportunitySchema.safeParse(await request.json());
+      ? resourceSchema.safeParse(await readJson(request))
+      : opportunitySchema.safeParse(await readJson(request));
   if (!input.success)
     return Response.json(
       { success: false, message: input.error.issues[0].message },
@@ -75,6 +78,7 @@ export async function DELETE(
   const authorization = await authorizeRole("admin");
   if (!authorization.authorized) return authorization.response;
   const { id } = await params;
+    if (!validObjectId(id)) return invalidIdResponse();
   const kind = getKind(request);
   if (!kind)
     return Response.json(

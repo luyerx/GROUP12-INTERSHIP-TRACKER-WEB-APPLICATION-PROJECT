@@ -132,7 +132,7 @@ export default function AdminUsersTable({ currentUserId, canManageRoles }: { cur
   }
 
   async function remove() {
-    if (!editing || !canManage(editing) || !confirm(`Delete ${editing.name}'s account?`)) return;
+    if (!editing || !canManage(editing) || !confirm(`Permanently delete ${editing.name}'s account? Suspend is recommended for routine management. Sessions, reset tokens and pending reminders will be removed. Historical applications/events are retained but inaccessible; published opportunities are closed. This cannot be undone.`)) return;
     setBusy(true);
     setError("");
     try {
@@ -378,6 +378,7 @@ export default function AdminUsersTable({ currentUserId, canManageRoles }: { cur
                     <option>Active</option>
                     <option>Suspended</option>
                   </select>
+                  <p className="mt-2 text-xs text-slate-500">Suspending blocks access and reminders, preserves history, and hides employee listings from student discovery. Prefer suspension to permanent deletion.</p>
                 </label>
               </div>
               {error && (

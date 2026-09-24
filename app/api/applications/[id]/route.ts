@@ -1,3 +1,5 @@
+import { validObjectId, invalidIdResponse } from "@/lib/apiValidation";
+import { readJson } from "@/lib/apiValidation";
 import { applicationInputSchema } from "@/lib/application";
 import { applicationApiError, applicationNotFound } from "@/lib/applicationApi";
 import { getApplication, updateApplication, deleteApplication } from "@/lib/applicationsRepository";
@@ -10,6 +12,7 @@ export async function GET(request: Request, { params }: Context) {
     const authorization = await authorizeRole("student");
     if (!authorization.authorized) return authorization.response;
     const { id } = await params;
+    if (!validObjectId(id)) return invalidIdResponse();
     const data = await getApplication(id, authorization.user.id);
     if (!data) return applicationNotFound();
     return Response.json({ success: true, data });
@@ -23,7 +26,8 @@ export async function PUT(request: Request, { params }: Context) {
     const authorization = await authorizeRole("student");
     if (!authorization.authorized) return authorization.response;
     const { id } = await params;
-    const input = applicationInputSchema.safeParse(await request.json());
+    if (!validObjectId(id)) return invalidIdResponse();
+    const input = applicationInputSchema.safeParse(await readJson(request));
     if (!input.success) {
       return Response.json({ success: false, message: input.error.issues[0].message }, { status: 400 });
     }
@@ -32,7 +36,7 @@ export async function PUT(request: Request, { params }: Context) {
     if (existing.opportunityId) {
       const officialFields = ["organisation", "roleTitle", "location", "jobDescription", "deadline", "sourceLink"] as const;
       if (officialFields.some((field) => input.data[field] !== existing[field])) {
-        return Response.json({ success: false, message: "Opportunity information is managed by the employer or admin." }, { status: 403 });
+        return Response.json({ success: false, message: "Tracked job details are a historical snapshot and cannot be edited. View the latest opportunity for current information." }, { status: 403 });
       }
     }
     const data = await updateApplication(id, authorization.user.id, input.data);
@@ -48,6 +52,7 @@ export async function DELETE(request: Request, { params }: Context) {
     const authorization = await authorizeRole("student");
     if (!authorization.authorized)return authorization.response;
     const { id } = await params;
+    if (!validObjectId(id)) return invalidIdResponse();
     const data = await deleteApplication(id, authorization.user.id);
     if (!data) return applicationNotFound();
     return Response.json({ success: true, message: "Application deleted successfully.", data });

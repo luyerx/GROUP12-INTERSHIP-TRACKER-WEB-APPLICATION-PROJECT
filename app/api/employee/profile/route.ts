@@ -1,3 +1,4 @@
+import { readJson } from "@/lib/apiValidation";
 import { z } from "zod";
 import { authorizeRole } from "@/lib/authorization";
 import { UserModel } from "@/lib/models/User";
@@ -15,7 +16,7 @@ export async function PATCH(request: Request) {
   try {
     const auth = await authorizeRole("employee");
     if (!auth.authorized) return auth.response;
-    const input = schema.safeParse(await request.json());
+    const input = schema.safeParse(await readJson(request));
     if (!input.success)
       return Response.json(
         { message: input.error.issues[0].message },

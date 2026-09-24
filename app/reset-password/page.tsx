@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { ArrowLeft, LoaderCircle, Eye, EyeOff } from "lucide-react";
 
+import { accountPasswordError } from "@/lib/accountPassword";
 import AuthLayout from "@/components/auth/AuthLayout";
 
 export default function ResetPasswordPage() {
@@ -34,8 +35,8 @@ function ResetPasswordForm() {
   const handleSubmit = async () => {
     setError("");
     if (!token) return setError("This reset link is missing a token.");
-    if (password.length < 8)
-      return setError("Password must contain at least 8 characters.");
+    const passwordError = accountPasswordError(password);
+    if (passwordError) return setError(passwordError);
     if (password !== confirmPassword)
       return setError("Passwords do not match.");
 
@@ -115,7 +116,7 @@ function ResetPasswordForm() {
           </label>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p id="password-hint" className="text-xs text-slate-500">
-              Use at least 8 characters.
+              Use at least 8 characters and at most 72 UTF-8 bytes.
             </p>
             <button
               className="btn-secondary"

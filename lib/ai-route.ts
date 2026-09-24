@@ -2,7 +2,6 @@ import "server-only";
 import { z } from "zod";
 import { authorizeRole } from "@/lib/authorization";
 import { getApplication } from "@/lib/applicationsRepository";
-import { OpportunityModel } from "@/lib/models/Opportunity";
 import { acquireAICooldown } from "@/lib/ai-cooldown";
 import { AIError, abortable, generateGuidance, withAIBudget } from "@/lib/gemini";
 import type { AIFeature } from "@/lib/ai-contract";
@@ -47,13 +46,12 @@ export async function handleAI(request: Request, feature: AIFeature) {
       const limit = acquireAICooldown(auth.user.id);
       if (!limit.allowed) return Response.json({ success: false, code: limit.code, message: limit.message }, { status: 429, headers: { "Retry-After": String(limit.retryAfter), "Cache-Control": "no-store" } });
       finish = limit.finish;
-      // Only published linked listings are read; private/draft employer data is never sent.
-      const opportunity = application.opportunityId ? await abortable(OpportunityModel.findOne({ _id: application.opportunityId, status: "Published" }).select("description").lean(), signal) : null;
+      // One source of job facts: exactly the saved application shown on its detail page.
       signal.throwIfAborted();
       const user = auth.user;
       const context = {
         application: { organisation: clip(application.organisation), roleTitle: clip(application.roleTitle), location: clip(application.location), status: clip(application.status), jobDescription: clip(application.jobDescription, 12000) },
-        opportunity: { description: clip(opportunity?.description, 12000) },
+        jobDataSource: application.opportunityId ? "Tracking snapshot captured when tracked; not current opportunity data." : "Saved external application data.",
         profile: { skills: list(user.skills), degree: clip(user.degree), major: clip(user.major), preferredRoles: list(user.preferredRoles), preferredLocations: list(user.preferredLocations) },
       };
       const response = json({ success: true, data: await generateGuidance(feature, context, apiKey, fetch, signal, deadline) });

@@ -73,7 +73,7 @@ export default function AIAssistantPage() {
             </label>)}
           </div>
         </fieldset>
-        <p className="mt-4 text-sm leading-6 text-slate-600">Generating sends relevant profile skills and education, plus the selected job details, to Google Gemini. Guidance may be inaccurate; verify it against the job listing. Results are not saved.</p>
+        <p className="mt-4 text-sm leading-6 text-slate-600">Generating sends relevant profile skills and education, plus saved application details, to Google Gemini. For tracked opportunities, AI uses the tracking snapshot, not the latest listing. Guidance may be inaccurate; verify it against the job listing. Results are not saved.</p>
         <div className="page-actions mt-4"><button className="btn" disabled={!applicationId || busy} onClick={() => void generate()}>{busy ? "Generating…" : "Generate"}</button><Link className="btn-secondary" href="/profile">Review profile</Link></div>
       </section>
       <div className="mt-6" aria-live="polite" aria-busy={busy}>

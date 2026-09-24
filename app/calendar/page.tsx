@@ -1056,11 +1056,11 @@ export default function CalendarPage() {
 
                   <input
                     id="eventTime"
-                    type="text"
+                    type="time"
                     value={eventTime}
                     disabled={isSavingEvent}
                     onChange={(event) => setEventTime(event.target.value)}
-                    placeholder="e.g. 10:30 AM"
+                    step={60}
                     className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-teal-600 focus:ring-4 focus:ring-teal-50 disabled:opacity-60"
                   />
                 </div>

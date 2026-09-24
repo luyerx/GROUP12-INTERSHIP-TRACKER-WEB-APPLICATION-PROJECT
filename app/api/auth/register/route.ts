@@ -21,7 +21,8 @@ export async function POST(request: Request) {
         },
         { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
       );
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ success: false, message: "Invalid request body." }, { status: 400 });
 
     if (
       typeof body.fullName !== "string" ||
@@ -119,7 +120,8 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
-    console.error("Register error:", error);
+    if (typeof error === "object" && error !== null && "code" in error && error.code === 11000)
+      return NextResponse.json({ success: false, message: "An account with this email already exists." }, { status: 409 });
 
     return NextResponse.json(
       {

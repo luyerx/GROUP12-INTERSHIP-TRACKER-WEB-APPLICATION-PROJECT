@@ -478,7 +478,7 @@ async function main() {
   const studentRow = await db.collection("users").findOne({ email: "student@example.test" });
   const token = randomBytes(32).toString("hex");
   const tokenHash = createHash("sha256").update(token).digest("hex");
-  await db.collection("passwordresettokens").insertOne({ userId: studentRow._id, tokenHash, expiresAt: new Date(Date.now() + 600000) });
+  await db.collection("passwordresettokens").insertOne({ userId: studentRow._id, tokenHash, usable: true, expiresAt: new Date(Date.now() + 600000) });
   const same = await request("/api/auth/reset-password", "POST", { token, password });
   check(same.status === 400 && same.data.message.includes("same as your current password"), "reset rejects current password");
   check(await db.collection("passwordresettokens").findOne({ tokenHash }), "rejected reset preserves token for retry");
