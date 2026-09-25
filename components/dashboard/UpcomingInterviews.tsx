@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { aucklandDateKey } from "@/lib/aucklandTime";
 import { useEffect, useState } from "react";
 type Event = {
   id: string;
@@ -21,13 +22,12 @@ export default function UpcomingInterviews() {
       const r = await fetch("/api/events", { cache: "no-store" });
       const j = await r.json();
       if (!r.ok) throw new Error(j.message || "Unable to load interviews.");
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
+      const today = aucklandDateKey();
       setRows(
         j.data
           .filter(
             (e: Event) =>
-              e.type === "interview" && new Date(e.date + "T00:00:00") >= now,
+              e.type === "interview" && e.date >= today,
           )
           .sort(
             (a: Event, b: Event) =>

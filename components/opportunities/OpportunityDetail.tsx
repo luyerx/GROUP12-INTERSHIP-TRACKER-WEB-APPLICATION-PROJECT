@@ -119,7 +119,7 @@ export default function OpportunityDetail({
                   <p className="my-4 text-sm leading-6 text-slate-600">
                     {mode === "student"
                       ? "Track saves this role in your personal pipeline. It does not submit an application to the employer."
-                      : "Draft listings are private. Published listings with an open closing date appear in student discovery. Close a listing to end discovery."}
+                      : "Draft listings are private. Published listings from Active Employee accounts with an open closing date appear in student discovery. Close a listing to end discovery."}
                   </p>
                   {mode === "student" ? (
                     row.applicationId ? (

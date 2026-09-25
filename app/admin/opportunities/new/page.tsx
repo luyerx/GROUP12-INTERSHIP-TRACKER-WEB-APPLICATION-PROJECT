@@ -1,4 +1,5 @@
-import OpportunityForm from "@/components/opportunities/OpportunityForm";
+import { redirect } from "next/navigation";
+
 export default function Page() {
-  return <OpportunityForm mode="admin" />;
+  redirect("/admin/opportunities");
 }

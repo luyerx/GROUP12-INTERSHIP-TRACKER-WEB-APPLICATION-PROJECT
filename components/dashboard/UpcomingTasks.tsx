@@ -2,7 +2,9 @@ import Link from "next/link";
 
 import { ArrowUpRight, CalendarDays } from "lucide-react";
 
-import { formatAppDateShort, parseAppDate } from "@/lib/date";
+import { formatAppDateShort, toDateInputValue } from "@/lib/date";
+
+import { aucklandDateKey, calendarDayDifference } from "@/lib/aucklandTime";
 
 type Application = {
   id: string;
@@ -16,56 +18,12 @@ type UpcomingTasksProps = {
   applications: Application[];
 };
 
-function getDaysUntilDeadline(deadline: string) {
-  const date = parseAppDate(deadline);
-
-  if (!date) {
-    return null;
-  }
-
-  const today = new Date();
-
-  today.setHours(0, 0, 0, 0);
-
-  date.setHours(0, 0, 0, 0);
-
-  const difference = date.getTime() - today.getTime();
-
-  return Math.ceil(difference / (1000 * 60 * 60 * 24));
-}
-
 export default function UpcomingTasks({ applications }: UpcomingTasksProps) {
-  const today = new Date();
-
-  today.setHours(0, 0, 0, 0);
-
-  const fourteenDaysFromNow = new Date(today);
-
-  fourteenDaysFromNow.setDate(today.getDate() + 14);
-
+  const today = aucklandDateKey();
   const upcomingTasks = applications
-    .filter((application) => {
-      const deadline = parseAppDate(application.deadline);
-
-      if (!deadline) {
-        return false;
-      }
-
-      deadline.setHours(0, 0, 0, 0);
-
-      return deadline >= today && deadline <= fourteenDaysFromNow;
-    })
-    .sort((a, b) => {
-      const firstDeadline = parseAppDate(a.deadline);
-
-      const secondDeadline = parseAppDate(b.deadline);
-
-      if (!firstDeadline || !secondDeadline) {
-        return 0;
-      }
-
-      return firstDeadline.getTime() - secondDeadline.getTime();
-    })
+    .map((application) => ({ application, daysRemaining: calendarDayDifference(toDateInputValue(application.deadline), today) }))
+    .filter(({ daysRemaining }) => daysRemaining >= 0 && daysRemaining <= 14)
+    .sort((a, b) => a.daysRemaining - b.daysRemaining)
     .slice(0, 3);
 
   return (
@@ -91,8 +49,7 @@ export default function UpcomingTasks({ applications }: UpcomingTasksProps) {
       </div>
 
       <div className="mt-6 divide-y divide-slate-100">
-        {upcomingTasks.map((application) => {
-          const daysRemaining = getDaysUntilDeadline(application.deadline);
+        {upcomingTasks.map(({ application, daysRemaining }) => {
 
           return (
             <Link

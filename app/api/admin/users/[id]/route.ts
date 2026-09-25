@@ -25,19 +25,23 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!input.success) return deny(input.error.issues[0].message, 400);
   const superadmin = authorization.user.role === "superadmin";
   if (input.data.role !== undefined && !superadmin) return deny("Only Super Admin can change roles.");
-  await connectToDatabase();
-  // Include allowed target roles in the mutation itself to protect against concurrent promotion.
-  const allowedRoles = superadmin ? ["student", "employee", "admin"] : ["student", "employee"];
-  const user = await UserModel.findOneAndUpdate(
-    { _id: id, role: { $in: allowedRoles } },
-    {
-      major: input.data.programme, status: input.data.status,
-      ...(input.data.role !== undefined ? { role: input.data.role.toLowerCase() } : {})
-    },
-    { returnDocument: "after", runValidators: true },
-  );
-  if (!user) return deny("Account is protected or no longer available.");
-  return Response.json({ success: true });
+  try {
+    await connectToDatabase();
+    // Include allowed target roles in the mutation itself to protect against concurrent promotion.
+    const allowedRoles = superadmin ? ["student", "employee", "admin"] : ["student", "employee"];
+    const user = await UserModel.findOneAndUpdate(
+      { _id: id, role: { $in: allowedRoles } },
+      {
+        major: input.data.programme, status: input.data.status,
+        ...(input.data.role !== undefined ? { role: input.data.role.toLowerCase() } : {})
+      },
+      { returnDocument: "after", runValidators: true },
+    );
+    if (!user) return deny("Account is protected or no longer available.");
+    return Response.json({ success: true });
+  } catch {
+    return Response.json({ success: false, message: "Unable to update account. Please retry." }, { status: 500 });
+  }
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {

@@ -11,8 +11,8 @@ export async function testWorkspaceUI({ base, student, employee, admin, superadm
   const check = (value, label) => { assert.ok(value, label); count++; console.log("UI PASS " + label); };
   const output = process.env.UI_SCREENSHOTS_DIR;
   if (output) await fs.mkdir(output, { recursive: true });
-  async function session(cookie) {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  async function session(cookie, timezoneId = "Pacific/Auckland") {
+    const context = await browser.newContext({ timezoneId, viewport: { width: 1440, height: 1000 } });
     await context.addCookies([{ name: "session_token", value: cookie.slice(cookie.indexOf("=") + 1), url: base }]);
     const page = await context.newPage();
     page.on("pageerror", e => errors.push(e.message));
@@ -111,6 +111,12 @@ export async function testWorkspaceUI({ base, student, employee, admin, superadm
     await page.getByRole("button", { name: "Add event", exact: true }).click();
     await page.locator('#eventTitle').fill("UI regression interview");
     await page.locator('#eventDate').fill("2026-09-20");
+    await page.route("**/api/events", route => route.request().method() === "POST" ? route.fulfill({ status: 500, json: { success: false, message: "Unable to save calendar event. Please retry." } }) : route.continue());
+    await page.getByRole("button", { name: "Add event", exact: true }).last().click();
+    await page.getByRole("alert").filter({ hasText: "Unable to save calendar event." }).waitFor();
+    check(await page.locator('#eventTitle').inputValue() === "UI regression interview", "Calendar failed write retains input");
+    check(await page.getByRole("button", { name: "Add event", exact: true }).last().isEnabled(), "Calendar failed write releases button");
+    await page.unroute("**/api/events");
     await page.getByRole("button", { name: "Add event", exact: true }).last().click();
     await page.getByRole("dialog", { name: "Calendar event", exact: true }).waitFor({ state: "hidden" });
     await page.getByRole("button", { name: /interview:.*UI regression interview/ }).click();
@@ -147,6 +153,15 @@ export async function testWorkspaceUI({ base, student, employee, admin, superadm
     await adminPage.goto(base + "/admin/resources");
     const resourceRow = adminPage.getByRole("row").filter({ hasText: "UI unavailable template" });
     await resourceRow.getByRole("button", { name: "Edit", exact: true }).click();
+    const resourceDialog = adminPage.getByRole("dialog", { name: "Edit resource", exact: true });
+    await resourceDialog.locator('input[name="title"]').fill("Retained title after failure");
+    await resourceDialog.locator('input[name="url"]').fill("https://www.auckland.ac.nz");
+    await adminPage.route("**/api/admin/content/*?kind=resources", route => route.request().method() === "PUT" ? route.fulfill({ status: 500, json: { success: false, message: "Unable to update content. Please retry." } }) : route.continue());
+    await resourceDialog.getByRole("button", { name: "Save changes", exact: true }).click();
+    await resourceDialog.getByRole("alert").waitFor();
+    check(await resourceDialog.locator('input[name="title"]').inputValue() === "Retained title after failure", "Admin failed write retains modal input");
+    check(await resourceDialog.getByRole("button", { name: "Save changes", exact: true }).isEnabled(), "Admin failed write allows retry");
+    await adminPage.unroute("**/api/admin/content/*?kind=resources");
     adminPage.once("dialog", dialog => dialog.accept());
     const deletedResponse = adminPage.waitForResponse(response => response.url().includes("/api/admin/content/") && response.request().method() === "DELETE");
     await adminPage.getByRole("dialog", { name: "Edit resource", exact: true }).getByRole("button", { name: "Delete", exact: true }).click();
@@ -233,6 +248,43 @@ export async function testWorkspaceUI({ base, student, employee, admin, superadm
     for (const route of ["/admin/dashboard", "/admin/opportunities", "/admin/resources"]) {
       await superPage.goto(base + route); await superPage.locator('h1').waitFor();
       check(superPage.url().endsWith(route), "Super Admin page accessible: " + route);
+    }
+    for (const manager of [adminPage, superPage]) {
+      await manager.goto(base + "/admin/opportunities");
+      await manager.getByRole("heading", { name: "Opportunities", exact: true }).waitFor();
+      check(await manager.getByRole("link", { name: "Create Opportunity", exact: true }).count() === 0, "Admin has no creation entry");
+      await manager.goto(base + "/admin/opportunities/new");
+      await manager.waitForURL(base + "/admin/opportunities");
+      check(await manager.getByText(/Review and manage existing Employee listings/).count() === 1, "Admin direct new URL returns to management");
+    }
+    for (const timezone of ["Pacific/Auckland", "America/Los_Angeles"]) {
+      const datesPage = await session(student, timezone);
+      for (const [now, today, tomorrow] of [
+        ["2026-09-25T12:01:00Z", "2026-09-26", "2026-09-27"],
+        ["2026-04-04T14:01:00Z", "2026-04-05", "2026-04-06"],
+        ["2026-09-26T14:01:00Z", "2026-09-27", "2026-09-28"],
+      ]) {
+        await datesPage.clock.setFixedTime(new Date(now));
+        await datesPage.route("**/api/applications", route => route.fulfill({ json: { success: true, data: [
+          { id: "today", organisation: "Today Company", roleTitle: "Today role", status: "Preparing", deadline: today },
+          { id: "tomorrow", organisation: "Tomorrow Company", roleTitle: "Tomorrow role", status: "Preparing", deadline: tomorrow },
+        ] } }));
+        await datesPage.route("**/api/events", route => route.fulfill({ json: { success: true, data: [
+          { id: "later", type: "interview", title: "Later interview", date: today, time: "15:00", applicationId: appId },
+          { id: "early", type: "interview", title: "Early interview", date: today, time: "09:00", applicationId: appId },
+          { id: "past", type: "interview", title: "Past interview", date: "2026-01-01", time: "09:00", applicationId: appId },
+        ] } }));
+        await datesPage.goto(base + "/dashboard");
+        const tasks = datesPage.locator('section').filter({ has: datesPage.getByRole('heading', { name: 'Upcoming tasks', exact: true }) });
+        await tasks.getByText("Due today", { exact: true }).waitFor();
+        check(await tasks.getByText("Due tomorrow", { exact: true }).count() === 1, timezone + " Auckland today/tomorrow agrees across midnight and DST");
+        await datesPage.getByText("Early interview", { exact: true }).waitFor();
+        check(await datesPage.getByText("Past interview", { exact: true }).count() === 0, timezone + " excludes past interviews");
+        const interviews = datesPage.locator('section').filter({ has: datesPage.getByRole('heading', { name: 'Upcoming interviews', exact: true }) });
+        check((await interviews.locator('a').allTextContents()).join('|').indexOf('Early interview') < (await interviews.locator('a').allTextContents()).join('|').indexOf('Later interview'), "same-day interviews sorted by HH:mm");
+        await datesPage.unroute("**/api/applications"); await datesPage.unroute("**/api/events");
+      }
+      await datesPage.context().close();
     }
     await page.goto(base + "/admin/users"); check(page.url().endsWith('/dashboard'), "Student admin route denied");
     await employeePage.goto(base + "/admin/users"); check(employeePage.url().endsWith('/employee/dashboard'), "Employee admin route denied");

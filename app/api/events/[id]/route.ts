@@ -11,9 +11,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!validObjectId(id)) return invalidIdResponse();
   const input = calendarEventSchema.safeParse(await readJson(request));
   if (!input.success) return Response.json({ success: false, message: input.error.issues[0].message }, { status: 400 });
-  const data = await updateCalendarEvent(id, authorization.user.id, input.data);
-  if (!data) return Response.json({ success: false, message: "The event or selected application was not found." }, { status: 404 });
-  return Response.json({ success: true, data });
+  try {
+    const data = await updateCalendarEvent(id, authorization.user.id, input.data);
+    if (!data) return Response.json({ success: false, message: "The event or selected application was not found." }, { status: 404 });
+    return Response.json({ success: true, data });
+  } catch {
+    return Response.json({ success: false, message: "Unable to update calendar event. Please retry." }, { status: 500 });
+  }
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -21,7 +25,11 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!authorization.authorized) return authorization.response;
   const { id } = await params;
     if (!validObjectId(id)) return invalidIdResponse();
-  const data = await deleteCalendarEvent(id, authorization.user.id);
-  if (!data) return Response.json({ success: false, message: "Calendar event not found." }, { status: 404 });
-  return Response.json({ success: true });
+  try {
+    const data = await deleteCalendarEvent(id, authorization.user.id);
+    if (!data) return Response.json({ success: false, message: "Calendar event not found." }, { status: 404 });
+    return Response.json({ success: true });
+  } catch {
+    return Response.json({ success: false, message: "Unable to update calendar event. Please retry." }, { status: 500 });
+  }
 }

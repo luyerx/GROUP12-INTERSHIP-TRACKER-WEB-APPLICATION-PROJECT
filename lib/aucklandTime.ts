@@ -48,3 +48,8 @@ export function aucklandOccurrence(date: string, time: string, endOfDay = false)
   }
   return matches.length === 1 ? matches[0] : null;
 }
+
+// Inputs are validated YYYY-MM-DD calendar keys; UTC removes 23/25-hour DST days.
+export function calendarDayDifference(dateKey: string, todayKey = aucklandDateKey()): number {
+  return (Date.parse(dateKey + "T00:00:00Z") - Date.parse(todayKey + "T00:00:00Z")) / 86400000;
+}

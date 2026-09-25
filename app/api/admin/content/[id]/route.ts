@@ -49,26 +49,30 @@ export async function PUT(
       { success: false, message: input.error.issues[0].message },
       { status: 400 },
     );
-  await connectToDatabase();
-  const row =
-    kind === "resources"
-      ? await ResourceModel.findByIdAndUpdate(id, input.data, {
-          returnDocument: "after",
-          runValidators: true,
-        }).lean()
-      : await OpportunityModel.findByIdAndUpdate(id, input.data, {
-          returnDocument: "after",
-          runValidators: true,
-        }).lean();
-  if (!row)
-    return Response.json(
-      { success: false, message: "Content not found." },
-      { status: 404 },
-    );
-  return Response.json({
-    success: true,
-    data: { ...row, id: String(row._id) },
-  });
+  try {
+    await connectToDatabase();
+    const row =
+      kind === "resources"
+        ? await ResourceModel.findByIdAndUpdate(id, input.data, {
+            returnDocument: "after",
+            runValidators: true,
+          }).lean()
+        : await OpportunityModel.findByIdAndUpdate(id, input.data, {
+            returnDocument: "after",
+            runValidators: true,
+          }).lean();
+    if (!row)
+      return Response.json(
+        { success: false, message: "Content not found." },
+        { status: 404 },
+      );
+    return Response.json({
+      success: true,
+      data: { ...row, id: String(row._id) },
+    });
+  } catch {
+    return Response.json({ success: false, message: "Unable to update content. Please retry." }, { status: 500 });
+  }
 }
 
 export async function DELETE(
@@ -85,15 +89,19 @@ export async function DELETE(
       { success: false, message: "A valid content kind is required." },
       { status: 400 },
     );
-  await connectToDatabase();
-  const row =
-    kind === "resources"
-      ? await ResourceModel.findByIdAndDelete(id).lean()
-      : await OpportunityModel.findByIdAndDelete(id).lean();
-  if (!row)
-    return Response.json(
-      { success: false, message: "Content not found." },
-      { status: 404 },
-    );
-  return Response.json({ success: true });
+  try {
+    await connectToDatabase();
+    const row =
+      kind === "resources"
+        ? await ResourceModel.findByIdAndDelete(id).lean()
+        : await OpportunityModel.findByIdAndDelete(id).lean();
+    if (!row)
+      return Response.json(
+        { success: false, message: "Content not found." },
+        { status: 404 },
+      );
+    return Response.json({ success: true });
+  } catch {
+    return Response.json({ success: false, message: "Unable to update content. Please retry." }, { status: 500 });
+  }
 }

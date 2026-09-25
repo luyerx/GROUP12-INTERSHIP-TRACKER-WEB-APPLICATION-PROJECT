@@ -53,6 +53,7 @@ export default function AdminContentTable({ kind }: { kind: Kind }) {
   }, [load]);
 
   useEffect(() => {
+    if (kind !== "resources") return;
     const name = `admin:add:${kind === "resources" ? "resource" : "opportunity"}`;
     const open = () =>
       setEditing(

@@ -24,11 +24,12 @@ export async function POST(request: Request) {
     const user = await getAuthenticatedUser();
     if (!user)
       return Response.json({ message: "Please sign in." }, { status: 401 });
-    if (user.role === "student")
+    if (user.role !== "employee")
       return Response.json(
         {
+          success: false,
           message:
-            "Only recruitment and admin accounts can publish opportunities.",
+            "Only Active Employee accounts can create opportunities. Admin accounts manage existing Employee listings.",
         },
         { status: 403 },
       );

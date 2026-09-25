@@ -22,7 +22,8 @@ import UpcomingTasks from "@/components/dashboard/UpcomingTasks";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import OpportunityBrowser from "@/components/opportunities/OpportunityBrowser";
 
-import { parseAppDate } from "@/lib/date";
+import { toDateInputValue, formatAppDate } from "@/lib/date";
+import { aucklandDateKey, calendarDayDifference, BUSINESS_TIME_ZONE } from "@/lib/aucklandTime";
 
 type ApplicationStatus =
   | "Interested"
@@ -52,32 +53,6 @@ type CurrentUserResponse = {
   success: boolean;
   user?: { fullName: string };
 };
-
-/*
- * Use the shared application date parser first.
- * Keep the previous fallback behaviour so the
- * Dashboard continues to accept other valid
- * JavaScript date strings if they appear.
- */
-function parseDashboardDeadline(deadline: string): Date | null {
-  const parsedDate = parseAppDate(deadline);
-
-  if (parsedDate) {
-    return parsedDate;
-  }
-
-  if (!deadline) {
-    return null;
-  }
-
-  const fallback = new Date(deadline);
-
-  if (Number.isNaN(fallback.getTime())) {
-    return null;
-  }
-
-  return fallback;
-}
 
 async function fetchApplications(): Promise<Application[]> {
   const response = await fetch("/api/applications", {
@@ -181,6 +156,7 @@ export default function DashboardPage() {
     }
   };
 
+  const today = aucklandDateKey();
   const dashboardStats = useMemo(() => {
     const totalApplications = applications.length;
 
@@ -192,24 +168,10 @@ export default function DashboardPage() {
       (application) => application.status === "Offer",
     ).length;
 
-    const today = new Date();
-
-    today.setHours(0, 0, 0, 0);
-
-    const fourteenDaysFromNow = new Date(today);
-
-    fourteenDaysFromNow.setDate(today.getDate() + 14);
-
     const upcomingDeadlineCount = applications.filter((application) => {
-      const deadline = parseDashboardDeadline(application.deadline);
-
-      if (!deadline) {
-        return false;
-      }
-
-      deadline.setHours(0, 0, 0, 0);
-
-      return deadline >= today && deadline <= fourteenDaysFromNow;
+      const key = toDateInputValue(application.deadline);
+      const days = key ? calendarDayDifference(key, today) : NaN;
+      return days >= 0 && days <= 14;
     }).length;
 
     return {
@@ -218,17 +180,16 @@ export default function DashboardPage() {
       offerCount,
       upcomingDeadlineCount,
     };
-  }, [applications]);
+  }, [applications, today]);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
   const nextDeadline = applications
     .filter((a) => a.status === "Interested" || a.status === "Preparing")
-    .map((application) => ({ application, date: parseDashboardDeadline(application.deadline) }))
+    .map((application) => ({ application, date: toDateInputValue(application.deadline) }))
     .filter((item) => item.date && item.date >= today)
-    .sort((a, b) => a.date!.getTime() - b.date!.getTime())[0];
+    .sort((a, b) => a.date.localeCompare(b.date))[0];
 
   const currentDateLabel = new Date().toLocaleDateString("en-NZ", {
+    timeZone: BUSINESS_TIME_ZONE,
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -308,7 +269,7 @@ export default function DashboardPage() {
               </h2>
             </div>
             {nextDeadline && <div className="primary-action">
-              <div><p className="text-sm text-teal-800">Due {nextDeadline.date!.toLocaleDateString("en-NZ", { day: "numeric", month: "long" })}</p>
+              <div><p className="text-sm text-teal-800">Due {formatAppDate(nextDeadline.date)}</p>
                 <h3 className="mt-2 text-xl font-semibold text-slate-950">{nextDeadline.application.roleTitle}</h3>
                 <p className="mt-1 text-sm text-slate-600">{nextDeadline.application.organisation}</p></div>
               <Link className="btn" href={"/applications/" + nextDeadline.application.id}>Review application →</Link>

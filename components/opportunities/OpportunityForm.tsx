@@ -265,7 +265,7 @@ export default function OpportunityForm({
                     {data.status === "Draft"
                       ? "Keep this listing private while you prepare it."
                       : data.status === "Published"
-                        ? "Students can discover published listings while the closing date is current."
+                        ? "Students can discover published listings from Active Employee accounts while the closing date is current."
                         : "This listing will no longer appear in student discovery."}
                   </p>
                 </div>

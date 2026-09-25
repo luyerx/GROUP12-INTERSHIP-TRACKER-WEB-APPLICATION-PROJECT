@@ -1,7 +1,6 @@
 import { readJson } from "@/lib/apiValidation";
 import { z } from "zod";
 import { validResourceLink } from "@/lib/resource-url";
-import { opportunityInputSchema } from "@/lib/opportunity";
 
 import { authorizeRole } from "@/lib/authorization";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -20,7 +19,6 @@ const resourceSchema = z.object({
   status: z.enum(["Published", "Draft"]),
 }).refine(validResourceLink, { path: ["url"], message: "Published resources require a public HTTP(S) URL. Draft resources may leave the URL empty." });
 
-const opportunitySchema = opportunityInputSchema;
 
 function getKind(request: Request) {
   const kind = new URL(request.url).searchParams.get("kind");
@@ -89,27 +87,24 @@ export async function POST(request: Request) {
       { success: false, message: "A valid content kind is required." },
       { status: 400 },
     );
-  const input =
-    kind === "resources"
-      ? resourceSchema.safeParse(await readJson(request))
-      : opportunitySchema.safeParse(await readJson(request));
+  if (kind === "opportunities")
+    return Response.json({ success: false, message: "Admin accounts manage existing Employee listings. Only Active Employee accounts can create opportunities." }, { status: 403 });
+  const input = resourceSchema.safeParse(await readJson(request));
 
   if (!input.success)
     return Response.json(
       { success: false, message: input.error.issues[0].message },
       { status: 400 },
     );
-  await connectToDatabase();
-  const row =
-    kind === "resources"
-      ? await ResourceModel.create(input.data)
-      : await OpportunityModel.create({
-          ...input.data,
-          createdBy: authorization.user.id,
-        });
+  try {
+    await connectToDatabase();
+    const row = await ResourceModel.create(input.data);
 
-  return Response.json(
-    { success: true, data: { ...row.toObject(), id: String(row._id) } },
-    { status: 201 },
-  );
+    return Response.json(
+      { success: true, data: { ...row.toObject(), id: String(row._id) } },
+      { status: 201 },
+    );
+  } catch {
+    return Response.json({ success: false, message: "Unable to save content. Please retry." }, { status: 500 });
+  }
 }

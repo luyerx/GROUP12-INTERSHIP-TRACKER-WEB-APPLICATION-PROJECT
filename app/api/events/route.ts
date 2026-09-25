@@ -14,7 +14,11 @@ export async function POST(request: Request) {
   if (!authorization.authorized) return authorization.response;
   const input = calendarEventSchema.safeParse(await readJson(request));
   if (!input.success) return Response.json({ success: false, message: input.error.issues[0].message }, { status: 400 });
-  const data = await createCalendarEvent(authorization.user.id, input.data);
-  if (!data) return Response.json({ success: false, message: "The selected application does not belong to this user." }, { status: 400 });
-  return Response.json({ success: true, data }, { status: 201 });
+  try {
+    const data = await createCalendarEvent(authorization.user.id, input.data);
+    if (!data) return Response.json({ success: false, message: "The selected application does not belong to this user." }, { status: 400 });
+    return Response.json({ success: true, data }, { status: 201 });
+  } catch {
+    return Response.json({ success: false, message: "Unable to save calendar event. Please retry." }, { status: 500 });
+  }
 }

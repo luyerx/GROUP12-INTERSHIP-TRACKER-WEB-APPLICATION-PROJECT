@@ -78,8 +78,8 @@ export default function OpportunityBrowser({
         <PageHeader
           eyebrow={mode === "student" ? "Career discovery" : mode === "employee" ? "Recruitment" : "Content management"}
           title={mode === "employee" ? "My Opportunities" : "Opportunities"}
-          description={mode === "student" ? "Find your next step. Track a published role in My Applications, then follow the employer’s instructions to apply." : "Create clear listings, publish when ready, and close opportunities when recruitment ends."}
-          action={mode !== "student" ? <Link className="btn" href={base + "/new"}>Create Opportunity</Link> : undefined}
+          description={mode === "student" ? "Find your next step. Track a published role in My Applications, then follow the employer’s instructions to apply." : mode === "admin" ? "Review and manage existing Employee listings. Only Active Employee accounts can create student-discoverable opportunities." : "Create clear listings, publish when ready, and close opportunities when recruitment ends."}
+          action={mode === "employee" ? <Link className="btn" href={base + "/new"}>Create Opportunity</Link> : undefined}
         />
       )}
       {!compact && (
@@ -177,21 +177,21 @@ export default function OpportunityBrowser({
               ? "No matching opportunities"
               : mode === "student"
                 ? "Your next opportunity is on its way"
-                : "Publish your first opportunity"
+                : mode === "admin" ? "No Employee opportunities to manage" : "Publish your first opportunity"
           }
           description={
             rows.length
               ? "Try a broader search or reset your filters to see all listings."
               : mode === "student"
                 ? "No open roles are available yet. You can still track roles you find on company websites, LinkedIn or Seek."
-                : "Start with a draft, add the role details, then publish when you are ready."
+                : mode === "admin" ? "Employee listings will appear here for review and management." : "Start with a draft, add the role details, then publish when you are ready."
           }
           action={
             rows.length ? (
               <button className="btn-secondary" onClick={clearFilters}>
                 Clear filters
               </button>
-            ) : (
+            ) : mode === "admin" ? undefined : (
               <Link
                 className="btn"
                 href={mode === "student" ? "/applications/new" : base + "/new"}
