@@ -1,8 +1,5 @@
 # Internship Tracker
 
-[Sep 10 SZY update](docs/Sep10-szy-update.md)
-[Sep 10 luyerx update](docs/Sep11-luyerx-update.md)
-
 A Next.js internship tracking application for managing opportunities, applications, deadlines, career resources, and student profiles.
 
 ## Current features
