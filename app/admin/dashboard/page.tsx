@@ -70,6 +70,11 @@ export default function Page() {
             "/admin/resources",
             "Maintain guides, templates and career preparation resources.",
           ],
+          [
+            "AI Usage",
+            "/admin/ai-usage",
+            "Review Gemini usage totals, recent activity and user-level AI request counts.",
+          ],
         ].map(([title, href, copy]) => (
           <Link key={href} href={href} className="panel hover:border-teal-400">
             <h2 className="text-lg font-semibold">{title} →</h2>

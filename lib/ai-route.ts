@@ -2,8 +2,8 @@ import "server-only";
 import { z } from "zod";
 import { authorizeRole } from "@/lib/authorization";
 import { getApplication } from "@/lib/applicationsRepository";
-import { acquireAICooldown } from "@/lib/ai-cooldown";
-import { AIError, abortable, generateGuidance, withAIBudget } from "@/lib/gemini";
+import { acquireAICooldown, consumeAIUsage, getAIUsageSummary } from "@/lib/ai-cooldown";
+import { AIError, abortable, generateGuidance, withAIBudget, GEMINI_MODEL } from "@/lib/gemini";
 import type { AIFeature } from "@/lib/ai-contract";
 
 const inputSchema = z.object({ applicationId: z.string().regex(/^[a-f\d]{24}$/i) }).strict();
@@ -13,11 +13,11 @@ const json = (body: unknown, status = 200) => Response.json(body, { status, head
 
 export async function handleAI(request: Request, feature: AIFeature) {
   let finish: (() => void) | undefined;
+  let usage: ReturnType<typeof getAIUsageSummary> | undefined;
   try {
     return await withAIBudget(async (signal, deadline) => {
       const auth = await abortable(authorizeRole("student"), signal);
       if (!auth.authorized) return json({ success: false, code: auth.response.status === 401 ? "AI_AUTH_REQUIRED" : auth.response.status === 403 ? "AI_ACCESS_DENIED" : "AI_INTERNAL_ERROR", message: auth.response.status === 401 ? "Please sign in to generate guidance." : "Unable to access AI guidance." }, auth.response.status);
-      // Stream the small ID-only body with a hard bound, even without Content-Length.
       const reader = request.body?.getReader();
       if (!reader) return json({ success: false, message: "Choose an application." }, 400);
       let body = "", bytes = 0;
@@ -39,14 +39,18 @@ export async function handleAI(request: Request, feature: AIFeature) {
       const input = inputSchema.safeParse(parsed);
       if (!input.success) return json({ success: false, message: "Choose a valid application." }, 400);
       const application = await abortable(getApplication(input.data.applicationId, auth.user.id), signal);
-      // Identical response for missing and other students' records avoids leaking existence.
       if (!application) return json({ success: false, message: "Application not found." }, 404);
       const apiKey = process.env.GEMINI_API_KEY?.trim();
-      if (!apiKey) return json({ success: false, message: "AI is not configured yet. Please contact the project administrator." }, 503);
+      if (!apiKey) return json({ success: false, code: "AI_PROVIDER_ACCESS_DENIED", message: "AI is not configured yet. Please contact the project administrator." }, 503);
       const limit = acquireAICooldown(auth.user.id);
       if (!limit.allowed) return Response.json({ success: false, code: limit.code, message: limit.message }, { status: 429, headers: { "Retry-After": String(limit.retryAfter), "Cache-Control": "no-store" } });
       finish = limit.finish;
-      // One source of job facts: exactly the saved application shown on its detail page.
+      const usageCheck = consumeAIUsage(auth.user.id);
+      if (!usageCheck.allowed) {
+        finish?.();
+        return json({ success: false, code: usageCheck.code, message: usageCheck.message }, 429);
+      }
+      usage = usageCheck.usage;
       signal.throwIfAborted();
       const user = auth.user;
       const context = {
@@ -54,7 +58,7 @@ export async function handleAI(request: Request, feature: AIFeature) {
         jobDataSource: application.opportunityId ? "Tracking snapshot captured when tracked; not current opportunity data." : "Saved external application data.",
         profile: { skills: list(user.skills), degree: clip(user.degree), major: clip(user.major), preferredRoles: list(user.preferredRoles), preferredLocations: list(user.preferredLocations) },
       };
-      const response = json({ success: true, data: await generateGuidance(feature, context, apiKey, fetch, signal, deadline) });
+      const response = json({ success: true, usage, model: GEMINI_MODEL, data: await generateGuidance(feature, context, apiKey, fetch, signal, deadline) });
       return response;
     }, request.signal);
   } catch (error) {
