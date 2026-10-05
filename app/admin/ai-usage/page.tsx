@@ -37,22 +37,83 @@ export default function AdminAIUsagePage() {
   async function load() {
     setLoading(true);
     setError("");
+
     try {
       const response = await fetch("/api/admin/ai-usage", { cache: "no-store" });
       const payload = await response.json();
-      if (!response.ok || !payload.success) throw new Error(payload.message || "Unable to load AI usage records.");
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || "Unable to load AI usage records.");
+      }
+
       setSummary(payload.data);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Unable to load AI usage records.");
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Unable to load AI usage records."
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let cancelled = false;
 
-  if (loading) return <div className="mt-6"><LoadingState label="Loading AI usage records…" /></div>;
-  if (error) return <div className="mt-6"><ErrorState message={error} retry={() => void load()} /></div>;
+    async function loadInitial() {
+      try {
+        const response = await fetch("/api/admin/ai-usage", {
+          cache: "no-store",
+        });
+        const payload = await response.json();
+
+        if (!response.ok || !payload.success) {
+          throw new Error(
+            payload.message || "Unable to load AI usage records."
+          );
+        }
+
+        if (!cancelled) {
+          setSummary(payload.data);
+        }
+      } catch (failure) {
+        if (!cancelled) {
+          setError(
+            failure instanceof Error
+              ? failure.message
+              : "Unable to load AI usage records."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadInitial();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="mt-6">
+        <LoadingState label="Loading AI usage records…" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mt-6">
+        <ErrorState message={error} retry={() => void load()} />
+      </div>
+    );
+  }
 
   return (
     <>
