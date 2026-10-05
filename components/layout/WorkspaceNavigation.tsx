@@ -26,7 +26,7 @@ const navigation = {
     ["Opportunities", "/opportunities", Search],
     ["My Applications", "/applications", FolderOpen],
     ["Calendar", "/calendar", CalendarDays],
-    ["AI Assistant", "/ai-assistant", Sparkles],
+    ["AI Career Hub", "/ai-assistant", Sparkles],
     ["Resources", "/resources", BookOpen],
     ["Profile", "/profile", UserRound],
   ],

@@ -6,11 +6,12 @@ import { useParams } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import { ErrorState, LoadingState } from "@/components/ui/Feedback";
-import { aiLabels, type AIFeature, type AIResult } from "@/lib/ai-contract";
+import AIResults from "@/components/ai/AIResults";
+import { aiFeatureTitles, type AIFeature, type AIResult } from "@/lib/ai-contract";
 
 type HistoryDetail = {
   id: string;
-  applicationId: string;
+  applicationId?: string;
   feature: AIFeature;
   model?: string;
   createdAt: string;
@@ -20,7 +21,7 @@ type HistoryDetail = {
 function formatDateTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Unknown date";
-  return date.toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+  return date.toLocaleString("en-NZ", { timeZone: "Pacific/Auckland", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 export default function AIHistoryDetailPage() {
@@ -28,6 +29,7 @@ export default function AIHistoryDetailPage() {
   const [entry, setEntry] = useState<HistoryDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -48,10 +50,10 @@ export default function AIHistoryDetailPage() {
     }
 
     void load();
-  }, [params.id]);
+  }, [params.id, reload]);
 
-  if (loading) return <DashboardLayout><PageHeader eyebrow="AI history" title="History detail" description="Review the saved guidance generated for this application." /><div className="mt-6"><LoadingState label="Loading AI history item…" /></div></DashboardLayout>;
-  if (error) return <DashboardLayout><PageHeader eyebrow="AI history" title="History detail" description="Review the saved guidance generated for this application." /><div className="mt-6"><ErrorState message={error} /></div></DashboardLayout>;
+  if (loading) return <DashboardLayout><PageHeader eyebrow="AI history" title="History detail" description="Review your saved career guidance." /><div className="mt-6"><LoadingState label="Loading AI history item…" /></div></DashboardLayout>;
+  if (error) return <DashboardLayout><PageHeader eyebrow="AI history" title="History detail" description="Review your saved career guidance." /><div className="mt-6"><ErrorState message={error} retry={() => setReload(value => value + 1)} /></div></DashboardLayout>;
   if (!entry) return null;
 
   return (
@@ -59,13 +61,13 @@ export default function AIHistoryDetailPage() {
       <PageHeader
         eyebrow="AI history"
         title="History detail"
-        description="Review the saved guidance and recall the exact preparation advice generated for this application."
+        description="Review your previously generated career guidance. Availability and role details may have changed."
       />
       <section className="panel mb-6 min-w-0">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Application</div>
-            <div className="mt-1 text-xl font-semibold text-slate-900">{entry.applicationId}</div>
+            <div className="mt-1 text-xl font-semibold text-slate-900">{entry.applicationId ? <Link className="text-teal-700 underline" href={`/applications/${entry.applicationId}`}>View saved application</Link> : "Opportunity discovery"}</div>
           </div>
           <div className="text-right">
             <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Generated</div>
@@ -73,7 +75,7 @@ export default function AIHistoryDetailPage() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600">
-          <span className="rounded-full bg-slate-100 px-3 py-1">{entry.feature}</span>
+          <span className="rounded-full bg-slate-100 px-3 py-1">{aiFeatureTitles[entry.feature]}</span>
           {entry.model && <span className="rounded-full bg-teal-100 px-3 py-1 text-teal-700">{entry.model}</span>}
         </div>
         <div className="mt-5 flex gap-3">
@@ -81,16 +83,8 @@ export default function AIHistoryDetailPage() {
         </div>
       </section>
 
-      <section className="grid min-w-0 gap-4 md:grid-cols-2">
-        {Object.entries(entry.result).map(([key, values]) => (
-          <article className="panel min-w-0 [overflow-wrap:anywhere]" key={key}>
-            <h2 className="text-lg font-semibold">{aiLabels[key]}</h2>
-            <ul className="mt-4 list-disc space-y-3 pl-5 text-sm leading-7 text-slate-600">
-              {values.map((value: string, index: number) => <li key={index}>{value}</li>)}
-            </ul>
-          </article>
-        ))}
-      </section>
+      {entry.feature === "document-assistant" && <p className="mb-4 text-sm text-slate-600">AI suggestions should be reviewed and edited by the user before use. Only guidance and short excerpts are saved.</p>}
+      <AIResults feature={entry.feature} result={entry.result} historical />
     </DashboardLayout>
   );
 }

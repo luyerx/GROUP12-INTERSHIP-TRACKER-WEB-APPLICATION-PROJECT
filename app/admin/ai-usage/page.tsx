@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { aiFeatureTitles, type AIFeature } from "@/lib/ai-contract";
 import PageHeader from "@/components/ui/PageHeader";
 import { ErrorState, LoadingState } from "@/components/ui/Feedback";
 
@@ -26,7 +27,7 @@ function formatDateTime(value?: string) {
   if (!value) return "Never";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Never";
-  return date.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return date.toLocaleString("en-NZ", { timeZone: "Pacific/Auckland", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 export default function AdminAIUsagePage() {
@@ -120,7 +121,7 @@ export default function AdminAIUsagePage() {
       <PageHeader
         eyebrow="Platform analytics"
         title="AI Usage Overview"
-        description="Review monthly and historical Gemini usage across staff and students."
+        description="Review up to 100 students with the most saved AI history. Counts exclude deleted history and failed requests; monthly quotas are tracked separately."
       />
 
       {summary && (
@@ -131,7 +132,7 @@ export default function AdminAIUsagePage() {
               <div className="mt-2 text-3xl font-semibold">{summary.totalUsers}</div>
             </section>
             <section className="panel">
-              <p className="eyebrow">Total requests</p>
+              <p className="eyebrow">Saved history records</p>
               <div className="mt-2 text-3xl font-semibold">{summary.totalRequests}</div>
             </section>
           </div>
@@ -147,7 +148,7 @@ export default function AdminAIUsagePage() {
                   <tr className="border-b border-slate-200 text-slate-600">
                     <th className="px-3 py-2">User</th>
                     <th className="px-3 py-2">Role</th>
-                    <th className="px-3 py-2">Requests</th>
+                    <th className="px-3 py-2">Saved records</th>
                     <th className="px-3 py-2">Features</th>
                     <th className="px-3 py-2">Last used</th>
                   </tr>
@@ -161,7 +162,7 @@ export default function AdminAIUsagePage() {
                       </td>
                       <td className="px-3 py-3 capitalize text-slate-700">{item.role}</td>
                       <td className="px-3 py-3 font-semibold text-slate-900">{item.totalRequests}</td>
-                      <td className="px-3 py-3 text-slate-700">{item.features.join(", ") || "—"}</td>
+                      <td className="px-3 py-3 text-slate-700">{item.features.map(feature => aiFeatureTitles[feature as AIFeature] ?? feature).join(", ") || "—"}</td>
                       <td className="px-3 py-3 text-slate-700">{formatDateTime(item.lastUsedAt)}</td>
                     </tr>
                   ))}

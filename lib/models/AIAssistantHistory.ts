@@ -1,6 +1,7 @@
 import "server-only";
 
 import { model, models, Schema } from "mongoose";
+import { aiFeatures } from "@/lib/ai-contract";
 
 const aiAssistantHistorySchema = new Schema(
   {
@@ -12,12 +13,12 @@ const aiAssistantHistorySchema = new Schema(
     },
     applicationId: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
     },
     feature: {
       type: String,
-      enum: ["interview-prep", "application-insights"],
+      enum: aiFeatures,
       required: true,
     },
     model: {

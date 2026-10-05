@@ -1,4 +1,5 @@
 import "server-only";
+import { aucklandDateKey } from "@/lib/aucklandTime";
 
 export const AI_MONTHLY_SOFT_LIMIT = 20;
 export const AI_MONTHLY_HARD_LIMIT = 30;
@@ -6,7 +7,7 @@ export const AI_MONTHLY_HARD_LIMIT = 30;
 const monthlyUsage = new Map<string, { monthKey: string; count: number; warned: boolean }>();
 
 function monthKeyFor(date = new Date()) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  return aucklandDateKey(date).slice(0, 7);
 }
 
 function pruneMonthlyUsage(now = Date.now()) {
@@ -97,7 +98,7 @@ export function consumeAIUsage(userId: string, now = Date.now()) {
   };
 }
 
-// Process-local, shared across both AI features; independent of auth limiters.
+// Process-local, shared across all AI features; independent of auth limiters.
 const entries = new Map<string, { starts: number[]; pending?: { expiresAt: number } }>();
 const windowMs = 60000;
 const pendingMs = 60000; // Safety lease exceeds the complete 48s route budget.

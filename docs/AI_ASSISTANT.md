@@ -1,3 +1,5 @@
+> Historical reliability notes (2026-09-23). Current Career Hub features, persistence, security and verification are documented in [AI_CAREER_HUB.md](AI_CAREER_HUB.md). Statements below about two tools, ID-only requests and unsaved results describe the earlier version.
+
 # Gemini AI Career Assistant — production reliability
 
 The Student AI Assistant uses the saved, owned application and current authenticated student profile. It produces real Gemini guidance only; no example response or cached invented result is substituted on failure. Generated results are not written to the database.

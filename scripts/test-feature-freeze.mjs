@@ -27,7 +27,7 @@ function load(file){
 }
 function check(v,label){assert.ok(v,label);count++;console.log('FREEZE PASS '+label);}
 async function call(file,method='GET',body,id,raw=false){
- const request=new Request('http://localhost/api?kind=opportunities',{method,headers:{'Content-Type':'application/json','x-forwarded-for':'198.51.100.'+(++ip)},...(body===undefined?{}:{body:raw?body:JSON.stringify(body)})});
+ const request=new Request('http://localhost/api?kind='+(file==='admin/content'&&method==='POST'?'resources':'opportunities'),{method,headers:{'Content-Type':'application/json','x-forwarded-for':'198.51.100.'+(++ip)},...(body===undefined?{}:{body:raw?body:JSON.stringify(body)})});
  const response=await load('app/api/'+file+'/route.ts')[method](request,{params:Promise.resolve({id})});
  return {status:response.status,body:await response.json()};
 }
