@@ -8,7 +8,7 @@ The existing Student AI page now presents five distinct career tools with icons,
 
 ## Five student tools — final-report reference
 
-All tools use the existing server-only Google Gemini REST `generateContent` integration through native `fetch`, strict JSON output and Zod. The configured primary model is `gemini-3.5-flash`, with `gemini-3.5-flash-lite` fallback. Each tool has its own task prompt and schema; transport, retries, timeouts and diagnostics remain shared. The successful model is returned and saved accurately, including fallback use. This implementation run did not make live Gemini calls.
+All tools use the existing server-only Google Gemini REST `generateContent` integration through native `fetch`, strict JSON output and Zod. The configured primary model is `gemini-3.5-flash-lite`, with `gemini-3.5-flash` fallback. Each tool has its own task prompt and schema; transport, retries, timeouts and diagnostics remain shared. The successful model is returned and saved accurately, including fallback use. This implementation run did not make live Gemini calls.
 
 | Function / user purpose | Data used | Deterministic processing | Gemini responsibility | Limitation |
 | --- | --- | --- | --- | --- |
@@ -59,7 +59,7 @@ Created POST routes:
 
 Preserved `/api/ai/interview-prep` and `/api/ai/application-insights`, extending their shared handler to save validated history and return accurate model/usage metadata. Hardened `/api/ai/history` GET/POST/DELETE, `/api/ai/history/[id]` GET and `/api/ai/usage` GET. `/api/admin/ai-usage` retains its existing aggregation and authorization; only its UI labels/description changed.
 
-All generation routes use Node.js with `maxDuration = 60`; 22-second attempt budget, 48-second total route budget, 55-second browser timeout and existing fallback/retry policy are retained. No second Gemini client was introduced.
+All generation routes use Node.js with `maxDuration = 60`; 12-second attempt budget, 28-second total route budget and 35-second browser timeout are shared through `lib/ai-config.ts`. At most two sequential attempts use 250–600ms fallback jitter. See [AI latency policy](AI_LATENCY.md) for bounds and verification. No second Gemini client was introduced.
 
 ## Files
 

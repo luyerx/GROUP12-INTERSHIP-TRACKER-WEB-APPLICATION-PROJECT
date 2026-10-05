@@ -21,6 +21,16 @@ import {
   type AIResult,
 } from "@/lib/ai-contract";
 import { aucklandDateKey } from "@/lib/aucklandTime";
+import { AI_BROWSER_TIMEOUT_MS, AI_SLOW_HINT_MS } from "@/lib/ai-config";
+
+const loadingLabels: Record<AIFeature, string> = {
+  "opportunity-recommendation": "Finding relevant opportunities…",
+  "smart-search": "Understanding your search…",
+  "application-summary": "Summarising this application…",
+  "document-assistant": "Reviewing your document…",
+  "interview-prep": "Preparing interview guidance…",
+  "application-insights": "Preparing application guidance…",
+};
 
 type Choice = { id: string; roleTitle: string; organisation: string };
 type HistoryEntry = {
@@ -76,6 +86,7 @@ export default function AIAssistantPage() {
   const [loadError, setLoadError] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [slowRequest, setSlowRequest] = useState(false);
   const [result, setResult] = useState<AIResult | null>(null);
   const [opportunities, setOpportunities] = useState<OpportunityCard[]>([]);
   const [totalResults, setTotalResults] = useState<number>();
@@ -203,7 +214,11 @@ export default function AIAssistantPage() {
     pending.current = controller;
     setBusy(true);
     resetResult();
-    const timer = setTimeout(() => controller.abort(), 55000);
+    setSlowRequest(false);
+    const timer = setTimeout(() => controller.abort(), AI_BROWSER_TIMEOUT_MS);
+    const hintTimer = setTimeout(() => {
+      if (!controller.signal.aborted) setSlowRequest(true);
+    }, AI_SLOW_HINT_MS);
     const input =
       feature === "smart-search"
         ? { query }
@@ -255,6 +270,8 @@ export default function AIAssistantPage() {
       );
     } finally {
       clearTimeout(timer);
+      clearTimeout(hintTimer);
+      setSlowRequest(false);
       pending.current = null;
       setBusy(false);
       void refreshUsage();
@@ -475,7 +492,8 @@ export default function AIAssistantPage() {
         </div>
       </section>
       <div className="mt-6 space-y-4" aria-live="polite" aria-busy={busy}>
-        {busy && <LoadingState label="Preparing your personalised guidance…" />}
+        {busy && <LoadingState label={loadingLabels[feature]} />}
+        {busy && slowRequest && <p className="text-sm text-slate-600">This may take a few more seconds.</p>}
         {error && (
           <ErrorState
             title="Guidance unavailable"

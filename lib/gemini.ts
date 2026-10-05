@@ -3,16 +3,13 @@ import { z } from "zod";
 import { aiPrompt } from "@/lib/ai-prompts";
 import { randomUUID } from "node:crypto";
 import { aiSchemas, DOCUMENT_EXCERPT_MAX_CHARS, type AIFeature } from "@/lib/ai-contract";
+import { AI_BUDGET_MS, AI_ATTEMPT_MS, GEMINI_MODEL, GEMINI_FALLBACK_MODEL, AI_MAX_PROVIDER_ATTEMPTS, AI_BACKOFF_MIN_MS, AI_BACKOFF_MAX_MS } from "@/lib/ai-config";
+export { AI_BUDGET_MS, AI_ATTEMPT_MS, GEMINI_MODEL, GEMINI_FALLBACK_MODEL } from "@/lib/ai-config";
 
 export class AIError extends Error {
   constructor(public status: number, message: string, public code = "AI_PROVIDER_ERROR", public reason?: string) { super(message); }
 }
 
-export const AI_BUDGET_MS = 48000;
-export const AI_ATTEMPT_MS = 22000;
-const minimumUsefulAttemptMs = 18000;
-export const GEMINI_MODEL = "gemini-3.5-flash";
-export const GEMINI_FALLBACK_MODEL = "gemini-3.5-flash-lite";
 const retryStatuses = new Set([429, 500, 502, 503, 504]);
 const timeoutError = () => new AIError(504, "AI took too long to respond. Please try again.", "AI_TIMEOUT");
 function transientNetwork(error: unknown): boolean {
@@ -66,16 +63,13 @@ export async function generateGuidance(feature: AIFeature, context: unknown, api
   const instruction = aiPrompt(feature);
   const started = Date.now();
   const requestId = randomUUID();
-  // Diversify first, then give the primary one time-separated recovery attempt.
-  // After two slow attempts, the budget gate prevents a third paid request.
-  const models = [GEMINI_MODEL, GEMINI_FALLBACK_MODEL, GEMINI_MODEL];
-  let primaryRateLimited = false;
+  // Sequential fallback only: no racing or third paid recovery request.
+  const models = [GEMINI_MODEL, GEMINI_FALLBACK_MODEL].slice(0, AI_MAX_PROVIDER_ATTEMPTS);
   for (let attempt = 0; attempt < models.length; attempt++) {
     signal.throwIfAborted();
     const remaining = deadline - Date.now();
     if (remaining <= 0) throw timeoutError();
-    // Do not spend the final recovery attempt on a primary that just reported quota exhaustion.
-    const model = attempt === 2 && primaryRateLimited ? GEMINI_FALLBACK_MODEL : models[attempt];
+    const model = models[attempt];
     const attemptStarted = Date.now();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(timeoutError()), Math.min(AI_ATTEMPT_MS, remaining));
@@ -95,7 +89,6 @@ export async function generateGuidance(feature: AIFeature, context: unknown, api
         }),
       }), attemptSignal);
       diagnostic.providerStatus = response.status;
-      if (attempt === 0 && response.status === 429) primaryRateLimited = true;
       if (!response.ok) {
         // Do not wait for an error body or log arbitrary provider content.
         void response.body?.cancel().catch(() => {});
@@ -153,7 +146,7 @@ export async function generateGuidance(feature: AIFeature, context: unknown, api
         }
         throw new Error("Invalid guidance");
       }
-      console.info("[AI diagnostic] " + JSON.stringify({ ...diagnostic, elapsedMs: Date.now() - attemptStarted, totalElapsedMs: Date.now() - started, success: true }));
+      console.info("[AI diagnostic] " + JSON.stringify({ ...diagnostic, stage, code: "AI_SUCCESS", elapsedMs: Date.now() - attemptStarted, totalElapsedMs: Date.now() - started, success: true }));
       onModel?.(model);
       return parsed.data;
     } catch (error) {
@@ -175,9 +168,9 @@ export async function generateGuidance(feature: AIFeature, context: unknown, api
       controller.abort();
     }
     if (!recoverable || attempt === models.length - 1 || signal.aborted) throw failure;
-    const backoffMs = (800 + Math.floor(Math.random() * 401)) * (attempt + 1);
+    const backoffMs = AI_BACKOFF_MIN_MS + Math.floor(Math.random() * (AI_BACKOFF_MAX_MS - AI_BACKOFF_MIN_MS + 1));
     // A fallback must have a useful execution window, not a doomed 2-second attempt.
-    if (deadline - Date.now() - backoffMs < minimumUsefulAttemptMs) throw timeoutError();
+    if (deadline - Date.now() - backoffMs < AI_ATTEMPT_MS) throw timeoutError();
     await backoff(backoffMs, signal);
   }
   throw new AIError(503, "AI is temporarily unavailable. Please try again.");

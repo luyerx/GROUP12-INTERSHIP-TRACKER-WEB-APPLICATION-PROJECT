@@ -101,7 +101,7 @@ export function consumeAIUsage(userId: string, now = Date.now()) {
 // Process-local, shared across all AI features; independent of auth limiters.
 const entries = new Map<string, { starts: number[]; pending?: { expiresAt: number } }>();
 const windowMs = 60000;
-const pendingMs = 60000; // Safety lease exceeds the complete 48s route budget.
+const pendingMs = 60000; // Safety lease exceeds the complete 28s route budget.
 
 export function acquireAICooldown(userId: string) {
   const now = Date.now();

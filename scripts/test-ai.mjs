@@ -39,9 +39,9 @@ const mockFetch = async (_url, options) => {
     return { status: 200, ok: true, text: () => new Promise(() => {}) };
   }
   if (outcome === "reset") throw Object.assign(new Error("secret"), { code: "ECONNRESET" });
-  if (outcome === "exhausted") { now += 47500; throw Object.assign(new Error("secret"), { code: "ECONNRESET" }); }
+  if (outcome === "exhausted") { now += 27500; throw Object.assign(new Error("secret"), { code: "ECONNRESET" }); }
   if (outcome === "body-reset") return { status: 200, ok: true, text: async () => { throw Object.assign(new Error("secret"), { cause: { code: "ECONNRESET" } }); } };
-  if (outcome === "slow-reset") { now += 22000; throw Object.assign(new Error("secret"), { code: "ECONNRESET" }); }
+  if (outcome === "slow-reset") { now += 12000; throw Object.assign(new Error("secret"), { code: "ECONNRESET" }); }
   lastRequest = JSON.parse(options.body);
   assert.equal(lastRequest.generationConfig.responseFormat.text.mimeType, "APPLICATION_JSON", "REST requires the MIME enum, not the SDK MIME string");
   assert.equal(lastRequest.generationConfig.thinkingConfig.thinkingLevel, "low");
@@ -74,7 +74,7 @@ const mockFetch = async (_url, options) => {
   return Response.json({ candidates: [{ finishReason: providerMode === "truncated" ? "MAX_TOKENS" : "STOP", content: { parts: [{ text }] } }] });
 };
 const savedHistory = [];
-let historyFailure = false;
+let historyFailure = false, holdHistory = false, releaseHistory;
 const opportunityRows = [];
 const employeeRows = [{ _id: "employee-active", role: "employee", status: "Active" }, { _id: "employee-suspended", role: "employee", status: "Suspended" }, { _id: "admin-owner", role: "admin", status: "Active" }];
 const chain = values => ({ select() { return this; }, sort() { return this; }, limit(n) { return chain(values.slice(0,n)); }, lean: async () => values });
@@ -84,7 +84,7 @@ const mocks = {
   "@/lib/mongodb": { connectToDatabase: async () => {} },
   "@/lib/models/Application": { ApplicationModel: { find: filter => chain(filter.userId === owner ? [application] : []), findOne: filter => ({ lean: async () => { if (holdLookup) await new Promise(resolve => { releaseLookup = resolve; }); return filter._id === id && filter.userId === owner ? application : null; } }) } },
   "@/lib/models/AIAssistantHistory": { AIAssistantHistoryModel: {
-    create: async data => { if(historyFailure) throw new Error("private database error"); const entry = { ...data, _id: String(savedHistory.length + 1).padStart(24, "0"), createdAt: new Date() }; savedHistory.push(entry); return entry; },
+    create: async data => { if(holdHistory) await new Promise(resolve => { releaseHistory = resolve; }); if(historyFailure) throw new Error("private database error"); const entry = { ...data, _id: String(savedHistory.length + 1).padStart(24, "0"), createdAt: new Date() }; savedHistory.push(entry); return entry; },
     find: filter => chain(savedHistory.filter(row => row.userId === filter.userId).slice().reverse()),
     findOne: filter => ({ lean: async () => savedHistory.find(row => row.userId === filter.userId && row._id === filter._id) }),
     deleteOne: async filter => { const i=savedHistory.findIndex(row=>row.userId===filter.userId&&row._id===filter._id); if(i<0)return {deletedCount:0};savedHistory.splice(i,1);return {deletedCount:1}; },
@@ -104,8 +104,8 @@ function load(file) {
     return name.startsWith("@/") ? load(name.slice(2) + ".ts") : require(name);
   }
   vm.runInNewContext("(function(require,module,exports){" + code + "\n})", { Response, Request, TextDecoder, AbortSignal: TestAbortSignal, AbortController, DOMException, clearTimeout, setTimeout: (callback, ms) => {
-    if (ms === 48000) expireBudget = callback;
-    if (ms === 22000) { expireAttempt = callback; providerTimeouts.push(ms); }
+    if (ms === 28000) expireBudget = callback;
+    if (ms === 12000) { expireAttempt = callback; providerTimeouts.push(ms); }
     if (ms >= 5000) return setTimeout(callback, ms);
     delays.push(ms);
     const complete = () => { now += ms; callback(); };
@@ -142,7 +142,7 @@ for (const [feature, post] of Object.entries(routes)) {
   check(success.headers.get("cache-control") === "no-store", feature + " private uncached response");
   check((await post(request())).status === 200, feature + " immediate repeat generation allowed");
 }
-check(providerTimeouts.length === 4 && providerTimeouts.every(ms => ms === 22000), "both features bound each Gemini attempt to 22 seconds");
+check(providerTimeouts.length === 4 && providerTimeouts.every(ms => ms === 12000), "both features bound each Gemini attempt to 12 seconds");
 check(providerCalls === 4, "rejected requests never call Gemini");
 application.opportunityId = "333333333333333333333333";
 check((await routes["interview-prep"](request())).status === 200, "linked application uses snapshot without querying latest opportunity (including deleted/closed listings)");
@@ -177,9 +177,9 @@ check((await routes["interview-prep"](request())).status === 200, "window expire
 providerMode = "pending";
 const pendingResponse = routes["interview-prep"](request());
 while (!releaseProvider) await new Promise(resolve => setImmediate(resolve));
-now += 45000;
+now += 25000;
 const duplicate = await routes["application-insights"](request());
-check(duplicate.status === 429 && (await duplicate.json()).code === "AI_IN_FLIGHT", "in-flight lock survives 35s and 45s; blocks both features");
+check(duplicate.status === 429 && (await duplicate.json()).code === "AI_IN_FLIGHT", "in-flight lock survives 25s within the route budget; blocks both features");
 providerMode = "success"; releaseProvider();
 check((await pendingResponse).status === 200, "in-flight request completes");
 check((await routes["application-insights"](request())).status === 200, "completion explicitly releases lock");
@@ -196,10 +196,10 @@ replacement.finish();
 check(acquireAICooldown("abandoned").allowed, "replacement explicitly releases lease");
 for (const [name, outcomes, expected, calls] of [
   ["503 then success", [503], 200, 2],
-  ["all attempts 503", [503, 503, 503], 503, 3],
-  ["secondary 503 then primary recovers", [503, 503], 200, 3],
-  ["primary quota then secondary recovery", [429, 503], 200, 3],
-  ["both models quota", [429, 429, 429], 429, 3],
+  ["all attempts 503", [503, 503, 503], 503, 2],
+  ["secondary 503 stops without returning to primary", [503, 503], 503, 2],
+  ["primary quota then secondary failure stops", [429, 503], 503, 2],
+  ["both models quota", [429, 429, 429], 429, 2],
   ["fallback access denied", [503, 403], 503, 2],
   ["primary timeout then fallback success", ["timeout"], 200, 2],
   ["403 deterministic", [403], 503, 1],
@@ -217,7 +217,8 @@ for (const [name, outcomes, expected, calls] of [
   const modelStart = models.length;
   const response = await routes["interview-prep"](request());
   check(response.status === expected && providerCalls - before === calls, name + " has correct HTTP and attempt count");
-  check(JSON.stringify(models.slice(modelStart)) === JSON.stringify(["gemini-3.5-flash", "gemini-3.5-flash-lite", outcomes[0] === 429 ? "gemini-3.5-flash-lite" : "gemini-3.5-flash"].slice(0, calls)), name + " uses the expected models");
+  check(JSON.stringify(models.slice(modelStart)) === JSON.stringify(["gemini-3.5-flash-lite", "gemini-3.5-flash"].slice(0, calls)), name + " uses the expected models");
+  sequence = []; // A new user request has its own provider outcomes.
   if (expected !== 200) {
     check((await response.json()).message.includes("Please"), name + " friendly error");
     check((await routes["application-insights"](request())).status === 200, name + " immediate manual retry succeeds");
@@ -227,11 +228,11 @@ owner = "retry-lock"; user = { ...profile, id: owner }; application.userId = own
 sequence = ["slow-reset"]; holdBackoff = true;
 const retrying = routes["interview-prep"](request());
 while (!releaseBackoff) await new Promise(resolve => setImmediate(resolve));
-check((await routes["application-insights"](request())).status === 429, "pending lease protects retry backoff after primary 22-second attempt");
+check((await routes["application-insights"](request())).status === 429, "pending lease protects retry backoff after primary 12-second attempt");
 holdBackoff = false; releaseBackoff();
 check((await retrying).status === 200, "retry within total budget succeeds");
-check(providerTimeouts.at(-1) === 22000, "fallback retains a full 22-second opportunity");
-check(delays.every(ms => ms >= 800 && ms <= 2400), "bounded 800-1200ms then 1600-2400ms backoff with jitter");
+check(providerTimeouts.at(-1) === 12000, "fallback retains a full 12-second opportunity");
+check(delays.every(ms => ms >= 250 && ms <= 600), "bounded 250-600ms fallback backoff with jitter");
 owner = "retry-count"; user = { ...profile, id: owner }; application.userId = owner;
 for (let i = 0; i < 5; i++) {
   sequence = [503];
@@ -243,8 +244,8 @@ providerMode = "abort-pending"; releaseProvider = undefined;
 const expiring = routes["interview-prep"](request());
 while (!releaseProvider) await new Promise(resolve => setImmediate(resolve));
 const pendingSignal = lastSignal;
-now += 48000; expireBudget();
-check((await expiring).status === 504 && pendingSignal.aborted, "48-second total deadline aborts provider and returns friendly timeout");
+now += 28000; expireBudget();
+check((await expiring).status === 504 && pendingSignal.aborted, "28-second total deadline aborts provider and returns friendly timeout");
 providerMode = "success";
 check((await routes["application-insights"](request())).status === 200, "total timeout releases lock for immediate manual retry");
 console.log(`SUCCESS ${count} AI assertions; no real Gemini requests.`);
@@ -274,7 +275,7 @@ for (const outcome of ["hang", "body-hang"]) {
   const pending = routes["interview-prep"](request());
   while (!releaseProvider) await new Promise(resolve => setImmediate(resolve));
   const signal = lastSignal;
-  now += 22000; expireAttempt();
+  now += 12000; expireAttempt();
   check((await pending).status === 200 && providerCalls - before === 2 && signal.aborted, outcome + " is bounded even if transport ignores abort; fallback succeeds");
   check((await routes["application-insights"](request())).status === 200, outcome + " releases lease");
 }
@@ -301,9 +302,9 @@ sequence = ["hang", "body-hang"]; releaseProvider = undefined;
 const slowBefore = providerCalls;
 const slow = routes["interview-prep"](request());
 while (!releaseProvider) await new Promise(resolve => setImmediate(resolve));
-releaseProvider = undefined; now += 22000; expireAttempt();
+releaseProvider = undefined; now += 12000; expireAttempt();
 while (!releaseProvider) await new Promise(resolve => setImmediate(resolve));
-now += 22000; expireAttempt();
+now += 12000; expireAttempt();
 check((await slow).status === 504 && providerCalls === slowBefore + 2, "two slow attempts cannot launch an underfunded third request");
 owner = "lookup-hang"; user = { ...profile, id: owner }; application.userId = owner;
 holdLookup = true; releaseLookup = undefined;
@@ -323,7 +324,7 @@ await new Promise(resolve => setImmediate(resolve)); expireBudget();
 check((await stalledBody).status === 504 && bodyCancelled && providerCalls === bodyBefore, "stalled incoming body is cancelled by the total route deadline");
 console.log(`SUCCESS ${count} final AI assertions; no real Gemini requests.`);
 
-// Career Hub extensions: the original 217 assertions above remain unchanged.
+// Career Hub extensions: the original 217 assertions above are retained with updated latency expectations.
 const newFeatures = [
   "application-summary",
   "document-assistant",
@@ -494,7 +495,7 @@ for (const feature of newFeatures) {
     );
     if (response.status === 200)
       check(
-        payload.model === "gemini-3.5-flash-lite" && payload.usage.used === 1,
+        payload.model === "gemini-3.5-flash" && payload.usage.used === 1,
         feature + " fallback model and usage accurate",
       );
   }
@@ -1310,3 +1311,60 @@ check(contract.documentExcerptBudget(1000)===250&&contract.documentExcerptBudget
 check(contract.DOCUMENT_EXCERPT_MAX_CHARS===160&&load('lib/ai-prompts.ts').aiPrompt('document-assistant').includes('maximum 160 characters'),'schema prompt and semantic helper share the exported 160-character constant');
 output['document-assistant']=goodDocumentOutput;
 console.log('SUCCESS '+count+' total AI assertions; original 453 retained; no real Gemini requests.');
+
+// Latency policy: retain prior safety/authorization coverage and test real timers via the mock clock.
+const timing = load('lib/ai-config.ts');
+check(timing.GEMINI_MODEL === 'gemini-3.5-flash-lite' && timing.GEMINI_FALLBACK_MODEL === 'gemini-3.5-flash', 'fast primary retains Flash fallback');
+check(timing.AI_ATTEMPT_MS === 12000 && timing.AI_MAX_PROVIDER_ATTEMPTS === 2, 'twelve-second attempts capped at two');
+check(timing.AI_BUDGET_MS === 28000 && timing.AI_BROWSER_TIMEOUT_MS === 35000, 'browser allows seven seconds beyond total server budget');
+check(timing.AI_ATTEMPT_MS * timing.AI_MAX_PROVIDER_ATTEMPTS + timing.AI_BACKOFF_MAX_MS === 24600 && timing.AI_BUDGET_MS > 24600, 'two full attempts and maximum backoff leave 3.4 seconds for local work');
+check(timing.AI_BACKOFF_MIN_MS === 250 && timing.AI_BACKOFF_MAX_MS === 600 && timing.AI_SLOW_HINT_MS === 5000, 'backoff and loading hint share central policy');
+
+fresh('latency-primary');
+providerMode = 'pending'; releaseProvider = undefined;
+const primaryCalls = providerCalls, primaryStart = now, primaryLogs = diagnostics.length;
+const quickPrimary = routes['interview-prep'](request());
+while (!releaseProvider) await new Promise(resolve => setImmediate(resolve));
+now += 3000; releaseProvider();
+const quickResponse = await quickPrimary, quickBody = await quickResponse.json();
+check(quickResponse.status === 200 && providerCalls === primaryCalls + 1 && now - primaryStart === 3000, 'primary completing at three seconds returns without fallback');
+check(quickBody.model === timing.GEMINI_MODEL && savedHistory.at(-1).model === timing.GEMINI_MODEL, 'primary model is accurate in response and persisted history');
+const quickDiagnostic = diagnostics.slice(primaryLogs).map(row => JSON.parse(row[0].slice(16))).find(row => row.success);
+check(quickDiagnostic.model === timing.GEMINI_MODEL && quickDiagnostic.attempt === 1 && !quickDiagnostic.fallbackUsed && quickDiagnostic.stage === 'guidance-schema' && quickDiagnostic.code === 'AI_SUCCESS' && quickDiagnostic.elapsedMs === 3000, 'primary success diagnostic has safe stage code model and timing');
+
+fresh('latency-fallback');
+sequence = ['hang']; releaseProvider = undefined;
+const fallbackCalls = providerCalls, fallbackStart = now, fallbackLogs = diagnostics.length;
+const quickFallback = routes['interview-prep'](request());
+while (!releaseProvider) await new Promise(resolve => setImmediate(resolve));
+const primarySignal = lastSignal;
+now += timing.AI_ATTEMPT_MS; expireAttempt();
+const fallbackResponse = await quickFallback, fallbackBody = await fallbackResponse.json();
+check(fallbackResponse.status === 200 && providerCalls === fallbackCalls + 2 && primarySignal.aborted, 'twelve-second primary timeout aborts before sequential fallback');
+check(now - fallbackStart >= 12250 && now - fallbackStart <= 12600, 'immediate fallback success arrives after twelve seconds plus bounded jitter');
+check(fallbackBody.usage.used === 1 && fallbackBody.history.model === timing.GEMINI_FALLBACK_MODEL && savedHistory.at(-1).model === timing.GEMINI_FALLBACK_MODEL, 'fallback counts once and saves actual successful Flash model');
+const fallbackDiagnostics = diagnostics.slice(fallbackLogs).map(row => JSON.parse(row[0].slice(16)));
+check(fallbackDiagnostics.length === 2 && fallbackDiagnostics[0].code === 'AI_TIMEOUT' && fallbackDiagnostics[0].elapsedMs === 12000 && fallbackDiagnostics[1].model === timing.GEMINI_FALLBACK_MODEL && fallbackDiagnostics[1].attempt === 2 && fallbackDiagnostics[1].fallbackUsed && fallbackDiagnostics[1].totalElapsedMs === now - fallbackStart, 'timeout and fallback diagnostics report accurate attempt and cumulative timing');
+
+fresh('latency-awaited-history');
+holdHistory = true; releaseHistory = undefined;
+let historySettled = false;
+const historyCount = savedHistory.length;
+const awaitedHistory = routes['interview-prep'](request()).then(value => { historySettled = true; return value; });
+while (!releaseHistory) await new Promise(resolve => setImmediate(resolve));
+check(!historySettled && savedHistory.length === historyCount, 'successful generation still awaits history persistence');
+check((await routes['interview-prep'](request())).status === 429, 'pending lease protects history persistence too');
+holdHistory = false; releaseHistory();
+const savedResponse = await awaitedHistory, savedBody = await savedResponse.json();
+check(savedResponse.status === 200 && savedBody.history.id && savedHistory.length === historyCount + 1, 'awaited history returns its confirmed saved identifier');
+
+fresh('latency-stalled-history');
+holdHistory = true; releaseHistory = undefined;
+const stalledHistory = routes['interview-prep'](request());
+while (!releaseHistory) await new Promise(resolve => setImmediate(resolve));
+now += timing.AI_BUDGET_MS; expireBudget();
+check((await stalledHistory).status === 504, 'stalled history cannot extend the twenty-eight-second route budget');
+holdHistory = false; releaseHistory();
+await new Promise(resolve => setImmediate(resolve));
+check((await routes['interview-prep'](request())).status === 200, 'history deadline releases lease for manual retry');
+console.log('SUCCESS '+count+' total AI assertions; original 463 retained with updated latency policy; no real Gemini requests.');
