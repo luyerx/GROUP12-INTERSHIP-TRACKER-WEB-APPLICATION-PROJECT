@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 export default function MonthGrid({ currentMonth, currentYear, calendarDays, events, setSelectedEvent }: { currentMonth: number; currentYear: number; calendarDays: { date: Date; currentMonth: boolean }[]; events: CalendarEvent[]; setSelectedEvent: (event: CalendarEvent) => void }) {
-  return (<section className="order-2 overflow-hidden card xl:order-1">
+  return (<section className="month-grid order-2 overflow-hidden card xl:order-1">
     <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
@@ -112,14 +112,14 @@ export default function MonthGrid({ currentMonth, currentYear, calendarDays, eve
                           ", " +
                           event.date
                         }
-                        className={`block w-full rounded-lg px-2 py-1.5 text-left text-[11px] font-medium ring-1 ring-inset transition hover:opacity-80 ${eventStyles[event.type]
+                        className={`block w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium ring-1 ring-inset transition hover:opacity-80 ${eventStyles[event.type]
                           }`}
                       >
                         <span className="block truncate">
                           {event.organisation}
                         </span>
 
-                        <span className="mt-0.5 block truncate text-[10px] opacity-75">
+                        <span className="mt-0.5 block truncate text-xs opacity-75">
                           {event.type === "deadline"
                             ? "Deadline"
                             : event.type === "reminder"

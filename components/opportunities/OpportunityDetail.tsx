@@ -82,7 +82,7 @@ export default function OpportunityDetail({
           )}
           {row && (
             <>
-              <header className="hero my-6">
+              <header className="opportunity-detail-header my-6">
                 <div className="mb-5 flex items-center gap-4">
                   <CompanyMark name={row.organisation} large />
                   <div>

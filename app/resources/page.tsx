@@ -9,11 +9,12 @@ import {
   Filter,
   GraduationCap,
   Search,
-  Sparkles,
+
   Video,
   X,
 } from "lucide-react";
 
+import CareerIllustration from "@/components/visual/CareerIllustration";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import ResourceLink from "@/components/resources/ResourceLink";
 import {
@@ -116,20 +117,20 @@ export default function ResourcesPage() {
     <DashboardLayout>
       <div className="mx-auto max-w-7xl">
         {/* Header */}
-        <PageHeader eyebrow="Career support" title="Resources" description="Practical guides, templates and preparation materials for your next career step. Available links open in a new tab." />
+        <PageHeader eyebrow="Career support" title="Career Resources" description="Practical guides, templates and preparation materials for your next career step. Available links open in a new tab." />
 
         {/* Featured */}
         {!loading && !error && featuredResources.length > 0 && (
           <section className="mt-8">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-slate-500" />
+              <BookOpen className="h-4 w-4 text-slate-500" />
 
               <h2 className="text-sm font-semibold text-slate-950">
                 Featured resources
               </h2>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="resource-featured-grid">
               {featuredResources.map((resource) => (
                 <FeaturedResourceCard key={resource.id} resource={resource} origin={origin} />
               ))}
@@ -296,43 +297,13 @@ function ResourceCard({ resource, origin }: ResourceCardProps) {
 }
 
 function FeaturedResourceCard({ resource, origin }: ResourceCardProps) {
-  return (
-    <article className="group relative overflow-hidden rounded-2xl border border-teal-100 bg-teal-50 p-6 text-slate-900 shadow-sm">
-      <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full border border-white/5" />
-
-      <div className="relative">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-teal-700">
-            <ResourceTypeIcon type={resource.type} />
-          </div>
-
-          <span className="rounded-full border border-teal-200 bg-white px-2.5 py-1 text-xs font-medium text-teal-800">
-            Featured
-          </span>
-        </div>
-
-        <p className="mt-6 text-xs font-medium uppercase tracking-wide text-slate-500">
-          {resource.category}
-        </p>
-
-        <h3 className="mt-2 text-lg font-semibold leading-7">
-          {resource.title}
-        </h3>
-
-        <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">
-          {resource.description}
-        </p>
-
-        <ResourceLink url={resource.url} title={resource.title} origin={origin} />
-      </div>
-    </article>
-  );
+  return <article className="resource-feature"><div className="resource-feature-art"><CareerIllustration variant="resources" /></div><div className="resource-feature-copy"><div className="flex items-center justify-between gap-3"><p className="eyebrow">{resource.category}</p><span className="badge">Featured</span></div><h3 className="mt-4">{resource.title}</h3><p className="my-3 text-sm leading-6 text-slate-600">{resource.description}</p><p className="mb-4 text-xs text-slate-500">{resource.source} · {resource.type}</p><ResourceLink url={resource.url} title={resource.title} origin={origin} /></div></article>;
 }
 
 function ResourceIcon({ type }: { type: ResourceType }) {
   return (
-    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-      <ResourceTypeIcon type={type} />
+    <div className="resource-thumbnail">
+      <span className="resource-thumb-sheet"><ResourceTypeIcon type={type} /><i /><i /></span>
     </div>
   );
 }

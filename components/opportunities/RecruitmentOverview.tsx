@@ -1,3 +1,4 @@
+import CareerIllustration from "@/components/visual/CareerIllustration";
 import Link from "next/link";
 import {
   BriefcaseBusiness,
@@ -50,6 +51,7 @@ export default function RecruitmentOverview({
           </Link>
         }
       />
+      <section className="workspace-welcome employer-welcome"><div><p className="eyebrow">Employer workspace</p><h2>Good opportunities start with clear stories.</h2><p>Give students the context they need. Shape your company profile, finish a draft and publish when you’re ready.</p><Link className="text-link" href="/employee/profile">Review company profile →</Link></div><CareerIllustration variant="hiring" /></section>
       <section className="next-actions mb-6" aria-label="Recruitment quick actions">
         <div><p className="eyebrow">Recruitment desk</p><h2 className="mt-2 text-xl font-semibold">Keep your next hire moving.</h2></div>
         <div className="flex flex-wrap gap-3"><Link className="btn-secondary" href="/employee/opportunities">Review listings →</Link><Link className="btn-secondary" href="/employee/profile">Update company profile →</Link></div>
@@ -81,7 +83,7 @@ export default function RecruitmentOverview({
           icon={CalendarClock}
         />
       </section>
-      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
+      <div className="employer-detail-grid">
         <section className="panel">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>

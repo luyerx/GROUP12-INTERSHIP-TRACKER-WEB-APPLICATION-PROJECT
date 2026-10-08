@@ -319,7 +319,7 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-6xl">
+      <div className="profile-content mx-auto max-w-6xl">
         {profileError && (
           <p
             role="alert"
@@ -341,7 +341,7 @@ export default function ProfilePage() {
           </div>
         )}
         {/* Page header */}
-        <PageHeader eyebrow="Student account" title="Profile" description="Manage your personal information, academic background, career preferences, skills, and notification settings." action={!isEditing ? (
+        <PageHeader eyebrow="Student account" title="Your career profile" description="Tell your story. Keep your experience, interests and preferences ready for your next opportunity." action={!isEditing ? (
           <button
             type="button"
             disabled={isLoading || Boolean(profileError)}

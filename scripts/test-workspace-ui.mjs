@@ -264,6 +264,10 @@ export async function testWorkspaceUI({ base, student, employee, admin, superadm
         ["2026-04-04T14:01:00Z", "2026-04-05", "2026-04-06"],
         ["2026-09-26T14:01:00Z", "2026-09-27", "2026-09-28"],
       ]) {
+        // Hydrate with the real server clock, then exercise simulated dates via client navigation.
+        // Freezing only the browser before SSR causes an artificial date-text hydration mismatch.
+        await datesPage.goto(base + "/profile");
+        await datesPage.getByRole("heading", { level: 1 }).waitFor();
         await datesPage.clock.setFixedTime(new Date(now));
         await datesPage.route("**/api/applications", route => route.fulfill({ json: { success: true, data: [
           { id: "today", organisation: "Today Company", roleTitle: "Today role", status: "Preparing", deadline: today },
@@ -274,7 +278,7 @@ export async function testWorkspaceUI({ base, student, employee, admin, superadm
           { id: "early", type: "interview", title: "Early interview", date: today, time: "09:00", applicationId: appId },
           { id: "past", type: "interview", title: "Past interview", date: "2026-01-01", time: "09:00", applicationId: appId },
         ] } }));
-        await datesPage.goto(base + "/dashboard");
+        await datesPage.getByRole("link", { name: "Overview", exact: true }).click();
         const tasks = datesPage.locator('section').filter({ has: datesPage.getByRole('heading', { name: 'Upcoming tasks', exact: true }) });
         await tasks.getByText("Due today", { exact: true }).waitFor();
         check(await tasks.getByText("Due tomorrow", { exact: true }).count() === 1, timezone + " Auckland today/tomorrow agrees across midnight and DST");

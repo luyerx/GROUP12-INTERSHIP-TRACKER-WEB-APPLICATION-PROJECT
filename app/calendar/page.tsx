@@ -665,7 +665,7 @@ export default function CalendarPage() {
           </div>
         )}
 
-        <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="calendar-workspace-grid">
           {/* Calendar */}
           <MonthGrid currentMonth={currentMonth} currentYear={currentYear} calendarDays={calendarDays} events={events} setSelectedEvent={setSelectedEvent} />
 

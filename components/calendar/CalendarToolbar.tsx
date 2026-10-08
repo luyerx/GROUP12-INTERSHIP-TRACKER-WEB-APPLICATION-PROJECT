@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 
 export default function CalendarToolbar({ openCreateEvent, applications, isLoadingApplications, goToToday, goToPreviousMonth, goToNextMonth }: { openCreateEvent: () => void; applications: { id: string }[]; isLoadingApplications: boolean; goToToday: () => void; goToPreviousMonth: () => void; goToNextMonth: () => void }) {
-  return (<div className="flex flex-wrap items-center gap-2">
+  return (<div className="calendar-controls flex flex-wrap items-center gap-2">
     <button
       type="button"
       onClick={openCreateEvent}

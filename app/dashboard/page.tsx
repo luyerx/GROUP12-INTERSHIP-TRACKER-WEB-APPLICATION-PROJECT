@@ -1,4 +1,5 @@
 "use client";
+import CareerIllustration from "@/components/visual/CareerIllustration";
 import PageHeader from "@/components/ui/PageHeader";
 
 import { LoadingState } from "@/components/ui/Feedback";
@@ -205,6 +206,11 @@ export default function DashboardPage() {
           Browse Opportunities
         </Link>} />
 
+        <section className="workspace-welcome" aria-label="Your career workspace">
+          <div><p className="eyebrow">Make room for your next move</p><h2>A little focus goes a long way.</h2><p>Review a role, prepare an example, or plan your week. Start with what matters today.</p><Link href="/ai-assistant" className="text-link">Prepare with AI →</Link></div>
+          <CareerIllustration variant="planner" />
+        </section>
+
         {/* Error */}
         {error && (
           <div
@@ -302,7 +308,7 @@ export default function DashboardPage() {
           </section>
         )}
         {/* Stats */}
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatCard
             title="Total applications"
             value={loading || error ? "—" : dashboardStats.totalApplications}
@@ -335,26 +341,23 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="mt-6">
-          <LoadingState label="Loading your application progress…" />
+      <div className="dashboard-task-grid">
+        <div className="dashboard-primary">
+          {loading ? <LoadingState label="Loading your application progress…" /> : !error && <>
+            <ApplicationPipeline applications={applications} />
+            <RecentApplications applications={applications} />
+          </>}
         </div>
-      ) : (
-        !error && (
-          <>
-            <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-              <ApplicationPipeline applications={applications} />
-
-              <UpcomingTasks applications={applications} />
-            </div>
-
-            <div className="mt-6">
-              <RecentApplications applications={applications} />
-            </div>
-          </>
-        )
-      )}
-      <UpcomingInterviews />
+        <aside className="dashboard-support" aria-label="Plan your next step">
+          {!loading && !error && <UpcomingTasks applications={applications} />}
+          <UpcomingInterviews />
+          <section className="dashboard-shortcuts">
+            <p className="eyebrow">Keep moving forward</p>
+            <Link href="/ai-assistant"><strong>Prepare with AI <span aria-hidden="true">↗</span></strong><span>Review your documents or practise interview questions.</span></Link>
+            <Link href="/opportunities"><strong>Explore opportunities <span aria-hidden="true">↗</span></strong><span>Find a role to add to your next steps.</span></Link>
+          </section>
+        </aside>
+      </div>
       <section className="mt-8">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-xl font-semibold">

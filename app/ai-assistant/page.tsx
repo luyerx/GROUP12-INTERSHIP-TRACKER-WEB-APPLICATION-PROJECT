@@ -286,22 +286,25 @@ export default function AIAssistantPage() {
         : filterNow - new Date(item.createdAt).getTime() <=
           Number(dateFilter) * 86400000),
   );
+  const ActiveToolIcon = tools.find(tool => tool.feature === feature)?.icon ?? FileText;
   return (
     <DashboardLayout>
       <PageHeader
         eyebrow="Your next career step"
         title="AI Career Hub"
-        description="Use AI-powered tools to discover opportunities, understand roles, improve applications and prepare for interviews."
+        description="Practical tools for every stage of your internship search."
       />
+      <div className="ai-workspace-grid">
+      <div className="ai-tool-rail">
       <fieldset disabled={busy} className="mb-6">
         <legend className="sr-only">Choose a career tool</legend>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="ai-tool-selector">
           {tools.map(({ feature: value, icon: Icon, description }) => (
             <label
               key={value}
               className={
-                "card flex min-w-0 cursor-pointer gap-3 p-4 " +
-                (feature === value ? "border-teal-600 bg-teal-50" : "")
+                "ai-tool-choice " +
+                (feature === value ? "is-active" : "")
               }
             >
               <input
@@ -332,12 +335,49 @@ export default function AIAssistantPage() {
           ))}
         </div>
       </fieldset>
-      <section className="panel min-w-0">
-        <h2 className="text-xl font-semibold">
+        <section className="ai-usage-compact">
+          <h2 className="text-lg font-semibold">Monthly AI usage</h2>
+          {usage ? (
+            <>
+              <p className="mt-3 text-sm text-slate-600">
+                {usage.used} / {usage.hardLimit} requests used ·{" "}
+                {usage.remaining} remaining
+              </p>
+              <progress
+                className="mt-4 h-2 w-full accent-teal-700"
+                value={usage.used}
+                max={usage.hardLimit}
+                aria-label="Monthly requests used"
+              />
+              <p className="mt-3 text-xs text-slate-500">
+                Resets each calendar month in Pacific/Auckland. Failed provider
+                attempts count; internal retries count once.
+              </p>
+              {usage.warning && (
+                <p className="mt-3 text-sm text-amber-700">
+                  {usage.reachedHardLimit
+                    ? "You have reached the monthly AI limit. Please try again next month."
+                    : "You are approaching the monthly AI limit."}
+                </p>
+              )}
+            </>
+          ) : (
+            <button
+              className="btn-secondary mt-3"
+              onClick={() => void refreshUsage()}
+            >
+              Load usage
+            </button>
+          )}
+        </section>
+      </div>
+      <div className="min-w-0">
+      <section id="career-tool-workspace" className="panel min-w-0 ai-tool-surface">
+        <div className="ai-tool-heading"><span className="ai-active-icon"><ActiveToolIcon size={24} aria-hidden="true" /></span><h2 className="text-xl font-semibold">
           {feature === "application-summary"
             ? "AI Application Summary"
             : aiFeatureTitles[feature]}
-        </h2>
+        </h2></div>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           {feature === "opportunity-recommendation"
             ? "Recommendations are based on your profile, tracked applications and currently available opportunities."
@@ -347,6 +387,7 @@ export default function AIAssistantPage() {
                 ? "Get AI-generated suggestions for improving your resume or cover letter for a tracked opportunity."
                 : tools.find((tool) => tool.feature === feature)?.description}
         </p>
+        <div className="ai-input-zone">
         {appTool &&
           (loading ? (
             <LoadingState label="Loading your applications…" />
@@ -457,6 +498,7 @@ export default function AIAssistantPage() {
             </p>
           </div>
         )}
+        </div>
         <p className="mt-5 text-sm leading-6 text-slate-600">
           Relevant tool inputs are sent to Google Gemini. Generated guidance is
           saved to your AI history for later review and can be deleted by you.
@@ -529,42 +571,7 @@ export default function AIAssistantPage() {
           />
         )}
       </div>
-      <div className="mt-8 grid items-start gap-6 lg:grid-cols-[1fr_2fr]">
-        <section className="panel">
-          <h2 className="text-lg font-semibold">Monthly AI usage</h2>
-          {usage ? (
-            <>
-              <p className="mt-3 text-sm text-slate-600">
-                {usage.used} / {usage.hardLimit} requests used ·{" "}
-                {usage.remaining} remaining
-              </p>
-              <progress
-                className="mt-4 h-2 w-full accent-teal-700"
-                value={usage.used}
-                max={usage.hardLimit}
-                aria-label="Monthly requests used"
-              />
-              <p className="mt-3 text-xs text-slate-500">
-                Resets each calendar month in Pacific/Auckland. Failed provider
-                attempts count; internal retries count once.
-              </p>
-              {usage.warning && (
-                <p className="mt-3 text-sm text-amber-700">
-                  {usage.reachedHardLimit
-                    ? "You have reached the monthly AI limit. Please try again next month."
-                    : "You are approaching the monthly AI limit."}
-                </p>
-              )}
-            </>
-          ) : (
-            <button
-              className="btn-secondary mt-3"
-              onClick={() => void refreshUsage()}
-            >
-              Load usage
-            </button>
-          )}
-        </section>
+      <div className="ai-support mt-8">
         <section className="panel min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Recent history</h2>
@@ -613,11 +620,9 @@ export default function AIAssistantPage() {
             />
           )}
           {!filteredHistory.length && (
-            <p className="text-sm text-slate-500">
-              No AI history matches this date range.
-            </p>
+            <div className="border-t border-slate-200 pt-4 text-sm text-slate-500"><p>No AI history matches this date range.</p><p className="mt-2 text-xs leading-5">Generate guidance with a career tool to build a collection you can return to.</p><a href="#career-tool-workspace" className="text-link mt-2">Prepare guidance ↑</a></div>
           )}
-          <div className="space-y-3">
+          <div className="ai-history-list space-y-3" role="region" aria-label="Saved career guidance" tabIndex={0}>
             {filteredHistory.map((item) => (
               <div
                 key={item.id}
@@ -657,6 +662,8 @@ export default function AIAssistantPage() {
             ))}
           </div>
         </section>
+      </div>
+      </div>
       </div>
     </DashboardLayout>
   );

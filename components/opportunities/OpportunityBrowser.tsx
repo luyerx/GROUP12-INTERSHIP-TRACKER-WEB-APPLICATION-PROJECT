@@ -73,20 +73,19 @@ export default function OpportunityBrowser({
     setSort("newest");
   };
   return (
-    <div>
+    <div className={!compact ? "opportunity-market" : undefined}>
       {!compact && (
         <PageHeader
           eyebrow={mode === "student" ? "Career discovery" : mode === "employee" ? "Recruitment" : "Content management"}
-          title={mode === "employee" ? "My Opportunities" : "Opportunities"}
+          title={mode === "employee" ? "My Opportunities" : mode === "student" ? "Find your next opportunity" : "Opportunities"}
           description={mode === "student" ? "Find your next step. Track a published role in My Applications, then follow the employer’s instructions to apply." : mode === "admin" ? "Review and manage existing Employee listings. Only Active Employee accounts can create student-discoverable opportunities." : "Create clear listings, publish when ready, and close opportunities when recruitment ends."}
           action={mode === "employee" ? <Link className="btn" href={base + "/new"}>Create Opportunity</Link> : undefined}
         />
       )}
       {!compact && (
-        <section
-          aria-label="Search and filter opportunities"
-          className="panel mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
-        >
+        <details open className="market-filters">
+          <summary>Search & filters</summary>
+          <section aria-label="Search and filter opportunities" className="market-filter-fields">
           <label className="form-label">
             Search
             <input
@@ -160,8 +159,10 @@ export default function OpportunityBrowser({
               </button>
             </div>
           )}
-        </section>
+          </section>
+        </details>
       )}
+      <div className="min-w-0">
       {loading ? (
         <LoadingState label="Loading opportunities…" />
       ) : error ? (
@@ -208,59 +209,26 @@ export default function OpportunityBrowser({
           <p role="status" className="mb-3 text-sm text-slate-500">
             {filtered.length} {compact ? "recent" : "matching"} opportunities
           </p>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {mode === "admin" ? <div className="overflow-x-auto rounded border border-slate-200 bg-white" role="region" aria-label="Opportunity management table" tabIndex={0}><table className="w-full min-w-[660px] text-left"><caption className="sr-only">Employee opportunities and publication status</caption><thead><tr>{["Role / Organisation", "Location", "Status", "Closing date", "Action"].map(label => <th key={label} scope="col" className="px-4 py-3">{label}</th>)}</tr></thead><tbody>{filtered.map(row => <tr key={row.id}><td className="px-4 py-4"><Link className="font-semibold text-teal-800" href={base + "/" + row.id}>{row.role}</Link><p className="mt-1 text-xs text-slate-500">{row.organisation} · {row.publisher || "Employee listing"}</p></td><td className="px-4 py-4">{row.location}</td><td className="px-4 py-4"><StatusBadge value={row.status} /></td><td className="px-4 py-4"><Deadline value={row.closingDate} /></td><td className="px-4 py-4"><Link className="text-teal-700 font-semibold" href={base + "/" + row.id}>Manage →</Link></td></tr>)}</tbody></table></div> : <div className={compact ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "market-list"}>
             {filtered.map((row) => (
-              <article key={row.id} className="panel job-card flex flex-col">
-                <div className="mb-5 flex items-center justify-between gap-2">
-                  <CompanyMark name={row.organisation} />
-                  {mode !== "student" ? <StatusBadge value={row.status} /> : row.applicationId ? <StatusBadge value="Tracked" /> : null}
+              <article key={row.id} className={"panel job-card " + (compact ? "flex flex-col" : "")}>
+                <div className="job-identity"><CompanyMark name={row.organisation} /></div>
+                <div className="job-main">
+                  <h2 className="text-lg font-semibold"><Link href={base + "/" + row.id} className="hover:text-teal-700">{row.role}</Link></h2>
+                  <div className="job-company"><p>{row.organisation}</p>{mode !== "student" ? <StatusBadge value={row.status} /> : row.applicationId ? <StatusBadge value="Tracked" /> : null}</div>
+                  <p className="job-metadata">{row.location} <span aria-hidden="true">·</span> {row.workMode || "On-site"} <span aria-hidden="true">·</span> {row.employmentType || "Internship"}</p>
+                  <p className="job-description line-clamp-3">{row.description || "View this listing for details and closing dates."}</p>
                 </div>
-                <p className="text-sm text-slate-500">{row.organisation}</p>
-                <h2 className="mt-1 text-lg font-semibold">
-                  <Link
-                    href={base + "/" + row.id}
-                    className="hover:text-teal-700"
-                  >
-                    {row.role}
-                  </Link>
-                </h2>
-                <p className="mt-2 text-sm text-slate-600">
-                  {row.location}
-                </p>
-                <div className="my-4 flex flex-wrap gap-2">
-                  <span className="badge">
-                    {row.employmentType || "Internship"}
-                  </span>
-                  <span className="badge">{row.workMode || "On-site"}</span>
-
-                </div>
-                <p className="line-clamp-3 text-sm leading-6 text-slate-600">
-                  {row.description ||
-                    "View this listing for details and closing dates."}
-                </p>
-                {mode === "admin" && (
-                  <p className="mt-3 text-xs text-slate-500">
-                    Publisher: {row.publisher}
-                  </p>
-                )}
-                <div className="mt-auto pt-5">
-                  <div className="mb-4 border-t border-slate-100 pt-4">
-                    <Deadline value={row.closingDate} />
-                  </div>
-                  <Link
-                    className="btn-secondary w-full"
-                    href={base + "/" + row.id}
-                  >
-                    {mode === "student"
-                      ? "View opportunity →"
-                      : "Manage opportunity →"}
-                  </Link>
+                <div className="job-actions">
+                  <Deadline value={row.closingDate} />
+                  <Link className="btn-secondary" href={base + "/" + row.id}>{mode === "student" ? "View opportunity →" : "Manage opportunity →"}</Link>
                 </div>
               </article>
             ))}
-          </div>
+          </div>}
         </>
       )}
+      </div>
     </div>
   );
 }

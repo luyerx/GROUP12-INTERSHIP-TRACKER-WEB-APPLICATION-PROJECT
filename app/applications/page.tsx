@@ -459,7 +459,7 @@ export default function ApplicationsPage() {
               <section className="mt-4 overflow-hidden card">
                 {filteredApplications.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="tracker-table w-full text-left">
+                    <table className="tracker-table applications-table w-full text-left">
                       <caption className="sr-only">
                         Your applications and current progress
                       </caption>
@@ -474,6 +474,8 @@ export default function ApplicationsPage() {
                           <th className="px-6 py-4">Deadline</th>
 
                           <th className="px-6 py-4">Status</th>
+
+                          <th className="px-6 py-4">Next step</th>
 
                           <th className="w-20 px-6 py-4">
                             <span className="sr-only">Actions</span>
@@ -545,6 +547,8 @@ export default function ApplicationsPage() {
                             <td data-label="Status" className="px-6 py-4">
                               <StatusBadge value={application.status} />
                             </td>
+
+                            <td data-label="Next step" className="px-6 py-4 text-xs text-slate-600">{{ Interested: "Review requirements", Preparing: "Finish your preparation", Applied: "Check for updates", Interview: "Prepare your examples", Offer: "Review the offer", Rejected: "Reflect and explore", Withdrawn: "Explore other roles" }[application.status]}</td>
 
                             {/* Edit */}
                             <td data-label="Actions" className="px-6 py-4">

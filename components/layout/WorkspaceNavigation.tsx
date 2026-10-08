@@ -11,7 +11,7 @@ import {
   Menu,
   Plus,
   Search,
-  Sparkles,
+  Compass,
   UserRound,
   Users,
   X,
@@ -26,7 +26,7 @@ const navigation = {
     ["Opportunities", "/opportunities", Search],
     ["My Applications", "/applications", FolderOpen],
     ["Calendar", "/calendar", CalendarDays],
-    ["AI Career Hub", "/ai-assistant", Sparkles],
+    ["AI Career Hub", "/ai-assistant", Compass],
     ["Resources", "/resources", BookOpen],
     ["Profile", "/profile", UserRound],
   ],
@@ -197,7 +197,7 @@ export default function WorkspaceNavigation({ role }: { role: Role }) {
               <ArrowUpRight size={14} />
             </Link>
           </div>
-          <div className="mt-5 flex items-center gap-3 border-t border-slate-200 pt-4">
+          <div className="nav-account mt-5 flex items-center gap-3 border-t border-slate-200 pt-4">
             <span className="user-avatar" aria-hidden="true">
               {(name || labels[role])
                 .split(/\s+/)

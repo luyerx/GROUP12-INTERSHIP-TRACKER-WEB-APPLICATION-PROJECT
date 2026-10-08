@@ -466,6 +466,10 @@ async function main() {
     const { testAIUI } = await import("./test-ai-ui.mjs");
     await testAIUI({ base, student, appId });
   }
+  if (process.env.RUN_VISUAL_TESTS === "1") {
+    const { testVisualReview } = await import("./test-visual-review.mjs");
+    await testVisualReview({ base, student, employee, admin, appId });
+  }
   if (process.env.RUN_UI_TESTS === "1") {
     const { testWorkspaceUI } = await import("./test-workspace-ui.mjs");
     await testWorkspaceUI({ base, student, employee, admin, superadmin, newAdmin, password, appId,

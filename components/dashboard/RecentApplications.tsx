@@ -47,7 +47,7 @@ export default function RecentApplications({
 
       {recentApplications.length > 0 ? (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-180 text-left">
+          <table className="tracker-table w-full md:min-w-180 text-left">
             <thead>
               <tr className="border-b border-slate-100 text-xs font-medium uppercase tracking-wide text-slate-500">
                 <th className="px-6 py-3.5">Company</th>
@@ -70,7 +70,7 @@ export default function RecentApplications({
                   key={application.id}
                   className="transition-colors hover:bg-slate-50/80"
                 >
-                  <td className="px-6 py-4">
+                  <td data-label="Company" className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700">
                         {application.organisation.charAt(0).toUpperCase()}
@@ -85,23 +85,23 @@ export default function RecentApplications({
                     </div>
                   </td>
 
-                  <td className="px-6 py-4 text-sm text-slate-700">
+                  <td data-label="Role" className="px-6 py-4 text-sm text-slate-700">
                     {application.roleTitle}
                   </td>
 
-                  <td className="px-6 py-4 text-sm text-slate-500">
+                  <td data-label="Location" className="px-6 py-4 text-sm text-slate-500">
                     {application.location || "Not set"}
                   </td>
 
-                  <td className="px-6 py-4 text-sm text-slate-500">
+                  <td data-label="Deadline" className="px-6 py-4 text-sm text-slate-500">
                     {formatAppDateShort(application.deadline)}
                   </td>
 
-                  <td className="px-6 py-4">
+                  <td data-label="Status" className="px-6 py-4">
                     <StatusBadge value={application.status} />
                   </td>
 
-                  <td className="px-6 py-4">
+                  <td data-label="Actions" className="px-6 py-4">
                     <Link
                       href={`/applications/${application.id}`}
                       aria-label={`View ${application.organisation} application`}

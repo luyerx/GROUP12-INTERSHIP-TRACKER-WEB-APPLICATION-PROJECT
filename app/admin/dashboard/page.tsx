@@ -46,42 +46,23 @@ export default function Page() {
           <LoadingState label="Loading platform statistics…" />
         </div>
       ) : (
-        <div className="my-7 grid gap-6 lg:grid-cols-2">
-          {[
-            { title: "People", copy: "Accounts across your platform", items: [["Students", stats.students], ["Employees", stats.employees], ["Admins", stats.admins]] },
-            { title: "Content & activity", copy: "Listings, resources and student tracking", items: [["Tracked applications", stats.applications], ["Open opportunities", stats.published], ["Draft opportunities", stats.drafts], ["Published resources", stats.resources]] },
-          ].map(group => <section className="panel" key={group.title}><p className="eyebrow">{group.title}</p><h2 className="mt-2 text-base font-semibold">{group.copy}</h2><dl className="mt-5 grid grid-cols-2 gap-5">{group.items.map(([label,value]) => <div className="border-t border-slate-200 pt-3" key={label}><dt className="text-sm text-slate-600">{label}</dt><dd className="mt-2 text-3xl font-semibold tabular-nums">{value}</dd></div>)}</dl></section>)}
-        </div>
+        <section className="admin-metrics" aria-label="Platform metrics">
+          <dl>{[["Students", stats.students], ["Employees", stats.employees], ["Tracked applications", stats.applications], ["Open opportunities", stats.published], ["Admins", stats.admins], ["Draft opportunities", stats.drafts], ["Published resources", stats.resources]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}<div><dt>AI activity</dt><dd className="metric-entry"><Link href="/admin/ai-usage">View usage ↗</Link></dd></div></dl>
+        </section>
       )}
-      <section className="grid gap-4 md:grid-cols-3">
-        {[
-          [
-            "Users",
-            "/admin/users",
-            "Review roles and account status. Admin access is granted here.",
-          ],
-          [
-            "Opportunities",
-            "/admin/opportunities",
-            "Manage listings across all employees and administrators.",
-          ],
-          [
-            "Resources",
-            "/admin/resources",
-            "Maintain guides, templates and career preparation resources.",
-          ],
-          [
-            "AI Usage",
-            "/admin/ai-usage",
-            "Review Gemini usage totals, recent activity and user-level AI request counts.",
-          ],
-        ].map(([title, href, copy]) => (
-          <Link key={href} href={href} className="panel hover:border-teal-400">
-            <h2 className="text-lg font-semibold">{title} →</h2>
-            <p className="mt-3 text-sm text-slate-600">{copy}</p>
-          </Link>
-        ))}
+      <section className="operations-overview" aria-labelledby="operations-title">
+        <header><p className="eyebrow">Platform management</p><h2 id="operations-title">Keep the essentials in order.</h2><p>Manage accounts, maintain career content and review AI activity from one workspace.</p></header>
+        <div className="operations-columns">
+          {[{title:"Accounts & activity",number:"01",items:[
+            ["Users", "/admin/users", "Review roles, account status and access to the platform.", "Roles · Account status"],
+            ["AI Usage", "/admin/ai-usage", "Review usage totals and recent activity metadata.", "Usage · Activity"]
+          ]},{title:"Career content",number:"02",items:[
+            ["Opportunities", "/admin/opportunities", "Review Employee listings and their publication status.", "Published · Draft · Closed"],
+            ["Resources", "/admin/resources", "Maintain useful guides, templates and career preparation materials.", "Categories · Featured content"]
+          ]}].map(group => <section className="operations-group" key={group.title}><div className="operations-group-title"><span>{group.number}</span><h3>{group.title}</h3></div>{group.items.map(([title,href,copy,meta]) => <Link className="management-row" key={href} href={href}><div><h4>{title}</h4><p>{copy}</p><span>{meta}</span></div><span aria-hidden="true">↗</span></Link>)}</section>)}
+        </div>
       </section>
+
     </>
   );
 }
