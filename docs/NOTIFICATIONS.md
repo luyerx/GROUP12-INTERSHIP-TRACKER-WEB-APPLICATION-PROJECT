@@ -1,29 +1,45 @@
-# Student email reminders
+# Notifications and password recovery
 
-The application sends only application deadline and scheduled interview reminders to the owning active Student account. Profile's **Email notifications** is the master switch; **Deadline reminders** and **Interview reminders** independently control their respective message types. Existing defaults are on. There are no general account update emails, SMS, push notifications or notification inbox.
+Current implementation reference, verified 2026-10-08 against `lib/notifications/`, `lib/aucklandTime.ts`, the cron and password-recovery routes.
 
-## Timing and dates
+## Reminder types and preferences
 
-Vercel runs `GET /api/cron/reminders` daily (`0 0 * * *`, UTC; Hobby-compatible). A reminder qualifies when its occurrence is in the future and within **48 hours** (`REMINDER_LEAD_HOURS = 24`, `REMINDER_SCAN_HOURS = 24`); it sends once, between 0 and 48 hours before the occurrence, depending on the daily trigger time and when the record was created. The 48-hour window accounts for daily scheduling; failures can retry on a later daily run if the occurrence is still in the future. Vercel Hobby may invoke the daily cron up to 59 minutes later than scheduled. Application `deadline` is an ISO `YYYY-MM-DD` date and is interpreted as **23:59:59.999 UTC** on that date. Calendar interview `date` must be ISO and `time` exactly `HH:mm` (24-hour **UTC**). Missing or ambiguous old interview times, invalid dates, and expired occurrences are skipped with diagnostics. Users should enter interview time in UTC; the current calendar UI does not provide time zone conversion. This limit matters for New Zealand local interviews.
+Only application deadlines and scheduled interviews generate reminder emails. The recipient is the owning Active Student, resolved from User; the request cannot choose a recipient. Profile's **Email notifications** is the master switch; **Deadline reminders** and **Interview reminders** independently control the two types. Existing defaults are on. Calendar reminder entries do not create a third email type. There is no notification inbox, push or SMS feature.
 
-Each interview event must still reference an Application owned by the same Student. The source record is re-read before sending to skip deleted or rescheduled reminders. The recipient is read from the owning User record; no request can specify a recipient. Inactive, missing or non-student accounts are skipped. Email bodies include only title, company, occurrence in UTC, and a prompt to log in.
+Interview events must reference an application owned by the same Student. The worker rechecks ownership, preferences and source date/time immediately before sending, skipping deleted/rescheduled records and inactive/ineligible users.
 
-## Configuration and deployment
+## Auckland date/time semantics
 
-Set server-only `MONGODB_URI`, `MONGODB_DB`, `RESEND_API_KEY`, `NOTIFICATION_FROM_EMAIL` (verified sender/domain in Resend), and a long random `CRON_SECRET` in Vercel Project Settings. Never use `NEXT_PUBLIC_` for these variables. The route rejects missing or incorrect `Authorization: Bearer <CRON_SECRET>` with 401. The route requests a 60-second maximum duration; larger collections may need batching. Deploy the included `vercel.json`; configure the same secret in Vercel. Resend is called with the built-in server-side `fetch`, so no npm package is added. The scheduled route must be redeployed after variables are set.
+Application deadlines are `YYYY-MM-DD` calendar dates in **Pacific/Auckland**. Their reminder occurrence is **23:59:59.999 Auckland local time**. Interview dates and 24-hour `HH:mm` times are interpreted as Auckland local wall-clock values, independently of the browser/server timezone.
 
-## Duplicate control and recovery
+`aucklandOccurrence` derives offsets using Intl around the date and round-trips possible instants. Invalid dates/times, a DST gap with no match, or a DST fold with two matches return null. Reminder processing skips these occurrences with a safe diagnostic; it does not silently choose an offset. Other legacy unparseable times are also skipped. Stored dates can remain readable without being eligible for a timed reminder. Email occurrence text is explicitly formatted in Auckland time.
 
-The `reminderlogs` MongoDB collection has a unique `key` index over owning user, record, type and occurrence timestamp. A run first creates an atomic 5-minute lease; a competing run cannot send the same reminder. Immediately before sending, the worker atomically changes its own unexpired claim to `sending`. Only `claimed` leases can be reclaimed; `sending` cannot be automatically retried. Successful provider responses are marked `sent`. Definite rejection (configuration error or HTTP 400/401/403/404/422/429) releases the claim for retry. Network timeouts, ambiguous server responses, crashes during sending, and failure to persist success leave `sending` for manual reconciliation, preventing automatic duplicate delivery. Requests time out after 10 seconds and include a stable hashed provider idempotency key. This deliberately trades automatic recovery for duplicate protection when delivery is uncertain; an interrupted run before the actual HTTP request may leave an unsent reminder blocked. Review the Resend delivery record before marking such a log sent or deleting a confirmed-unsent log. Never blindly reset `sending` logs. Updating a date/time creates a new occurrence and may trigger another reminder.
+The included `vercel.json` schedules `GET /api/cron/reminders` daily with `0 0 * * *`. **UTC describes the hosting scheduler, not interview input or deadline semantics.** Hosting delivery timing is external to this code. The worker accepts occurrences in the future and within **48 hours**, from `REMINDER_LEAD_HOURS = 24` plus `REMINDER_SCAN_HOURS = 24`. It does not promise a message exactly 24 hours before the event. Late-created records or delivery failures can miss the window.
 
-## Testing and manual verification
+## Duplicate control
 
-Run `npm ci`, `node scripts/test-notifications.mjs`, `npm run lint`, `npm run build`, `node scripts/test-acceptance.mjs`, and `npm run test:workflow` (the last test requires a reachable test MongoDB and uses an isolated database). Automated reminder tests use a fake sender and never call Resend.
+ReminderLog has a unique key based on owner, reminder kind, record and occurrence instant. A worker acquires an atomic five-minute `claimed` lease, then transitions its unexpired claim to `sending` before contacting Resend. Expired `claimed` leases can be reclaimed; `sending` is not automatically retried. Successful delivery is marked `sent`.
 
-For one live test, configure the five server-side variables with a verified Resend sender, create one active Student with a test inbox, create its application deadline tomorrow or its interview tomorrow at a valid UTC time, leave the corresponding switches on, then call the cron endpoint once with the Bearer secret. Confirm one message in Resend's dashboard and the test inbox; call again and check the summary reports no second send. Use only a test inbox and verify the selected date falls within the timing window. Do not publish the secret or expose returned logs. Forgot Password still only creates reset tokens; it does not send real email.
+Definite rejection (missing configuration or HTTP 400/401/403/404/422/429) releases the claim. Network timeouts, ambiguous responses, crashes during sending or failure to persist success retain the `sending` barrier. A stable hashed provider idempotency key supplements this database control. Requests have a ten-second timeout. This trades automatic recovery for duplicate prevention: an uncertain or pre-send interrupted delivery may need manual reconciliation. Review provider records before resolving such a log; never blindly reset all sending entries. Changing date/time creates a new occurrence key.
 
-## Merge verification
+## Resend and cron configuration
 
-Additional tests: `node scripts/test-notifications-integration.mjs` exercises the actual Profile API, MongoDB models, concurrent claims, provider rejection and uncertain delivery using an isolated test database and mocked email transport. `RUN_UI_TESTS=1` with `npm run test:workflow` also checks all three Profile switches across save/reload. It requires Playwright (or `PLAYWRIGHT_MODULE`). No test calls the real email provider.
+The server uses native fetch to Resend; no Resend SDK is installed. Configure `MONGODB_URI`, `MONGODB_DB`, `RESEND_API_KEY`, `NOTIFICATION_FROM_EMAIL` and `CRON_SECRET` securely. The cron route requires the matching Bearer secret and declares Node.js runtime with maxDuration 60. Larger datasets may require future batching; this closeout does not change it.
 
-Provider idempotency keys expire after 24 hours: https://resend.com/changelog/idempotency-keys . The durable `sending` barrier is therefore retained for ambiguous outcomes instead of relying on provider deduplication forever.
+Email delivery depends on the configured sender and recipient restrictions in the Resend environment. The project does not claim that a production domain is configured or require purchasing a domain for source submission. Never publish actual credentials or invoke the real cron as an automated closeout test.
+
+## Forgot Password and Reset Password
+
+- Requests are rate limited by client identifier (five per 15 minutes) and hashed email address (three per 15 minutes), including unknown/ineligible accounts.
+- Reset links use the configured `APP_BASE_URL`, never an untrusted Host header. Production requires an HTTPS non-local origin without credentials, path, query or fragment.
+- A cryptographically random 32-byte token is generated; only its SHA-256 hash is stored for an eligible account, initially unusable, with a **30-minute expiry**. Older tokens for that user are removed.
+- Resend delivery occurs for every valid address through the same generic path. Unknown/ineligible addresses receive an inert link without a stored token. This limits account-existence disclosure; it is not a formal constant-time guarantee.
+- Only confirmed delivery activates a stored token. Failed/ambiguous delivery triggers cleanup; a pending token remains unusable even if cleanup fails. Reminder opt-out switches do not disable password recovery mail.
+- Reset validates the token and new password, atomically consumes the usable unexpired token, updates the bcrypt password hash, revokes all user sessions and removes remaining reset tokens within a MongoDB transaction. Using the existing password is rejected and the transaction rolls back. A used/expired/ineligible token cannot reset an account.
+- Reset submissions are separately limited to ten per 15 minutes. Rate limit storage is process-local.
+
+## Verification
+
+`node scripts/test-notifications.mjs` uses a fake sender. `node scripts/test-notifications-integration.mjs` and `node scripts/test-password-recovery.mjs` use uniquely named isolated databases and mocked email transport. Workflow browser tests cover preference persistence and Auckland/DST display semantics. Current counts are in [Final Project Closeout](FINAL_PROJECT_CLOSEOUT.md).
+
+No closeout test sends real email. Actual inbox delivery, sender eligibility and deployed cron execution remain environment-specific checks for a separately authorized demonstration.

@@ -423,7 +423,7 @@ export default function ApplicationDetailPage() {
 
               <p className="mt-2 text-sm leading-6 text-slate-500">
                 Use your profile and this role to generate personalised
-                interview preparation and application insights.
+                Interview Preparation and Application Summary.
               </p>
 
               <Link className="btn-secondary mt-5 w-full" href={`/ai-assistant?applicationId=${encodeURIComponent(application.id)}`}>

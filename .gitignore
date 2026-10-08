@@ -41,3 +41,15 @@ next-env.d.ts
 .env
 .env.local
 .env.*.local
+
+# Submission hygiene: local values and generated review artifacts
+.env.*
+!.env.example
+/test-results/
+/playwright-report/
+/blob-report/
+/screenshots/
+*.log
+*.zip
+Thumbs.db
+Desktop.ini

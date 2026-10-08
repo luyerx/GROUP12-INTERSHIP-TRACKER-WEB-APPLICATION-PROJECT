@@ -1,3 +1,10 @@
+# Historical Development Note
+
+This document records an earlier development state and is retained for project history.
+For the current implementation, see [README.md](../README.md), [final AI implementation](AI_IMPLEMENTATION_SUMMARY.md) and the [documentation index](README.md). Dates, test counts, file status and earlier configuration below describe that earlier pass, not the current submission state.
+
+---
+
 > Historical reliability notes (2026-09-23). Current Career Hub features, persistence, security and verification are documented in [AI_CAREER_HUB.md](AI_CAREER_HUB.md). Statements below about two tools, ID-only requests and unsaved results describe the earlier version.
 
 # Gemini AI Career Assistant — production reliability

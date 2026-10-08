@@ -1,57 +1,31 @@
 # AI latency policy
 
-## Configuration
+Current source reference: `lib/ai-config.ts`, `lib/gemini.ts`, `lib/ai-route.ts` and the AI browser page. Verified 2026-10-08.
 
-| Setting | Previous | Current |
-| --- | --- | --- |
-| Primary | gemini-3.5-flash | gemini-3.5-flash-lite |
-| Fallback | gemini-3.5-flash-lite | gemini-3.5-flash |
-| Attempt limit | 22s | 12s |
-| Total route budget | 48s | 28s |
-| Browser timeout | 55s | 35s |
-| Maximum provider attempts | 3, subject to budget | 2, sequential |
-| Backoff | 800–1200ms, then 1600–2400ms | 250–600ms once |
-| Pending lease / platform maxDuration | 60s / 60s | unchanged |
-
-Public constants live in `lib/ai-config.ts`. Credentials remain server-only.
-
-The five tools produce bounded structured output: recommendations select from server-ranked candidates; search extracts filters; summary, interview and document guidance use limited sections. The supplied real Document Assistant observation (Flash timed out around 22s, Lite succeeded around 3.1s) supports trying Lite first. It does not establish average speed or quality across tools. Strict JSON, Zod, semantic validation, excerpt privacy rules and output token limits are unchanged. Twelve seconds gives more headroom than an aggressive 3–5s attempt cutoff.
-
-## Request path and bounds
-
-Authentication, input validation, ownership/context reads, once-per-request usage accounting, provider attempts, semantic validation and awaited history persistence all share the route deadline. No concurrent provider race is introduced. Only existing transient status/network/timeout conditions may use the fallback; deterministic 400/401/403/404 and invalid output do not. The fallback gate requires a full 12s remaining after jitter. Slow pre-provider work can therefore prevent fallback rather than launch an underfunded request.
-
-- Fast/normal success: actual primary duration plus local work; primary is capped at 12s. A 3–12s experience is a target, not a measured result.
-- Primary timeout then fallback: at most 12s + 0.6s + 12s = 24.6s of provider/backoff time. The remaining 3.4s covers local work when both attempts consume their full allowances.
-- Total route: 28s timer from entry, including history. Browser: 35s, allowing 7s for network/delivery overhead. JavaScript timers are scheduling bounds, not hard real-time guarantees under event-loop stalls.
-- Successful output is never retried because history fails. Ordinary history failure still returns guidance plus its existing warning. A stalled write reaching the global deadline retains the existing 504 behavior; the lease is released. The database driver may finish an in-flight write after cancellation, as before. No fire-and-forget write or new history semantics were introduced.
-
-The database connection is cached. Profile context comes from authentication, application ownership uses one scoped lookup, and recommendation's second discovery read rechecks current visibility after generation. These are necessary reads; no repository changes were warranted. There are no measured history timings to justify changing persistence. The shortened total deadline prevents history from adding an unbounded wait.
-
-The rolling five-request limit, monthly soft 20/hard 30 limits, and one pending request per student remain unchanged. Fallback counts as the same user request. Both response and history record the actual successful model. Provider diagnostics include safe model/attempt/stage/status (when received), duration and code metadata; timeout has no provider HTTP status. `totalElapsedMs` measures the provider phase including backoff, not authentication/history. No prompts, document text, generated output or credentials are logged.
-
-Loading text identifies the selected tool. A hint appears after 5s and clears on completion or timeout. The page layout is unchanged.
-
-## Verification
-
-Automated tests verify timeout/fallback behavior with mocks. Real provider latency must be manually verified. The prior 463 AI assertions are retained with timing/model expectations updated; two newly terminal retry cases also exercise the existing error/manual-retry checks. New cases cover precise timeout/backoff timing, successful model persistence, safe diagnostic metadata, awaited/stalled history and budget relationships. Browser tests cover delayed hint cleanup and the 35s timeout.
-
-Validation on 2026-10-06:
-
-| Check | Result |
+| Setting | Current value |
 | --- | --- |
-| git diff --check | Passed |
-| npm run lint | Passed |
-| npm run build | Passed |
-| node scripts/test-ai.mjs | 484 assertions (463 prior + 17 new + 4 additional terminal-failure branch checks) |
-| npm run test:workflow | 143 workflow assertions, plus AI suite and 14 HTTP AI assertions |
-| Browser checks enabled in workflow | 44 assertions (40 prior + 4 loading-hint checks) |
-| node scripts/test-feature-freeze.mjs | 95 assertions |
-| node scripts/test-acceptance.mjs | 40 frontend assertions; also runs 48 Admin assertions |
-| node scripts/test-admin-regression.mjs | 48 assertions separately |
+| Primary model | gemini-3.5-flash-lite |
+| Fallback model | gemini-3.5-flash |
+| Attempt timeout | 12 seconds |
+| Complete route budget | 28 seconds |
+| Browser timeout | 35 seconds |
+| Slow hint | 5 seconds |
+| Maximum provider attempts | 2, sequential |
+| Fallback backoff | 250–600ms once |
+| Pending safety lease / platform maxDuration | 60 seconds / 60 seconds |
 
-Database regressions used uniquely named isolated databases, removed by their test cleanup, and process-only DNS configuration outside the repository. Gemini was disabled for database tests and mocked for AI/browser tests. The configured application database and demo data were not seeded or changed.
+## Request bounds
 
-For a manual test, use a student account and an owned application, then generate each of the five tools once using non-sensitive sample inputs. In browser Network, record endpoint duration/status; compare safe server `[AI diagnostic]` metadata for actual model, attempt, fallback, elapsed and cumulative provider duration. Check useful output and the saved History entry. Do not paste raw documents or full responses into logs. Respect the existing five-per-minute and monthly quotas. Live transient failures may exercise fallback; do not deliberately manipulate production credentials or induce provider errors. Mock tests supply deterministic timeout/fallback coverage.
+The route deadline starts before authentication, input reading, ownership/context reads, quota accounting, provider attempts, semantic validation and awaited history saving. The fallback gate requires a full 12-second allowance after jitter; slow local work can prevent fallback. There is no parallel provider race or third generation.
 
-No live Gemini call, seed, email, deployment, commit or push is part of this change. Model quality/success rate under the shorter deadline requires manual sampling; two attempts trade some recovery opportunities for bounded waiting.
+Eligible transient failures are HTTP 429/500/502/503/504, supported network failures and timeouts. Invalid output and deterministic request/access failures do not trigger fallback. Two full attempts plus maximum jitter consume 24.6 seconds, leaving at most 3.4 seconds for other work within the 28-second route allowance. Browser timeout allows additional network overhead. JavaScript timers are scheduling bounds, not hard real-time guarantees under event-loop stalls.
+
+An ordinary history write failure returns valid guidance with a warning, without generating again. A write stalled until the global deadline produces the existing timeout response; a database operation already underway may still finish after cancellation. The pending lease is released when the route settles.
+
+Fallback counts as one logical quota request. The actual successful model is returned and saved. Provider diagnostics record safe request/feature/model/attempt/status/stage/timing metadata, never prompts, input documents, generated content or secrets. Provider `totalElapsedMs` includes fallback/backoff but excludes authentication and history time.
+
+## Limits and evidence
+
+Monthly soft/hard limits are 20/30; request starts are limited to five per rolling minute with one pending request per student per process. These Maps are process-local. No success rate or average live response time is promised by these configuration values.
+
+`node scripts/test-ai.mjs` checks timing, fallback, model metadata, semantic validation and stalled history with mocks. The current confirmed count is 484; [closeout results](FINAL_PROJECT_CLOSEOUT.md) record verification. Browser regressions separately cover the slow hint and 35-second timeout. Live Gemini was not called during closeout. Earlier reliability experiments in [AI_ASSISTANT.md](AI_ASSISTANT.md) are historical and must not be read as current performance guarantees.

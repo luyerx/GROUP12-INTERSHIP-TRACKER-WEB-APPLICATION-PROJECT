@@ -1,3 +1,10 @@
+# Historical Development Note
+
+This document records an earlier development state and is retained for project history.
+For the current implementation, see [README.md](../README.md), [final AI implementation](AI_IMPLEMENTATION_SUMMARY.md) and the [documentation index](README.md). Dates, test counts, file status and earlier configuration below describe that earlier pass, not the current submission state.
+
+---
+
 # Homepage and career-platform visual pass
 
 Reviewed 7 October 2026 (Pacific/Auckland).

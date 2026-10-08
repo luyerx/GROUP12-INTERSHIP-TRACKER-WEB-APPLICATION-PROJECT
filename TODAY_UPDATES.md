@@ -1,3 +1,10 @@
+# Historical Development Note
+
+This document records an earlier development state and is retained for project history.
+For the current implementation, see [README.md](README.md), [final AI implementation](docs/AI_IMPLEMENTATION_SUMMARY.md) and the [documentation index](docs/README.md). Dates, test counts, file status and earlier configuration below describe that earlier pass, not the current submission state.
+
+---
+
 # September 27, 2026
 
 ## 功能清单
