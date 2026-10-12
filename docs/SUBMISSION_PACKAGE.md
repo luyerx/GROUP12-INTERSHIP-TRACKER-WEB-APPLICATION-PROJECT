@@ -27,7 +27,7 @@ Screenshots/report/video requested by the course should be supplied as separatel
 
 ## Preferred PowerShell procedure: committed source
 
-`git archive` packages a committed tree; it does **not** include uncommitted edits or required untracked files. It also does not magically filter tracked secrets using .gitignore. Therefore review the source manifest, confirm necessary source/docs are committed through the team's normal process, and check for prohibited tracked files before packaging. **The current closeout working tree is dirty; do not archive HEAD yet or it will omit final changes.** Closeout itself does not authorize or perform a commit.
+`git archive` packages a committed tree; it does **not** include uncommitted edits or required untracked files. It also does not magically filter tracked secrets using .gitignore. Therefore review the source manifest, confirm necessary source/docs are committed through the team's normal process, and check for prohibited tracked files before packaging. The working tree was clean at the start of the submission hygiene review. Recheck Git status after any later edits and commit required source/documentation changes before archiving HEAD. Presentation materials are supplied separately and are not part of the tracked source package.
 
 Run from the repository directory after that prerequisite is satisfied:
 
